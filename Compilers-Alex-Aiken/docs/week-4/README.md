@@ -24,19 +24,18 @@ Algorithm to use parsing table:
 
 - Reject on reaching error state;
 - Accept on end of input & empty stack.
-
-<br><code>
-initialize stack = <S, $> and next
+<b>
+initialize stack = < S, $ > and next<br>
 repeat<br>
 &emsp;case stack of<br>
-&emsp;&emsp; <X, rest> : If T[X, *next] = Y1...Yn<br>
-&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;then stack <- <Y1...Yn rest>;<br>
-&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;else error();<br>
-&emsp;&emsp; <t, rest> : If t == *next++<br>
-&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;then stack <- < rest>;<br>
-&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;else error();<br>
-&emsp;until stack == <>
-</code>
+&emsp;&emsp; < X, rest > : If T[X, *next] = Y1...Yn<br>
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;then stack <- < Y1...Yn rest >;<br>
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;else error();<br>
+&emsp;&emsp; < t, rest > : If t == *next++<br>
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;then stack <- < rest >;<br>
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;else error();<br>
+&emsp;until stack == < >
+</b>
 
 # 07-02: First Sets
 - Consider non-terminal <b>A</b>, production <b>A -> α</b>, & token <b>t</b>;
