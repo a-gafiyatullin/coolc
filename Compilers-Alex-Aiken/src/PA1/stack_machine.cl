@@ -53,7 +53,7 @@ class Stack {
             let command: StackCommand <- head.command() in
                 command.evaluate(self)
         else
-            head.command()
+            new StackCommand (* or compilation error *)
         fi
     };
 };
