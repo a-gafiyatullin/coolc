@@ -41,10 +41,10 @@ std::string Token::to_string() const
     }
     else
     {
-        out += _token_type_to_str[_type] + " ";
+        out += _token_type_to_str[_type];
         if (_type >= INT_CONST && _type < STR_CONST)
         {
-            out += _lexeme;
+            out +=  " " + _lexeme;
         }
         else if (_type == STR_CONST || _type == ERROR)
         {
@@ -85,7 +85,7 @@ std::string Token::to_string() const
                 }
                 str_for_out += ch;
             }
-            out += "\"" + str_for_out + "\"";
+            out += " \"" + str_for_out + "\"";
         }
 #ifdef LEXER_FULL_VERBOSE
         else

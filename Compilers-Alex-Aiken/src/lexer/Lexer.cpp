@@ -39,15 +39,16 @@ Lexer::Lexer(const std::string &input_file_name)
 
 // append a suffix to prefix if can
 // set new error message
-void append_to_string_if_can(std::string &prefix, const std::string &suffix, const int &max_len, std::string &error_msg)
+void Lexer::append_to_string_if_can(std::string &prefix, const std::string &suffix, std::string &error_msg, int &error_line_num)
 {
     if (!error_msg.empty())
     {
         return;
     }
-    if (prefix.length() + suffix.length() > max_len - 1)
+    if (prefix.length() + suffix.length() > MAX_STR_CONST - 1)
     {
         error_msg = "String constant too long";
+        error_line_num = _line_number;
     }
     else
     {
@@ -67,6 +68,18 @@ Token Lexer::match_string(const std::string &start_string)
 
     while (true)
     {
+        // we read all lines from the file
+        if (_input_file.eof() && processed_string.empty())
+        {
+            if (error_msg.empty())
+            {
+                error_msg = "EOF in string constant";
+                error_line_num = _line_number;
+            }
+
+            _current_line.clear();
+            return Token(Token::ERROR, error_msg, error_line_num);
+        }
         if (processed_string.empty())
         {
             std::getline(_input_file, processed_string);
@@ -80,25 +93,14 @@ Token Lexer::match_string(const std::string &start_string)
             {
                 // save a rest of the line
                 _current_line = processed_string;
-                return Token(Token::ERROR, error_msg.empty() ? "Unterminated string constant" : error_msg, _line_number);
+                return Token(Token::ERROR, error_msg.empty() ? "Unterminated string constant" : error_msg,
+                             error_msg.empty() ? _line_number : error_line_num);
             }
             else
             {
-                append_to_string_if_can(builded_string, "\n", MAX_STR_CONST, error_msg);
+                append_to_string_if_can(builded_string, "\n", error_msg, error_line_num);
                 escape = 0;
             }
-        }
-        // we read all lines from the file
-        if (_input_file.eof() && processed_string.empty())
-        {
-            if (error_msg.empty())
-            {
-                error_msg = "EOF in string constant";
-                error_line_num = _line_number;
-            }
-
-            _current_line.clear();
-            return Token(Token::ERROR, error_msg, error_line_num);
         }
 
         // escape next character
@@ -110,7 +112,7 @@ Token Lexer::match_string(const std::string &start_string)
             {
                 if (error_msg.empty())
                 {
-                    error_msg = "String contains null character";
+                    error_msg = "String contains escaped null character.";
                     error_line_num = _line_number;
                 }
             }
@@ -135,7 +137,7 @@ Token Lexer::match_string(const std::string &start_string)
                     ch = "\\";
                 }
 
-                append_to_string_if_can(builded_string, ch, MAX_STR_CONST, error_msg);
+                append_to_string_if_can(builded_string, ch, error_msg, error_line_num);
             }
             escape = 0;
             processed_string = processed_string.substr(1);
@@ -147,7 +149,7 @@ Token Lexer::match_string(const std::string &start_string)
         {
             int ch = processed_string[matches.position(0)];
 
-            append_to_string_if_can(builded_string, processed_string.substr(0, matches.position(0)), MAX_STR_CONST, error_msg);
+            append_to_string_if_can(builded_string, processed_string.substr(0, matches.position(0)), error_msg, error_line_num);
             processed_string = processed_string.substr(matches.position(0) + 1);
 
             switch (ch)
@@ -183,7 +185,7 @@ Token Lexer::match_string(const std::string &start_string)
 
                 if (error_msg.empty())
                 {
-                    error_msg = "String contains null character";
+                    error_msg = "String contains null character.";
                     error_line_num = _line_number;
                 }
                 break;
@@ -193,7 +195,7 @@ Token Lexer::match_string(const std::string &start_string)
         else
         {
             // did not catch any special characters using regular expression
-            append_to_string_if_can(builded_string, processed_string, MAX_STR_CONST, error_msg);
+            append_to_string_if_can(builded_string, processed_string, error_msg, error_line_num);
             processed_string.clear();
         }
     }
@@ -206,6 +208,11 @@ std::optional<Token> Lexer::skip_comment(const std::string &start_string)
 
     while (true)
     {
+        if (_input_file.eof() && processed_string.empty())
+        {
+            _current_line.clear();
+            return Token(Token::ERROR, "EOF in comment", _line_number);
+        }
         if (processed_string.empty())
         {
             std::getline(_input_file, processed_string);
@@ -213,11 +220,6 @@ std::optional<Token> Lexer::skip_comment(const std::string &start_string)
 #ifdef LEXER_FULL_VERBOSE
             std::cout << "New line: " << processed_string << std::endl;
 #endif // LEXER_FULL_VERBOSE
-        }
-        if (_input_file.eof() && processed_string.empty())
-        {
-            _current_line.clear();
-            return Token(Token::ERROR, "EOF in comment", _line_number);
         }
 
         std::smatch matches;
@@ -357,7 +359,7 @@ std::optional<Token> Lexer::next()
 #ifdef LEXER_FULL_VERBOSE
                     std::cout << "Matched boolean " << it->str() << " in position " << it->position() << std::endl;
 #endif // LEXER_FULL_VERBOSE
-                    t = Token(Token::BOOL_CONST, it->str(), _line_number);
+                    t = Token(Token::BOOL_CONST, str_in_lowercase, _line_number);
                 }
                 else if (Token::is_typeid(it->str()))
                 {

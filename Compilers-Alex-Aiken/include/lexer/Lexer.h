@@ -26,6 +26,9 @@ protected:
     // return either std::nullopt if OK or ERROR token
     std::optional<Token> skip_comment(const std::string &start_string);
 
+    void append_to_string_if_can(std::string &prefix, const std::string &suffix,
+                                 std::string &error_msg, int &error_line_num);
+
 public:
     Lexer(const std::string &input_file_name);
 
