@@ -48,9 +48,6 @@ dotest-asan:
 dotest-ubsan:
 	python3 ${TEST_DIR}/test.py -ubsan
 
-%.o: %.cpp
-	${CXX} ${CXXFLAGS} -c $<
-
 ${LEXER_BUILD_DIR}/%.o: %.cpp
 	${CXX} ${CXXFLAGS} -c $< -o $@
 
