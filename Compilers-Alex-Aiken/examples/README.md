@@ -3,7 +3,7 @@ The examples directory contains a few small and not so small
 example programs which illustrate various aspects of the Cool
 programming language.
 
-Name    | Desciption                                 |
+Name    | Description                                 |
 --------|--------------------------------------------|
 arith.cl|Tests various aspects of arithmetic in Cool.|
 atoi.cl |An implementation of the C function by the same name. It converts a String into an Int.
@@ -20,7 +20,7 @@ graph.cl|A program reading descriptions of weighted-directed graphs from stdin i
 g1.graph|A sample input to graph.cl
 palindrome.cl|Recognizes palindromes.
 complex.cl|Checks the = operator and cummulative effects of method calls via a complex number object.
-life.cl|The classic Game of Life
+life.cl|The classic Game of Life.
 sort_list.cl|A more complex example sorting lists of integers.
 stack_machine.cl|A simple stack machine.
 
