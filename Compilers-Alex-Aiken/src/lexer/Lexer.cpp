@@ -2,14 +2,6 @@
 
 using namespace lexer;
 
-#ifdef LEXER_FULL_VERBOSE
-#define log_match(type, str, pos) std::cout << "Matched " << type << " " << str << " in position " << pos << std::endl;
-#define log(str) std::cout << str << std::endl;
-#else
-#define log_match(type, str, pos)
-#define log(str)
-#endif // LEXER_FULL_VERBOSE
-
 const int Lexer::MAX_STR_CONST = 1025;
 
 const std::regex Lexer::_lexer_spec(
