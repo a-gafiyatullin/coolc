@@ -5,3 +5,4 @@ a.out
 .d
 build
 hwbin
+*.so
