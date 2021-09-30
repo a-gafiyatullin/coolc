@@ -1,5 +1,7 @@
 #include "lexer/Token.h"
 
+using namespace lexer;
+
 const std::vector<std::string> Token::_token_type_to_str = {
     "CLASS",
     "ELSE",
@@ -44,7 +46,7 @@ std::string Token::to_string() const
         out += _token_type_to_str[_type];
         if (_type >= INT_CONST && _type < STR_CONST)
         {
-            out +=  " " + _lexeme;
+            out += " " + _lexeme;
         }
         else if (_type == STR_CONST || _type == ERROR)
         {

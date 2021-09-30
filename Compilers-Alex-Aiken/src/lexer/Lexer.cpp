@@ -1,5 +1,15 @@
 #include "lexer/Lexer.h"
 
+using namespace lexer;
+
+#ifdef LEXER_FULL_VERBOSE
+#define log_match(type, str, pos) std::cout << "Matched " << type << " " << str << " in position " << pos << std::endl;
+#define log(str) std::cout << str << std::endl;
+#else
+#define log_match(type, str, pos)
+#define log(str)
+#endif // LEXER_FULL_VERBOSE
+
 const int Lexer::MAX_STR_CONST = 1025;
 
 const std::regex Lexer::_lexer_spec(
@@ -84,11 +94,11 @@ Token Lexer::match_string(const std::string &start_string)
         {
             std::getline(_input_file, processed_string);
             _line_number++;
-#ifdef LEXER_FULL_VERBOSE
-            std::cout << "New line: " << processed_string << std::endl;
-            std::cout << "Matched '\n' in position 0" << std::endl;
-#endif // LEXER_FULL_VERBOSE \
-    // we read a new line, so check if '\n' is escaped
+
+            log("New line: " + processed_string);
+            log_match("new line symbol", "", 0);
+
+            // we read a new line, so check if '\n' is escaped
             if (!escape)
             {
                 // save a rest of the line
@@ -156,9 +166,7 @@ Token Lexer::match_string(const std::string &start_string)
             {
             case '\"':
             {
-#ifdef LEXER_FULL_VERBOSE
-                std::cout << "Matched closing \" in position " << matches.position(0) << std::endl;
-#endif // LEXER_FULL_VERBOSE
+                log_match("closing \"", "", matches.position(0));
 
                 _current_line = processed_string;
                 return Token(error_msg.empty() ? Token::STR_CONST : Token::ERROR,
@@ -167,9 +175,7 @@ Token Lexer::match_string(const std::string &start_string)
             }
             case '\\':
             {
-#ifdef LEXER_FULL_VERBOSE
-                std::cout << "Matched \\ in position " << matches.position(0) << std::endl;
-#endif // LEXER_FULL_VERBOSE
+                log_match("closing \\", "", matches.position(0));
 
                 if (error_msg.empty())
                 {
@@ -179,9 +185,7 @@ Token Lexer::match_string(const std::string &start_string)
             }
             case '\0':
             {
-#ifdef LEXER_FULL_VERBOSE
-                std::cout << "Matched null character in position " << matches.position(0) << std::endl;
-#endif // LEXER_FULL_VERBOSE
+                log_match("null character", "", matches.position(0));
 
                 if (error_msg.empty())
                 {
@@ -217,9 +221,8 @@ std::optional<Token> Lexer::skip_comment(const std::string &start_string)
         {
             std::getline(_input_file, processed_string);
             _line_number++;
-#ifdef LEXER_FULL_VERBOSE
-            std::cout << "New line: " << processed_string << std::endl;
-#endif // LEXER_FULL_VERBOSE
+
+            log("New line: " + processed_string);
         }
 
         std::smatch matches;
@@ -227,9 +230,7 @@ std::optional<Token> Lexer::skip_comment(const std::string &start_string)
         {
             for (int i = 0; i < matches.size(); i++)
             {
-#ifdef LEXER_FULL_VERBOSE
-                std::cout << "Matched control symbol " << matches[i] << " in position " << matches.position(i) << std::endl;
-#endif // LEXER_FULL_VERBOSE
+                log_match("controls", matches[i], matches.position(i));
 
                 char ch = processed_string[matches.position(i)];
                 if (ch == '(')
@@ -268,9 +269,8 @@ std::optional<Token> Lexer::next()
             {
                 std::getline(_input_file, _current_line);
                 _line_number++;
-#ifdef LEXER_FULL_VERBOSE
-                std::cout << "New line: " << _current_line << std::endl;
-#endif // LEXER_FULL_VERBOSE
+
+                log("New line: " + _current_line);
             }
             if (_input_file.eof() && _current_line.empty())
             {
@@ -289,25 +289,19 @@ std::optional<Token> Lexer::next()
             // save string suffix for further lexing
             if (string_start < par_comm_start && string_start < dash_comm_start)
             {
-#ifdef LEXER_FULL_VERBOSE
-                std::cout << "Found start of the string in position " << string_start << std::endl;
-#endif // LEXER_FULL_VERBOSE
+                log_match("start of the string", "", string_start);
                 suffix_start = string_start;
                 shift = 1;
             }
             else if (par_comm_start < string_start && par_comm_start < dash_comm_start)
             {
-#ifdef LEXER_FULL_VERBOSE
-                std::cout << "Found start of the comment in position " << par_comm_start << std::endl;
-#endif // LEXER_FULL_VERBOSE
+                log_match("start of the comment", "", par_comm_start);
                 suffix_start = par_comm_start;
                 shift = 2;
             }
             else if (dash_comm_start < string_start && dash_comm_start < par_comm_start)
             {
-#ifdef LEXER_FULL_VERBOSE
-                std::cout << "Found start of the dash comment in position " << dash_comm_start << std::endl;
-#endif // LEXER_FULL_VERBOSE
+                log_match("start of the dash comment", "", dash_comm_start);
                 suffix_start = dash_comm_start;
                 shift = 2;
             }
@@ -342,67 +336,49 @@ std::optional<Token> Lexer::next()
 
                 if (Token::is_keyword(str_in_lowercase))
                 {
-#ifdef LEXER_FULL_VERBOSE
-                    std::cout << "Matched keyword " << it->str() << " in position " << it->position() << std::endl;
-#endif // LEXER_FULL_VERBOSE
+                    log_match("keyword", it->str(), it->position());
                     t = Token(Token::str_to_token(str_in_lowercase), it->str(), _line_number);
                 }
                 else if (Token::is_number(it->str()))
                 {
-#ifdef LEXER_FULL_VERBOSE
-                    std::cout << "Matched number " << it->str() << " in position " << it->position() << std::endl;
-#endif // LEXER_FULL_VERBOSE
+                    log_match("number", it->str(), it->position());
                     t = Token(Token::INT_CONST, str_in_lowercase, _line_number);
                 }
                 else if (Token::is_boolean(it->str()))
                 {
-#ifdef LEXER_FULL_VERBOSE
-                    std::cout << "Matched boolean " << it->str() << " in position " << it->position() << std::endl;
-#endif // LEXER_FULL_VERBOSE
+                    log_match("boolean", it->str(), it->position());
                     t = Token(Token::BOOL_CONST, str_in_lowercase, _line_number);
                 }
                 else if (Token::is_typeid(it->str()))
                 {
-#ifdef LEXER_FULL_VERBOSE
-                    std::cout << "Matched typeid " << it->str() << " in position " << it->position() << std::endl;
-#endif // LEXER_FULL_VERBOSE
+                    log_match("typeid", it->str(), it->position());
                     t = Token(Token::TYPEID, it->str(), _line_number);
                 }
                 else if (Token::is_object(it->str()))
                 {
-#ifdef LEXER_FULL_VERBOSE
-                    std::cout << "Matched object " << it->str() << " in position " << it->position() << std::endl;
-#endif // LEXER_FULL_VERBOSE
+                    log_match("object", it->str(), it->position());
                     t = Token(Token::OBJECTID, it->str(), _line_number);
                 }
                 else if (Token::is_close_par_comment(it->str()))
                 {
-#ifdef LEXER_FULL_VERBOSE
-                    std::cout << "Matched *) " << it->str() << " in position " << it->position() << std::endl;
-#endif // LEXER_FULL_VERBOSE
+                    log_match("", it->str(), it->position());
                     t = Token(Token::ERROR, "Unmatched *)", _line_number);
                 }
                 else if (Token::is_control_character(it->str()))
                 {
-#ifdef LEXER_FULL_VERBOSE
-                    std::cout << "Matched controls " << it->str() << " in position " << it->position() << std::endl;
-#endif // LEXER_FULL_VERBOSE
+                    log_match("controls", it->str(), it->position());
                     t = Token(Token::OPERATIONS_AND_CONTROLS, it->str(), _line_number);
                 }
                 else if (Token::is_whitespace(it->str()))
                 {
-#ifdef LEXER_FULL_VERBOSE
-                    std::cout << "Matched whitespace " << it->str() << " in position " << it->position() << std::endl;
-#endif // LEXER_FULL_VERBOSE
+                    log_match("whitespace", it->str(), it->position());
                     continue;
                 }
                 _saved_tokens.push(t);
             }
             _current_line.clear();
 
-#ifdef LEXER_FULL_VERBOSE
-            std::cout << "Start analyzing a rest of the string." << std::endl;
-#endif // LEXER_FULL_VERBOSE
+            log("Start analyzing a rest of the string.");
 
             // analyze a rest of the string
             if (suffix_start != -1)
@@ -423,9 +399,7 @@ std::optional<Token> Lexer::next()
                 }
             }
 
-#ifdef LEXER_FULL_VERBOSE
-            std::cout << "End analyzing the rest of the string." << std::endl;
-#endif // LEXER_FULL_VERBOSE
+            log("End analyzing the rest of the string.");
         }
 
         auto t = _saved_tokens.front();
