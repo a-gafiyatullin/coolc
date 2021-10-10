@@ -12,7 +12,7 @@ Code is formatted using built-in VS Code clang-format with its default style, so
 - Build debug version with <b>ASan</b>: <code>make parser-asan</code>
 - Build debug version with <b>UBSan</b>: <code>make parser-ubsan</code>
 
-Executable <code>new-lexer</code> is located in <code>bin/</code> directory.
+Executable <code>new-parser</code> is located in <code>bin/</code> directory.
 ## How to run tests:
 - Run tests with release build: <code>make dotest</code>
 - Run tests with debug version with <b>ASan</b>: <code>make dotest-asan</code>
