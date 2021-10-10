@@ -1,11 +1,11 @@
+#pragma once
+
 #include <iostream>
 #include <string>
 #include "utils/Utils.h"
 #include <map>
 #include <algorithm>
 #include <vector>
-#include <sstream>
-#include <iomanip>
 
 #ifdef LEXER_FULL_VERBOSE
 #include <cassert>
@@ -85,6 +85,9 @@ namespace lexer
         // null character can be found in  _control_characters, although it is not a control character
         inline static bool is_control_character(const std::string &str) { return str[0] != 0 && _control_characters.find(str) != std::string::npos; }
         inline static bool is_close_par_comment(const std::string &str) { return str == "*)"; }
+
+        inline std::string get_type_as_str() const { return (_type != OPERATIONS_AND_CONTROLS ? _token_type_to_str[_type] : ""); };
+        inline int get_line_number() const { return _line_number; }
 
 #ifdef LEXER_VERBOSE
         std::string to_string() const;

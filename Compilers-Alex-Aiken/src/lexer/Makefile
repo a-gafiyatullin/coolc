@@ -1,18 +1,19 @@
 ROOT= ../..
 
-SRC	= Lexer.cpp Token.cpp
+SRC	= Lexer.cpp Token.cpp ../utils/Utils.cpp
 
 CXXINCLUDE = -I${ROOT}/include/
 LEXER_MODE = -DLEXER_STANDALONE
 
 BUILD_DIR = ${ROOT}/build
 LEXER_BUILD_DIR = ${BUILD_DIR}/lexer
+UTILS_BUILD_DIR = ${BUILD_DIR}/utils
 BIN_DIR = ${ROOT}/bin
 TEST_DIR = ${ROOT}/tests/lexer
 LIB_DIR = ${ROOT}/lib
 
-CXX = g++
-BASIC_CXXFLAGS = -std=c++17 ${CXXINCLUDE} ${LEXER_MODE}
+CXX = clang++-10
+BASIC_CXXFLAGS = -std=c++20 ${CXXINCLUDE} ${LEXER_MODE}
 CXXFLAGS = ${BASIC_CXXFLAGS} -O2
 DEBUG_CXXFLAGS = ${BASIC_CXXFLAGS} -g -O0
 LDFLAGS = 
@@ -30,7 +31,9 @@ compile-lexer: create_build_dir ${OBJS}
 
 create_build_dir:
 	rm -rf ${LEXER_BUILD_DIR}
+	rm -rf ${UTILS_BUILD_DIR}
 	mkdir -p ${LEXER_BUILD_DIR}
+	mkdir -p ${UTILS_BUILD_DIR}
 
 create_lib_dir:
 	-mkdir -p ${ROOT}/lib
@@ -44,7 +47,7 @@ lexer-ubsan: LDFLAGS = -fsanitize=undefined -g
 lexer-ubsan: lexer
 
 lexer-shared-release: LEXER_MODE =
-lexer-shared-release: CXXFLAGS += -shared -fPIC
+lexer-shared-release: CXXFLAGS += -fPIC
 lexer-shared-release: LDFLAGS = -shared -fPIC
 lexer-shared-release: create_lib_dir create_build_dir ${OBJS}
 	${CXX} ${LDFLAGS} ${OBJS} -o ${LIB_DIR}/lexer.so

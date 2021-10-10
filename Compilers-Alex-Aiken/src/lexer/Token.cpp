@@ -50,51 +50,8 @@ std::string Token::to_string() const
         }
         else if (_type == STR_CONST || _type == ERROR)
         {
-            // transform escape sequencies
-            std::string str_for_out;
-            for (int i = 0; i < _lexeme.size(); i++)
-            {
-                std::string ch = _lexeme.substr(i, 1);
-                switch (_lexeme[i])
-                {
-                case '\n':
-                    ch = "\\n";
-                    break;
-                case '\b':
-                    ch = "\\b";
-                    break;
-                case '\t':
-                    ch = "\\t";
-                    break;
-                case '\f':
-                    ch = "\\f";
-                    break;
-                case '\\':
-                    ch = "\\\\";
-                    break;
-                case '"':
-                    ch = "\\\"";
-                    break;
-                default:
-                    if (!isprint(_lexeme[i]))
-                    {
-                        std::stringstream ss;
-                        ss << '\\' << std::oct << std::setfill('0') << std::setw(3)
-                           << (int)_lexeme[i] << std::dec
-                           << std::setfill(' ');
-                        ch = ss.str();
-                    }
-                }
-                str_for_out += ch;
-            }
-            out += " \"" + str_for_out + "\"";
+            out += " " + get_printable_string(_lexeme);
         }
-#ifdef LEXER_FULL_VERBOSE
-        else
-        {
-            assert(("Token::to_string: Unexpected token type!"));
-        }
-#endif // LEXER_FULL_VERBOSE
     }
 
     return out;

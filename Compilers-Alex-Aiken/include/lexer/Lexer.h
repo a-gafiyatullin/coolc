@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Token.h"
 #include <fstream>
 #include <regex>
@@ -31,6 +33,11 @@ namespace lexer
         void append_to_string_if_can(std::string &prefix, const std::string &suffix,
                                      std::string &error_msg, int &error_line_num);
 
+#ifdef LEXER_FULL_VERBOSE
+        void log_match(const std::string &type, const std::string &str, const int &pos);
+        void log(const std::string &str);
+#endif //LEXER_FULL_VERBOSE
+
     public:
         Lexer(const std::string &input_file_name);
 
@@ -43,6 +50,9 @@ namespace lexer
          * next() returns std::nullopt for EOF.
         */
         std::optional<Token> next();
+
+        inline std::string get_file_name() const { return _file_name; }
+        inline int get_line_number() const { return _line_number; }
 
 #ifdef LEXER_VERBOSE
         std::string to_string() const;
