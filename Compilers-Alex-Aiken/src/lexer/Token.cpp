@@ -33,6 +33,11 @@ const std::vector<std::string> Token::_token_type_to_str = {
     "",
     "ERROR"};
 
+bool Token::same_token(const TOKEN_TYPE &type, const std::string &lexeme) const
+{
+    return _lexeme == lexeme && _type == type;
+}
+
 #ifdef LEXER_VERBOSE
 std::string Token::to_string() const
 {

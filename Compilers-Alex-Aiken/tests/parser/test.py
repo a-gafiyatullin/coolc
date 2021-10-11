@@ -55,29 +55,33 @@ print(bcolors.BOLD +'Reference parser: ' + bcolors.ENDC + reference_parser + '\n
 if not os.path.exists(reference_parser):
     print("Can't find reference parser!")
 
-test_num = 0
+def do_tests_in_folder_with_ext(folder, ext, header):
+    test_num = 0
 
-print(bcolors.HEADER + '-------------------- START TESTS! --------------------' + bcolors.ENDC)
-for filename in os.listdir(current_dir + '/end-to-end'):
-    test_num += 1
-    if filename.endswith(".test"):
-        result = str(test_num) + ') ' + bcolors.BOLD + filename + bcolors.ENDC
-        
-        myresult = subprocess.run([myparser, 'end-to-end/' + filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        reference_lexer_result = subprocess.Popen([reference_lexer, 'end-to-end/' + filename], stdout=subprocess.PIPE)
-        reference_parser_result = subprocess.run([reference_parser], stdin=reference_lexer_result.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if (myresult.stdout == reference_parser_result.stdout or myresult.stdout in reference_parser_result.stderr) and myresult.stderr == b'':
-            sys.stdout.write("%-55s %s\n" % (result, bcolors.OKGREEN + '[OK]' + bcolors.ENDC))
-        else:
-            sys.stdout.write("%-55s %s\n\n" % (result, bcolors.FAIL +  '[FAILED]' + bcolors.ENDC))
-            print(bcolors.BOLD + 'new-parser-stdout:        ' + bcolors.ENDC, end='')
-            print(myresult.stdout)
-            print(bcolors.BOLD + 'new-parser-stderr:        ' + bcolors.ENDC, end='')
-            print(myresult.stderr)
-            print(bcolors.BOLD + 'reference-parser-stdout: ' + bcolors.ENDC, end='')
-            print(reference_parser_result.stdout)
-            print(bcolors.BOLD + 'reference-parser-stderr: ' + bcolors.ENDC, end='')
-            print(reference_parser_result.stderr)
-            break
+    print(bcolors.HEADER + '-------------------- START ' + header + ' TESTS! --------------------' + bcolors.ENDC)
+    for filename in os.listdir(folder):
+        test_num += 1
+        if filename.endswith(ext):
+            result = str(test_num) + ') ' + bcolors.BOLD + filename + bcolors.ENDC
 
-print(bcolors.HEADER + '-------------------- END TESTS! --------------------' + bcolors.ENDC)
+            myresult = subprocess.run([myparser, folder + filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            reference_lexer_result = subprocess.Popen([reference_lexer, folder + filename], stdout=subprocess.PIPE)
+            reference_parser_result = subprocess.run([reference_parser], stdin=reference_lexer_result.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if (myresult.stdout == reference_parser_result.stdout or myresult.stdout in reference_parser_result.stderr) and myresult.stderr == b'':
+                sys.stdout.write("%-55s %s\n" % (result, bcolors.OKGREEN + '[OK]' + bcolors.ENDC))
+            else:
+                sys.stdout.write("%-55s %s\n\n" % (result, bcolors.FAIL +  '[FAILED]' + bcolors.ENDC))
+                print(bcolors.BOLD + 'new-parser-stdout:        ' + bcolors.ENDC, end='')
+                print(myresult.stdout)
+                print(bcolors.BOLD + 'new-parser-stderr:        ' + bcolors.ENDC, end='')
+                print(myresult.stderr)
+                print(bcolors.BOLD + 'reference-parser-stdout: ' + bcolors.ENDC, end='')
+                print(reference_parser_result.stdout)
+                print(bcolors.BOLD + 'reference-parser-stderr: ' + bcolors.ENDC, end='')
+                print(reference_parser_result.stderr)
+                break
+
+    print(bcolors.HEADER + '-------------------- END TESTS! --------------------' + bcolors.ENDC)
+
+do_tests_in_folder_with_ext(current_dir + '/end-to-end/', '.test', 'end-to-end')
+do_tests_in_folder_with_ext(root_dir + '/examples/', '.cl', 'examples')

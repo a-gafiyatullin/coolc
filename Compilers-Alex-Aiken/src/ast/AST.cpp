@@ -67,12 +67,6 @@ namespace ast
         {
             return "_mul";
         }
-#ifdef PARSER_FULL_VERBOSE
-        else
-        {
-            static_assert(false && "get_binary_op_name: unexpexted operation!");
-        }
-#endif // PARSER_FULL_VERBOSE
     }
 
     void dump_binary_expr(const int &offset, const BinaryExpression &expr)
@@ -107,12 +101,6 @@ namespace ast
         {
             return "_comp";
         }
-#ifdef PARSER_FULL_VERBOSE
-        else
-        {
-            static_assert(false && "get_unary_op_name: unexpexted operation!");
-        }
-#endif // PARSER_FULL_VERBOSE
     }
 
     void dump_unary_expr(const int &offset, const UnaryExpression &expr)

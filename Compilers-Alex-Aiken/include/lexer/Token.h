@@ -89,6 +89,7 @@ namespace lexer
         inline std::string get_type_as_str() const { return (_type != OPERATIONS_AND_CONTROLS ? _token_type_to_str[_type] : ""); };
         inline int get_line_number() const { return _line_number; }
 
+        bool same_token(const TOKEN_TYPE &type, const std::string &lexeme) const;
 #ifdef LEXER_VERBOSE
         std::string to_string() const;
 

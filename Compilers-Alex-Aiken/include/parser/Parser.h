@@ -1,5 +1,6 @@
 #include "lexer/Lexer.h"
 #include "ast/AST.h"
+#include <stack>
 
 #ifdef PARSER_FULL_VERBOSE
 #include <cassert>
@@ -57,7 +58,7 @@ namespace parser
         void report_error();
         // check type of the _next_token and report error if it has unexpected type
         bool check_next_and_report_error(const lexer::Token::TOKEN_TYPE &expected_type,
-                                         const std::string &expected_lexeme = "");
+                                         const std::string &expected_lexeme);
 
         // main parse methods
         std::shared_ptr<ast::Class> parse_class();
@@ -98,9 +99,16 @@ namespace parser
         std::shared_ptr<ast::Expression> parse_bool();
 
         // parse arithmetic or logical operators
-        int _min_precedence; // prevent right recursion for left associative operators
+        std::stack<int> _precedence_level; // prevent right recursion for left associative operators
 
+        // operators precedence control
         int precedence_level(const std::string &oper, const lexer::Token::TOKEN_TYPE &type) const;
+        inline void save_precedence_level() { _precedence_level.push(-1); };
+        void restore_precedence_level();
+        int current_precedence_level() const;
+        void set_precedence_level(const int &lvl);
+        void push_precedence_level(const int &lvl);
+
         bool token_is_left_assoc_operator() const;
         bool token_is_non_assoc_operator() const;
         template <class T>
@@ -120,7 +128,7 @@ namespace parser
 #endif // PARSER_FULL_VERBOSE
 
     public:
-        Parser(const std::shared_ptr<lexer::Lexer> &lexer) : _lexer(lexer), _next_token(_lexer->next()), _min_precedence(-1) {}
+        Parser(const std::shared_ptr<lexer::Lexer> &lexer) : _lexer(lexer), _next_token(_lexer->next()) { _precedence_level.push(-1); }
 
         std::shared_ptr<ast::Program> parse_program();
     };
@@ -183,11 +191,10 @@ namespace parser
         auto oper = _next_token.value().get_value();
         auto type = _next_token.value().get_type();
 
-        if (precedence_level(oper, type) <= _min_precedence)
+        if (precedence_level(oper, type) <= current_precedence_level())
             return lhs;
 
-        int prev_precedence = _min_precedence;
-        _min_precedence = precedence_level(oper, type);
+        push_precedence_level(precedence_level(oper, type));
 
         PARSER_FULL_VERBOSE_ONLY(log_enter("parse_operators"));
         std::shared_ptr<ast::Expression> res_expr = nullptr;
@@ -199,7 +206,7 @@ namespace parser
         return_if_false(!(rhs == nullptr));
 
         return_if_eof();
-        _min_precedence = prev_precedence;
+        restore_precedence_level();
         if (token_is_left_assoc_operator() || token_is_non_assoc_operator())
         {
             if (token_is_non_assoc_operator() && _next_token.value().get_value() == oper)
