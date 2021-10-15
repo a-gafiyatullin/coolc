@@ -128,8 +128,11 @@ std::shared_ptr<ast::Class> Parser::parse_class()
     }
 
     advance_else_return(check_next_and_report_error(lexer::Token::OPERATIONS_AND_CONTROLS, "{"));
-    bool result = parse_list<std::shared_ptr<ast::Feature>, &Parser::parse_feature>(class_->_features, lexer::Token::OBJECTID);
-    return_if_false(result);
+    if (!_next_token.value().same_token(lexer::Token::OPERATIONS_AND_CONTROLS, "}"))
+    {
+        bool result = parse_list<std::shared_ptr<ast::Feature>, &Parser::parse_feature>(class_->_features, lexer::Token::OBJECTID);
+        return_if_false(result);
+    }
     advance_else_return(check_next_and_report_error(lexer::Token::OPERATIONS_AND_CONTROLS, "}"));
     advance_else_return(check_next_and_report_error(lexer::Token::OPERATIONS_AND_CONTROLS, ";"));
 
@@ -551,7 +554,6 @@ bool Parser::parse_dispatch_list(std::vector<std::shared_ptr<ast::Expression>> &
 
     if (!_next_token.value().same_token(lexer::Token::OPERATIONS_AND_CONTROLS, ")"))
     {
-        // one argument before the first comma
         bool result = parse_list<std::shared_ptr<ast::Expression>, &Parser::parse_expr>(list,
                                                                                         lexer::Token::OPERATIONS_AND_CONTROLS, ",",
                                                                                         true);
