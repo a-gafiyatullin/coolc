@@ -84,3 +84,92 @@ Algorithm sketch:
         - <b>T[A, $] = α</b>
 - If any entry in the parsing table is multiply defined then <b>G</b> is not <b>LL(1)</b>. A grammar is defenitely not <b>LL(1)</b> if it is not left factored, is left recursive and ambiguous.
 - Most programming languages GFGs are not <b>LL(1)</b>.
+
+# 07-05: Bottom-Up Parsing
+- Bottom-up parsing is more general than (deterministic) top-down parsing
+    - And just as efficient;
+    - Builds on ideas in top-down parsing.
+- Bottom-up is the preffered method;
+- Bottom-up parsers don't need left-factored grammars;
+- Bottom up parsing <b>reduces</b> a string to the start symbol by inverting productions;
+- The productions, read backwards, trace a rightmost derivation;
+
+- A bootom-up parser traces a rightmost derivation in reverse;
+
+# 07-06: Shift-Reduce Parsing
+- Let <b>αβω</b> be a step of a bottom-up parse;
+- Assume the next reduction is by <b>X -> β</b>;
+- Then <b>ω</b> is a string of terminals.
+
+Idea: Slpit string into two substrings
+- Right substring is as yet unexamined by parsing;
+- Left substring has terminals and non-terminals;
+- The dividing point is marked by a |.
+
+<b>Shift</b>: Move | one place to the right
+- Shift a terminal to the left string (read a terminal).
+
+<b>Reduce</b>: Apply an inverse production at the right end of the left string.
+- If <b>A -> xy</b> is a production, then <b>Cbxy | ijk -> CbA | ijk</b>.
+
+Left string can be implemented by a stack
+- Top of the stack is the |.
+
+Shift pushes a terminal on the stack
+
+Reduce
+- pops symbols off of the stack;
+- pushes a non-terminal on the stack.
+
+In a given state, more than one action (shift or reduce) may lead to a valid parse.
+
+If it is legal to shift or reduce, there is a <b>shift-reduce</b> conflict.
+
+If it legal to reduce by two different productions, there is a <b>reduce-reduce</b> conflict.
+
+# 08-01: Handles
+<b>Intuition</b>: Want to reduce only if the result can still be reduced to the start symbol.
+
+Assume a rightmost derivation <b>S ->* αXω -> αβω</b>.
+
+Then <b>αβ</b> is a <b>handle</b> of <b>αβω</b>.
+
+Handles formalize the intuition
+- A handle is a reduction that also allows further reductions back to the start symbol.
+
+We only want to reduce at handles.
+
+In shift-reduce parsing, handles appear only at the top of the stack, never inside.
+
+Handles are never to the left of the rightmost non-terminal
+- Therefore, shift-reduce moves are sufficient; the | need never move left.
+
+Bottom-up parsing algorithms are based on recognizing handles.
+
+# 08-02: Recognizing Handles
+<b>α</b> is a <b>viable prefix</b> if there is an <b>ω</b> such that <b>α | ω</b> is a state of a shift-reduce parser.
+- A viable prefix does not extend past the right end of the handle;
+- It's a viable prefix because it is a prefix of the handle;
+- As long as a parser has viable prefixes on the stack no parsing error has been detected.
+
+For any grammar, the set of viable prefixes is a regular language.
+
+An <b>item</b> is a production with a <b>"."</b> somewhere on the rhs.
+
+The only item for <b>X -> ε</b> is <b>X -> .</b>
+
+Items are ofter called <b>LR(0) items</b>.
+
+The stack may have many prefixes of rhs's:<br>
+<b>Prefix(1) Prefix(2) ... Prefix(n-1) Prefix(n)</b>
+
+Let <b>Prefix(i)</b> be a prefix of rhs of <b>X(i) -> α(i)</b>:
+- <b>Prefix(i)</b> will eventually reduce to <b>X(i)</b>;
+- The missing part of <b>α(i-1)</b> start with <b>X(i)</b>;
+- i.e <b>X(i-1) -> Prefix(i-1)X(i)β</b> for some <b>β</b>.
+
+Recursively, <b>Prefix(k+1) ... Prefix(n)</b> eventually reduces to the missing part of <b>α(k)</b>.
+
+<b>Idea</b>: To recognize viable prefixes, we must:
+- Recognize a sequence of partial rhs's of productions, where
+- Each partial rhs can eventually reduce to part of the missing suffix of its predecessor.
