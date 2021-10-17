@@ -173,3 +173,64 @@ Recursively, <b>Prefix(k+1) ... Prefix(n)</b> eventually reduces to the missing 
 <b>Idea</b>: To recognize viable prefixes, we must:
 - Recognize a sequence of partial rhs's of productions, where
 - Each partial rhs can eventually reduce to part of the missing suffix of its predecessor.
+
+# 08-03: Recognizing Viable Prefixes
+1. Add a dummy production <b>S' -> S</b> to <b>G</b>;
+2. The NFA states are the items of <b>G</b>
+    - Including the extra production
+3. For item <b>E -> α.Xβ</b> add transition <b>E -> α.Xβ</b> ->(<b>X</b>) <b>E -> αX.β</b>
+4. For item <b>E -> α.Xβ</b> and production <b>X -> γ</b> add
+    - <b>E -> α.Xβ</b> ->(<b>ε</b>) <b>X -> .γ</b>
+5. Every state is an accepting state
+6. Start state is <b>S' -> .S</b>
+
+# 08-04: Valid Items
+Item <b>X -> β.γ</b> is valid for a viable prefix <b>αβ</b> if <b>S' ->* αXω -> αβγω</b> by a right-most derivation.
+
+After parsing <b>αβ</b>, the valid items are the possible tops of the stack of items.
+
+An item <b>I</b> is valid for a viable prefix <b>α</b> if the DFA recognizing viable prefixes terminates on input <b>α</b> in a state <b>s</b> containing <b>I</b>
+
+The items in <b>s</b> describe what the top of item stack might be after reading input <b>α</b>.
+
+# 08-05: SLR Parsing
+LR(0) Parsing: Assume
+- stack contains <b>α</b>
+- next input is <b>t</b>
+- DFA on input <b>α</b> terminates in state <b>s</b>
+
+Reduce by <b>X -> β</b> if 
+- <b>s</b> contains item <b>X -> β.</b> 
+
+Shift if
+- <b>s</b> contains item <b>X -> β.tω</b>
+- equivalent to saying <b>s</b> has a transition labeled <b>t</b>
+
+LR(0) has a reduce/reduce conflict if
+- Any state has two reduce items:
+- <b>X -> β.</b> and <b>X -> ω.</b>
+
+LR(0) has a shift/reduce conflict if:
+- Any state has a reduce item and a shift item:
+- <b>X -> β.</b> and <b>Y -> ω.tδ</b>
+
+SLR Idea:
+
+Reduce by <b>X -> β</b> if 
+- <b>s</b> contains item <b>X -> β.</b>
+- <b>t ∈ Follow(X)</b>
+
+SLR Parsing Algorithm:
+1. Let M be DFA for viable prefix of G
+2. Let |x1..xn$ be initial configuration
+3. Repeat until configuration is S|$
+    - Let α|ω be current configuration
+    - Run M on current stack α
+    - if M rejects α, report parsing error
+        - Stack α is not a viable prefix
+    - if M accepts α with item I, let a be next input
+        - Shift if <b>X -> β.aγ ∈ I</b>
+        - Reduce if <b>X -> β.</b> and <b>a ∈ Follow(X)</b>
+        - Report parsing error if neither applies
+
+if there is a conflict in the last step, grammar is not SLR(k)
