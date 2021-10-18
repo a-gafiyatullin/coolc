@@ -234,3 +234,44 @@ SLR Parsing Algorithm:
         - Report parsing error if neither applies
 
 if there is a conflict in the last step, grammar is not SLR(k)
+
+# 08-07: SLR Improvements
+- Rerruning the viable prefix automaton on the stack at each step is wasteful
+- Remember the state of the automaton on each prefix of the stack
+- Change stack to contain pairs <b><Symbol, DFA state></b>
+- For a stack <b><sym(1), state(1)> ... <sym(n), state(n)> state(n)</b> is the final state of the DFA on <b>sym(1) ... sym(n)</b>
+- Detail: The bottom of the stack is <b><any, start></b> where
+    - <b>any</b> is any dummy symbol
+    - <b>start</b> is the start state of the DFA
+- Define <b>goto[i, A] = j</b> if <b>state(i) ->A state(j)</b>
+- goto is just the transition function of the DFA
+    - one of two parsing tables
+
+For each state <b>s(i)</b> and terminal <b>a</b>
+- If <b>s(i)</b> has item <b>X -> α.aβ</b> and <b>goto[i, a] = j</b> then <b>action[i, a] = shift j</b>
+- If <b>s(i)</b> has item <b>X -> α.</b> and <b>a ∈ Follow(X)</b> and <b>X != S'</b> then <b>action[i, a] = reduce X -> α</b>
+- If <b>s(i)</b> has item <b>S' -> S.</b> then <b>action[i, $] = accept</b>
+- Otherwise, <b>action[i, a] = error</b>
+
+Algorithm:
+
+<code> Let I = w$ be initial input<br>
+Let j = 0<br>
+Let DFA state 1 have item S' -> .S<br>
+Let stack = <dummy, 1><br>
+&emsp;repeat<br>
+&emsp;&emsp;case action[top_state(stack), I[j]] of<br>
+&emsp;&emsp;&emsp;shift k: push <I[j++], k><br>
+&emsp;&emsp;&emsp;reduce X -> A:<br>
+&emsp;&emsp;&emsp;&emsp;pop |A| pairs,<br>
+&emsp;&emsp;&emsp;&emsp;push <X, goto[top_state(stack), X]><br>
+&emsp;&emsp;&emsp;accept: halt normally<br>
+&emsp;&emsp;&emsp;error: halt and report error<br>
+</code>
+
+- Some common constructs are not SLR(1)
+- <b>LR(1)</b> is more powerful
+    - Build lopkahead into the items
+    - <b>[T -> .int*T,$]</b> means
+        - After seeing <b>T -> int * T</b> reduce if lookahead is <b>$</b>
+    - More accurate than just uisng follow sets
