@@ -255,7 +255,8 @@ For each state <b>s(i)</b> and terminal <b>a</b>
 
 Algorithm:
 
-<code> Let I = w$ be initial input<br>
+<b>
+Let I = w$ be initial input<br>
 Let j = 0<br>
 Let DFA state 1 have item S' -> .S<br>
 Let stack = <dummy, 1><br>
@@ -267,7 +268,7 @@ Let stack = <dummy, 1><br>
 &emsp;&emsp;&emsp;&emsp;push <X, goto[top_state(stack), X]><br>
 &emsp;&emsp;&emsp;accept: halt normally<br>
 &emsp;&emsp;&emsp;error: halt and report error<br>
-</code>
+</b>
 
 - Some common constructs are not SLR(1)
 - <b>LR(1)</b> is more powerful
