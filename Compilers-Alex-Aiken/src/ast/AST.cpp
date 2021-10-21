@@ -51,7 +51,7 @@ namespace ast
         {
             return "_lt";
         }
-        else if constexpr (std::is_same_v<T, MinusExpression>)
+        else if (std::is_same_v<T, MinusExpression>)
         {
             return "_sub";
         }
@@ -69,8 +69,11 @@ namespace ast
         }
     }
 
-    void dump_binary_expr(const int &offset, const BinaryExpression &expr)
+    void dump_binary_expr(const BinaryExpression &expr, const int &line, const int &offset)
     {
+        std::string field(offset, ' ');
+        std::cout << field << "#" << line << std::endl;
+
         std::visit(overloaded{[&](const BinaryExpr auto &binary_expr)
                               {
                                   std::cout << std::string(offset, ' ')
@@ -103,8 +106,11 @@ namespace ast
         }
     }
 
-    void dump_unary_expr(const int &offset, const UnaryExpression &expr)
+    void dump_unary_expr(const UnaryExpression &expr, const int &line, const int &offset)
     {
+        std::string field(offset, ' ');
+        std::cout << field << "#" << line << std::endl;
+
         std::visit(overloaded{[&](const UnaryExpr auto &unary_expr)
                               {
                                   std::cout << std::string(offset, ' ')
@@ -150,6 +156,89 @@ namespace ast
         std::cout << field << ")" << std::endl;
     }
 
+    void dump_bool_expression(const BoolExpression &bool_expr, const int &line, const int &offset)
+    {
+        dump_line_and_name(offset, line, "_bool");
+        std::cout << std::string(offset + 2, ' ') << (int)bool_expr._value << std::endl;
+    }
+
+    void dump_string_expression(const StringExpression &str, const int &line, const int &offset)
+    {
+        dump_line_and_name(offset, line, "_string");
+        std::cout << std::string(offset + 2, ' ') << get_printable_string(str._string) << std::endl;
+    }
+
+    void dump_int_expression(const IntExpression &number, const int &line, const int &offset)
+    {
+        dump_line_and_name(offset, line, "_int");
+        std::cout << std::string(offset + 2, ' ') << number._value << std::endl;
+    }
+
+    void dump_object_expression(const ObjectExpression &object, const int &line, const int &offset)
+    {
+        dump_line_and_name(offset, line, "_object");
+        std::cout << std::string(offset + 2, ' ') << object._object << std::endl;
+    }
+
+    void dump_new_expression(const NewExpression &new_, const int &line, const int &offset)
+    {
+        dump_line_and_name(offset, line, "_new");
+        dump_type(offset + 2, new_._type);
+    }
+
+    void dump_case_expression(const CaseExpression &case_, const int &line, const int &offset)
+    {
+        dump_line_and_name(offset, line, "_typcase");
+        dump_expression(offset + 2, case_._expr);
+        std::for_each(case_._cases.begin(), case_._cases.end(), [&offset](const auto &branch)
+                      { dump_case(offset + 2, branch); });
+    }
+
+    void dump_let_expression(const LetExpression &let, const int &line, const int &offset)
+    {
+        dump_line_and_name(offset, line, "_let");
+        dump_object(offset + 2, let._object);
+        dump_type(offset + 2, let._type);
+        dump_expression(offset + 2, let._expr);
+        dump_expression(offset + 2, let._body_expr);
+    }
+
+    void dump_list_expression(const ListExpression &list, const int &line, const int &offset)
+    {
+        dump_line_and_name(offset, line, "_block");
+        std::for_each(list._exprs.begin(), list._exprs.end(), [&offset](const auto &e)
+                      { dump_expression(offset + 2, e); });
+    }
+
+    void dump_while_expression(const WhileExpression &while_, const int &line, const int &offset)
+    {
+        dump_line_and_name(offset, line, "_loop");
+        dump_expression(offset + 2, while_._predicate);
+        dump_expression(offset + 2, while_._body_expr);
+    }
+
+    void dump_if_expression(const IfExpression &if_, const int &line, const int &offset)
+    {
+        dump_line_and_name(offset, line, "_cond");
+        dump_expression(offset + 2, if_._predicate);
+        dump_expression(offset + 2, if_._true_path_expr);
+        dump_expression(offset + 2, if_._false_path_expr);
+    }
+
+    void dump_dispatch_expression(const DispatchExpression &dispatch, const int &line, const int &offset)
+    {
+        std::string field(offset, ' ');
+        std::cout << field << "#" << line << std::endl;
+        dump_dispatch(offset, dispatch);
+    }
+
+    void dump_assign_expression(const AssignExpression &assign, const int &line, const int &offset)
+    {
+        dump_line_and_name(offset, line, "_assign");
+        dump_object(offset + 2, assign._object);
+        dump_expression(offset + 2, assign._expr);
+    }
+
     void dump_expression(const int &offset, const std::shared_ptr<Expression> &expr)
     {
         if (expr == nullptr)
@@ -162,102 +251,59 @@ namespace ast
 
         std::visit(overloaded{[&](const BoolExpression &bool_expr)
                               {
-                                  dump_line_and_name(offset, expr->_line_number, "_bool");
-
-                                  std::cout << std::string(offset + 2, ' ') << (int)bool_expr._value << std::endl;
+                                  dump_bool_expression(bool_expr, expr->_line_number, offset);
                               },
                               [&](const StringExpression &str)
                               {
-                                  dump_line_and_name(offset, expr->_line_number, "_string");
-
-                                  std::cout << std::string(offset + 2, ' ') << get_printable_string(str._string) << std::endl;
+                                  dump_string_expression(str, expr->_line_number, offset);
                               },
                               [&](const IntExpression &number)
                               {
-                                  dump_line_and_name(offset, expr->_line_number, "_int");
-
-                                  std::cout << std::string(offset + 2, ' ') << number._value << std::endl;
+                                  dump_int_expression(number, expr->_line_number, offset);
                               },
                               [&](const ObjectExpression &object)
                               {
-                                  dump_line_and_name(offset, expr->_line_number, "_object");
-
-                                  std::cout << std::string(offset + 2, ' ') << object._object << std::endl;
+                                  dump_object_expression(object, expr->_line_number, offset);
                               },
                               [&](const BinaryExpression &binary_expr)
                               {
-                                  std::string field(offset, ' ');
-                                  std::cout << field << "#" << expr->_line_number << std::endl;
-
-                                  dump_binary_expr(offset, binary_expr);
+                                  dump_binary_expr(binary_expr, expr->_line_number, offset);
                               },
                               [&](const UnaryExpression &unary_expr)
                               {
-                                  std::string field(offset, ' ');
-                                  std::cout << field << "#" << expr->_line_number << std::endl;
-
-                                  dump_unary_expr(offset, unary_expr);
+                                  dump_unary_expr(unary_expr, expr->_line_number, offset);
                               },
                               [&](const NewExpression &new_)
                               {
-                                  dump_line_and_name(offset, expr->_line_number, "_new");
-
-                                  dump_type(offset + 2, new_._type);
+                                  dump_new_expression(new_, expr->_line_number, offset);
                               },
                               [&](const CaseExpression &case_)
                               {
-                                  dump_line_and_name(offset, expr->_line_number, "_typcase");
-
-                                  dump_expression(offset + 2, case_._expr);
-                                  std::for_each(case_._cases.begin(), case_._cases.end(),
-                                                [&offset](const auto &branch)
-                                                { dump_case(offset + 2, branch); });
+                                  dump_case_expression(case_, expr->_line_number, offset);
                               },
                               [&](const LetExpression &let)
                               {
-                                  dump_line_and_name(offset, expr->_line_number, "_let");
-
-                                  dump_object(offset + 2, let._object);
-                                  dump_type(offset + 2, let._type);
-                                  dump_expression(offset + 2, let._expr);
-                                  dump_expression(offset + 2, let._body_expr);
+                                  dump_let_expression(let, expr->_line_number, offset);
                               },
                               [&](const ListExpression &list)
                               {
-                                  dump_line_and_name(offset, expr->_line_number, "_block");
-
-                                  std::for_each(list._exprs.begin(), list._exprs.end(),
-                                                [&offset](const auto &e)
-                                                { dump_expression(offset + 2, e); });
+                                  dump_list_expression(list, expr->_line_number, offset);
                               },
                               [&](const WhileExpression &while_)
                               {
-                                  dump_line_and_name(offset, expr->_line_number, "_loop");
-
-                                  dump_expression(offset + 2, while_._predicate);
-                                  dump_expression(offset + 2, while_._body_expr);
+                                  dump_while_expression(while_, expr->_line_number, offset);
                               },
                               [&](const IfExpression &if_)
                               {
-                                  dump_line_and_name(offset, expr->_line_number, "_cond");
-
-                                  dump_expression(offset + 2, if_._predicate);
-                                  dump_expression(offset + 2, if_._true_path_expr);
-                                  dump_expression(offset + 2, if_._false_path_expr);
+                                  dump_if_expression(if_, expr->_line_number, offset);
                               },
                               [&](const DispatchExpression &dispatch)
                               {
-                                  std::string field(offset, ' ');
-                                  std::cout << field << "#" << expr->_line_number << std::endl;
-
-                                  dump_dispatch(offset, dispatch);
+                                  dump_dispatch_expression(dispatch, expr->_line_number, offset);
                               },
                               [&](const AssignExpression &assign)
                               {
-                                  dump_line_and_name(offset, expr->_line_number, "_assign");
-
-                                  dump_object(offset + 2, assign._object);
-                                  dump_expression(offset + 2, assign._expr);
+                                  dump_assign_expression(assign, expr->_line_number, offset);
                               }},
                    expr->_data);
 
@@ -314,12 +360,12 @@ namespace ast
         std::cout << field << ")" << std::endl;
     }
 
-    void dump_program(const std::shared_ptr<Program> &program)
+    void dump_program(const Program &program)
     {
 
-        dump_line_and_name(0, program->_line_number, "_program");
+        dump_line_and_name(0, program._line_number, "_program");
 
-        std::for_each(program->_classes.begin(), program->_classes.end(),
+        std::for_each(program._classes.begin(), program._classes.end(),
                       [](const auto &class_)
                       { dump_class(2, class_); });
     }

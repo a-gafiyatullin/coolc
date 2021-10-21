@@ -5,7 +5,7 @@ using namespace parser;
 #ifdef PARSER_FULL_VERBOSE
 void Parser::log(const std::string &msg) const
 {
-    std::cout << std::string(level, ' ') << msg << std::endl;
+    std::cout << std::string(_level, ' ') << msg << std::endl;
 }
 
 void Parser::log_enter(const std::string &msg)
@@ -13,21 +13,21 @@ void Parser::log_enter(const std::string &msg)
     std::string line = "EOF";
     if (_next_token.has_value())
     {
-        line = std::to_string(_next_token.value().get_line_number());
+        line = std::to_string(_next_token->get_line_number());
     }
     log(line + ": Enter " + msg);
 
-    level += 4;
+    _level += 4;
 }
 
 void Parser::log_exit(const std::string &msg)
 {
-    level -= 4;
+    _level -= 4;
 
     std::string line = "EOF";
     if (_next_token.has_value())
     {
-        line = std::to_string(_next_token.value().get_line_number());
+        line = std::to_string(_next_token->get_line_number());
     }
     log(line + ": Exit " + msg);
 }
@@ -49,8 +49,9 @@ void Parser::report_error()
     {
         auto token = _next_token.value();
         auto type = token.get_type();
+
         _error = "\"" + _lexer->get_file_name() + "\", line " + std::to_string(token.get_line_number()) + ": syntax error at or near ";
-        if (type == lexer::Token::OPERATIONS_AND_CONTROLS)
+        if (type >= lexer::Token::SEMICOLON && type <= lexer::Token::COMMA)
         {
             _error += "\'" + token.get_value() + "\'";
         }
@@ -64,15 +65,12 @@ void Parser::report_error()
         }
     }
 
-    std::cout << _error << std::endl;
-    PARSER_FULL_VERBOSE_ONLY(log("Actual token: " + _next_token.value().get_value()));
+    PARSER_FULL_VERBOSE_ONLY(log("Actual token: " + _next_token->get_value() + ", actual type = " + std::to_string(_next_token->get_type())));
 }
 
-bool Parser::check_next_and_report_error(const lexer::Token::TOKEN_TYPE &expected_type,
-                                         const std::string &expected_lexeme)
+bool Parser::check_next_and_report_error(const lexer::Token::TOKEN_TYPE &expected_type)
 {
-    if (!_error.empty() || !_next_token.has_value() ||
-        !_next_token.value().same_token(expected_type, expected_lexeme))
+    if (!_error.empty() || !_next_token.has_value() || !_next_token->same_token_type(expected_type))
     {
         report_error();
         return false;
@@ -87,16 +85,16 @@ std::shared_ptr<ast::Program> Parser::parse_program()
     PARSER_FULL_VERBOSE_ONLY(log_enter("parse_program"));
 
     // check if program is empty
-    return_if_false(_next_token.has_value());
+    PARSER_RETURN_IF_FALSE(_next_token.has_value());
 
     auto program = std::make_shared<ast::Program>();
-    PARSER_VERBOSE_ONLY(program->_line_number = _next_token.value().get_line_number());
+    PARSER_VERBOSE_ONLY(program->_line_number = _next_token->get_line_number());
 
     bool result = parse_list<std::shared_ptr<ast::Class>, &Parser::parse_class>(program->_classes, lexer::Token::CLASS);
-    return_if_false(result);
+    PARSER_RETURN_IF_FALSE(result);
     if (_next_token.has_value())
     {
-        report_and_return();
+        PARSER_REPORT_AND_RETURN();
     }
 
     PARSER_FULL_VERBOSE_ONLY(log_exit("parse_program"));
@@ -108,18 +106,16 @@ std::shared_ptr<ast::Class> Parser::parse_class()
     PARSER_FULL_VERBOSE_ONLY(log_enter("parse_class"));
 
     auto class_ = std::make_shared<ast::Class>();
-    PARSER_VERBOSE_ONLY(class_->_line_number = _next_token.value().get_line_number());
+    PARSER_VERBOSE_ONLY(class_->_line_number = _next_token->get_line_number());
 
-    advance_else_return(check_next_and_report_error(lexer::Token::CLASS, _next_token.value().get_value()));
-    act_else_return(check_next_and_report_error(lexer::Token::TYPEID, _next_token.value().get_value()),
-                    class_->_type = parse_type());
+    PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::CLASS));
+    PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::TYPEID), class_->_type = parse_type());
 
-    return_if_eof();
-    if (_next_token.value().same_token(lexer::Token::INHERITS, _next_token.value().get_value()))
+    PARSER_RETURN_IF_EOF();
+    if (_next_token->same_token_type(lexer::Token::INHERITS))
     {
-        advance_else_return(check_next_and_report_error(lexer::Token::INHERITS, _next_token.value().get_value()));
-        act_else_return(check_next_and_report_error(lexer::Token::TYPEID, _next_token.value().get_value()),
-                        class_->_parent = parse_type());
+        PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::INHERITS));
+        PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::TYPEID), class_->_parent = parse_type());
     }
     else
     {
@@ -127,14 +123,14 @@ std::shared_ptr<ast::Class> Parser::parse_class()
         class_->_parent->_string = "Object";
     }
 
-    advance_else_return(check_next_and_report_error(lexer::Token::OPERATIONS_AND_CONTROLS, "{"));
-    if (!_next_token.value().same_token(lexer::Token::OPERATIONS_AND_CONTROLS, "}"))
+    PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::LEFT_CURLY_BRACKET));
+    if (!_next_token->same_token_type(lexer::Token::RIGHT_CURLY_BRACKET))
     {
         bool result = parse_list<std::shared_ptr<ast::Feature>, &Parser::parse_feature>(class_->_features, lexer::Token::OBJECTID);
-        return_if_false(result);
+        PARSER_RETURN_IF_FALSE(result);
     }
-    advance_else_return(check_next_and_report_error(lexer::Token::OPERATIONS_AND_CONTROLS, "}"));
-    advance_else_return(check_next_and_report_error(lexer::Token::OPERATIONS_AND_CONTROLS, ";"));
+    PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::RIGHT_CURLY_BRACKET));
+    PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::SEMICOLON));
 
     PARSER_VERBOSE_ONLY(class_->_file_name = _lexer->get_file_name());
 
@@ -147,54 +143,48 @@ std::shared_ptr<ast::Feature> Parser::parse_feature()
     PARSER_FULL_VERBOSE_ONLY(log_enter("parse_feature"));
 
     auto feature = std::make_shared<ast::Feature>();
-    PARSER_VERBOSE_ONLY(feature->_line_number = _next_token.value().get_line_number());
+    PARSER_VERBOSE_ONLY(feature->_line_number = _next_token->get_line_number());
 
-    act_else_return(check_next_and_report_error(lexer::Token::OBJECTID, _next_token.value().get_value()),
-                    feature->_object = parse_object());
+    PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::OBJECTID), feature->_object = parse_object());
 
-    return_if_eof();
+    PARSER_RETURN_IF_EOF();
     // check if feature is method
-    if (_next_token.value().same_token(lexer::Token::OPERATIONS_AND_CONTROLS, "("))
+    if (_next_token->same_token_type(lexer::Token::LEFT_PAREN))
     {
         feature->_base = ast::MethodFeature();
-        advance_and_return_if_eof();
+        PARSER_ADVANCE_AND_RETURN_IF_EOF();
         // parse arguments
-        if (!_next_token.value().same_token(lexer::Token::OPERATIONS_AND_CONTROLS, ")"))
+        if (!_next_token->same_token_type(lexer::Token::RIGHT_PAREN))
         {
             bool result = parse_list<std::shared_ptr<ast::Formal>,
                                      &Parser::parse_formal>(std::get<ast::MethodFeature>(feature->_base)._formals, lexer::Token::OBJECTID);
-            return_if_false(result);
+            PARSER_RETURN_IF_FALSE(result);
         }
-        advance_else_return(check_next_and_report_error(lexer::Token::OPERATIONS_AND_CONTROLS, ")"));
+        PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::RIGHT_PAREN));
     }
 
-    advance_else_return(check_next_and_report_error(lexer::Token::OPERATIONS_AND_CONTROLS, ":"));
-    act_else_return(check_next_and_report_error(lexer::Token::TYPEID, _next_token.value().get_value()),
-                    feature->_type = parse_type());
+    PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::COLON));
+    PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::TYPEID), feature->_type = parse_type());
 
-    return_if_eof();
-    auto token = _next_token.value();
-    switch (token.get_type())
+    PARSER_RETURN_IF_EOF();
+    switch (_next_token->get_type())
     {
-    case lexer::Token::OPERATIONS_AND_CONTROLS:
+    case lexer::Token::LEFT_CURLY_BRACKET:
     {
         // parse method body
-        if (token.get_value() == "{")
-        {
-            advance_and_return_if_eof();
-            act_else_return(true, feature->_expr = parse_expr());
-            advance_else_return(check_next_and_report_error(lexer::Token::OPERATIONS_AND_CONTROLS, "}"));
-        }
+        PARSER_ADVANCE_AND_RETURN_IF_EOF();
+        PARSER_ACT_ELSE_RETURN(true, feature->_expr = parse_expr());
+        PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::RIGHT_CURLY_BRACKET));
         break;
     }
     case lexer::Token::ASSIGN:
     {
-        advance_and_return_if_eof();
-        act_else_return(true, feature->_expr = parse_expr());
+        PARSER_ADVANCE_AND_RETURN_IF_EOF();
+        PARSER_ACT_ELSE_RETURN(true, feature->_expr = parse_expr());
         break;
     }
     }
-    advance_else_return(check_next_and_report_error(lexer::Token::OPERATIONS_AND_CONTROLS, ";"));
+    PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::SEMICOLON));
 
     PARSER_FULL_VERBOSE_ONLY(log_exit("parse_feature"));
     return feature;
@@ -205,19 +195,17 @@ std::shared_ptr<ast::Formal> Parser::parse_formal()
     PARSER_FULL_VERBOSE_ONLY(log_enter("parse_formal"));
 
     auto formal = std::make_shared<ast::Formal>();
-    PARSER_VERBOSE_ONLY(formal->_line_number = _next_token.value().get_line_number());
+    PARSER_VERBOSE_ONLY(formal->_line_number = _next_token->get_line_number());
 
-    act_else_return(check_next_and_report_error(lexer::Token::OBJECTID, _next_token.value().get_value()),
-                    formal->_object = parse_object());
-    advance_else_return(check_next_and_report_error(lexer::Token::OPERATIONS_AND_CONTROLS, ":"));
-    act_else_return(check_next_and_report_error(lexer::Token::TYPEID, _next_token.value().get_value()),
-                    formal->_type = parse_type());
+    PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::OBJECTID), formal->_object = parse_object());
+    PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::COLON));
+    PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::TYPEID), formal->_type = parse_type());
 
-    return_if_eof();
+    PARSER_RETURN_IF_EOF();
     // skip ',' if it is list of formals
-    if (_next_token.value().same_token(lexer::Token::OPERATIONS_AND_CONTROLS, ","))
+    if (_next_token->same_token_type(lexer::Token::COMMA))
     {
-        advance_and_return_if_eof();
+        PARSER_ADVANCE_AND_RETURN_IF_EOF();
     }
 
     PARSER_FULL_VERBOSE_ONLY(log_exit("parse_formal"));
@@ -228,15 +216,13 @@ std::shared_ptr<ast::Expression> Parser::parse_expr()
 {
     std::shared_ptr<ast::Expression> expr = nullptr;
 
-    switch (_next_token.value().get_type())
+    save_precedence_level();
+
+    switch (_next_token->get_type())
     {
     case lexer::Token::OBJECTID:
     {
-        save_precedence_level();
-
         expr = parse_expr_object();
-
-        restore_precedence_level();
         break;
     }
     case lexer::Token::INT_CONST:
@@ -256,56 +242,42 @@ std::shared_ptr<ast::Expression> Parser::parse_expr()
     }
     case lexer::Token::NOT:
     {
-        push_precedence_level(precedence_level("", lexer::Token::NOT));
-
         expr = parse_not();
-
-        restore_precedence_level();
         break;
     }
     case lexer::Token::IF:
     {
-        save_precedence_level();
-
         expr = parse_if();
-
-        restore_precedence_level();
         break;
     }
     case lexer::Token::WHILE:
     {
-        save_precedence_level();
-
         expr = parse_while();
-
-        restore_precedence_level();
         break;
     }
-    case lexer::Token::OPERATIONS_AND_CONTROLS:
+    case lexer::Token::NEG:
     {
-        save_precedence_level();
-
-        expr = parse_brackets_and_neg();
-
-        restore_precedence_level();
+        expr = parse_neg();
+        break;
+    }
+    case lexer::Token::LEFT_CURLY_BRACKET:
+    {
+        expr = parse_curly_brackets();
+        break;
+    }
+    case lexer::Token::LEFT_PAREN:
+    {
+        expr = parse_paren();
         break;
     }
     case lexer::Token::LET:
     {
-        save_precedence_level();
-
         expr = parse_let();
-
-        restore_precedence_level();
         break;
     }
     case lexer::Token::CASE:
     {
-        save_precedence_level();
-
         expr = parse_case();
-
-        restore_precedence_level();
         break;
     }
     case lexer::Token::NEW:
@@ -315,16 +287,14 @@ std::shared_ptr<ast::Expression> Parser::parse_expr()
     }
     case lexer::Token::ISVOID:
     {
-        push_precedence_level(precedence_level("", lexer::Token::ISVOID));
-
         expr = parse_isvoid();
-
-        restore_precedence_level();
         break;
     }
     default:
-        report_and_return();
+        PARSER_REPORT_AND_RETURN();
     }
+
+    restore_precedence_level();
 
     return expr == nullptr ? expr : parse_maybe_dispatch_or_oper(expr);
 }
@@ -333,18 +303,18 @@ std::shared_ptr<ast::Expression> Parser::parse_expr()
 std::shared_ptr<ast::Expression> Parser::parse_if()
 {
     PARSER_FULL_VERBOSE_ONLY(log_enter("parse_if"));
-    PARSER_VERBOSE_ONLY(int line = _next_token.value().get_line_number(););
+    PARSER_VERBOSE_ONLY(int line = _next_token->get_line_number(););
 
-    advance_and_return_if_eof();
+    PARSER_ADVANCE_AND_RETURN_IF_EOF();
     auto predicate = parse_expr();
 
-    advance_else_return(check_next_and_report_error(lexer::Token::THEN, _next_token.value().get_value()));
+    PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::THEN));
     auto true_path = parse_expr();
 
-    advance_else_return(check_next_and_report_error(lexer::Token::ELSE, _next_token.value().get_value()));
+    PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::ELSE));
     auto false_path = parse_expr();
 
-    advance_else_return(check_next_and_report_error(lexer::Token::FI, _next_token.value().get_value()));
+    PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::FI));
 
     PARSER_FULL_VERBOSE_ONLY(log_exit("parse_if"));
     return make_expr(ast::IfExpression{predicate, true_path, false_path}, PARSER_VERBOSE_LINE(line));
@@ -353,16 +323,16 @@ std::shared_ptr<ast::Expression> Parser::parse_if()
 std::shared_ptr<ast::Expression> Parser::parse_while()
 {
     PARSER_FULL_VERBOSE_ONLY(log_enter("parse_while"));
-    PARSER_VERBOSE_ONLY(int line = _next_token.value().get_line_number(););
+    PARSER_VERBOSE_ONLY(int line = _next_token->get_line_number(););
 
-    advance_and_return_if_eof();
+    PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
     auto predicate = parse_expr();
 
-    advance_else_return(check_next_and_report_error(lexer::Token::LOOP, _next_token.value().get_value()));
+    PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::LOOP));
     auto body = parse_expr();
 
-    advance_else_return(check_next_and_report_error(lexer::Token::POOL, _next_token.value().get_value()));
+    PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::POOL));
 
     PARSER_FULL_VERBOSE_ONLY(log_exit("parse_while"));
     return make_expr(ast::WhileExpression{predicate, body}, PARSER_VERBOSE_LINE(line));
@@ -371,18 +341,16 @@ std::shared_ptr<ast::Expression> Parser::parse_while()
 std::shared_ptr<ast::Expression> Parser::parse_case()
 {
     PARSER_FULL_VERBOSE_ONLY(log_enter("parse_case"));
-    PARSER_VERBOSE_ONLY(int line = _next_token.value().get_line_number(););
+    PARSER_VERBOSE_ONLY(int line = _next_token->get_line_number(););
     ast::CaseExpression case_expr;
 
-    advance_and_return_if_eof();
+    PARSER_ADVANCE_AND_RETURN_IF_EOF();
     case_expr._expr = parse_expr();
 
-    advance_else_return(check_next_and_report_error(lexer::Token::OF, _next_token.value().get_value()));
-    bool result = parse_list<std::shared_ptr<ast::Case>, &Parser::parse_one_case>(case_expr._cases,
-                                                                                  lexer::Token::OPERATIONS_AND_CONTROLS, ";",
-                                                                                  true, lexer::Token::ESAC);
-    return_if_false(result);
-    advance_else_return(check_next_and_report_error(lexer::Token::ESAC, _next_token.value().get_value()));
+    PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::OF));
+    bool result = parse_list<std::shared_ptr<ast::Case>, &Parser::parse_one_case>(case_expr._cases, lexer::Token::SEMICOLON, true, lexer::Token::ESAC);
+    PARSER_RETURN_IF_FALSE(result);
+    PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::ESAC));
 
     PARSER_FULL_VERBOSE_ONLY(log_exit("parse_case"));
     return make_expr(case_expr, PARSER_VERBOSE_LINE(line));
@@ -391,9 +359,9 @@ std::shared_ptr<ast::Expression> Parser::parse_case()
 std::shared_ptr<ast::Expression> Parser::parse_new()
 {
     PARSER_FULL_VERBOSE_ONLY(log_enter("parse_new"));
-    PARSER_VERBOSE_ONLY(int line = _next_token.value().get_line_number(););
+    PARSER_VERBOSE_ONLY(int line = _next_token->get_line_number(););
 
-    advance_and_return_if_eof();
+    PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
     PARSER_FULL_VERBOSE_ONLY(log_exit("parse_new"));
     return make_expr(ast::NewExpression{parse_type()}, PARSER_VERBOSE_LINE(line));
@@ -402,9 +370,10 @@ std::shared_ptr<ast::Expression> Parser::parse_new()
 std::shared_ptr<ast::Expression> Parser::parse_isvoid()
 {
     PARSER_FULL_VERBOSE_ONLY(log_enter("parse_isvoid"));
-    PARSER_VERBOSE_ONLY(int line = _next_token.value().get_line_number(););
+    PARSER_VERBOSE_ONLY(int line = _next_token->get_line_number(););
+    set_precedence_level(precedence_level(lexer::Token::ISVOID));
 
-    advance_and_return_if_eof();
+    PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
     PARSER_FULL_VERBOSE_ONLY(log_exit("parse_isvoid"));
     return make_expr(ast::UnaryExpression{ast::IsVoidExpression(), parse_expr()}, PARSER_VERBOSE_LINE(line));
@@ -414,15 +383,13 @@ std::shared_ptr<ast::Case> Parser::parse_one_case()
 {
     PARSER_FULL_VERBOSE_ONLY(log_enter("parse_one_case"));
     auto case_ = std::make_shared<ast::Case>();
-    PARSER_VERBOSE_ONLY(case_->_line_number = _next_token.value().get_line_number());
+    PARSER_VERBOSE_ONLY(case_->_line_number = _next_token->get_line_number());
 
-    act_else_return(check_next_and_report_error(lexer::Token::OBJECTID, _next_token.value().get_value()),
-                    case_->_object = parse_object());
-    advance_else_return(check_next_and_report_error(lexer::Token::OPERATIONS_AND_CONTROLS, ":"));
-    act_else_return(check_next_and_report_error(lexer::Token::TYPEID, _next_token.value().get_value()),
-                    case_->_type = parse_type());
-    advance_else_return(check_next_and_report_error(lexer::Token::DARROW, _next_token.value().get_value()));
-    act_else_return(true, case_->_expr = parse_expr());
+    PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::OBJECTID), case_->_object = parse_object());
+    PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::COLON));
+    PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::TYPEID), case_->_type = parse_type());
+    PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::DARROW));
+    PARSER_ACT_ELSE_RETURN(true, case_->_expr = parse_expr());
 
     PARSER_FULL_VERBOSE_ONLY(log_exit("parse_one_case"));
     return case_;
@@ -431,9 +398,10 @@ std::shared_ptr<ast::Case> Parser::parse_one_case()
 std::shared_ptr<ast::Expression> Parser::parse_not()
 {
     PARSER_FULL_VERBOSE_ONLY(log_enter("parse_not"));
-    PARSER_VERBOSE_ONLY(int line = _next_token.value().get_line_number(););
+    PARSER_VERBOSE_ONLY(int line = _next_token->get_line_number(););
+    set_precedence_level(precedence_level(lexer::Token::NOT));
 
-    advance_and_return_if_eof();
+    PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
     PARSER_FULL_VERBOSE_ONLY(log_exit("parse_not"));
     return make_expr(ast::UnaryExpression{ast::NotExpression(), parse_expr()}, PARSER_VERBOSE_LINE(line));
@@ -443,7 +411,7 @@ std::shared_ptr<ast::Expression> Parser::parse_let()
 {
     PARSER_FULL_VERBOSE_ONLY(log_enter("parse_let"));
 
-    return_if_false(check_next_and_report_error(lexer::Token::LET, _next_token.value().get_value()));
+    PARSER_RETURN_IF_FALSE(check_next_and_report_error(lexer::Token::LET));
 
     PARSER_FULL_VERBOSE_ONLY(log_exit("parse_let"));
     auto expr = parse_let_define();
@@ -457,93 +425,87 @@ std::shared_ptr<ast::Expression> Parser::parse_let_define()
     PARSER_FULL_VERBOSE_ONLY(log_enter("parse_let_define"));
     ast::LetExpression def;
 
-    advance_and_return_if_eof(); // skip "LET" or ","
-    PARSER_VERBOSE_ONLY(int line = _next_token.value().get_line_number(););
+    PARSER_ADVANCE_AND_RETURN_IF_EOF(); // skip "LET" or ","
+    PARSER_VERBOSE_ONLY(int line = _next_token->get_line_number(););
 
-    act_else_return(check_next_and_report_error(lexer::Token::OBJECTID, _next_token.value().get_value()),
-                    def._object = parse_object());
-    advance_else_return(check_next_and_report_error(lexer::Token::OPERATIONS_AND_CONTROLS, ":"));
-    act_else_return(check_next_and_report_error(lexer::Token::TYPEID, _next_token.value().get_value()),
-                    def._type = parse_type());
+    PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::OBJECTID), def._object = parse_object());
+    PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::COLON));
+    PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::TYPEID), def._type = parse_type());
 
-    return_if_eof();
-    if (_next_token.value().same_token(lexer::Token::ASSIGN, _next_token.value().get_value()))
+    PARSER_RETURN_IF_EOF();
+    if (_next_token->same_token_type(lexer::Token::ASSIGN))
     {
-        advance_and_return_if_eof();
-        act_else_return(true, def._expr = parse_expr());
+        PARSER_ADVANCE_AND_RETURN_IF_EOF();
+        PARSER_ACT_ELSE_RETURN(true, def._expr = parse_expr());
     }
 
-    if (_next_token.value().same_token(lexer::Token::IN, _next_token.value().get_value()))
+    if (_next_token->same_token_type(lexer::Token::IN))
     {
-        advance_and_return_if_eof();
-        act_else_return(true, def._body_expr = parse_expr());
+        PARSER_ADVANCE_AND_RETURN_IF_EOF();
+        PARSER_ACT_ELSE_RETURN(true, def._body_expr = parse_expr());
 
         PARSER_FULL_VERBOSE_ONLY(log_exit("parse_let_define for IN"));
         return make_expr(def, PARSER_VERBOSE_LINE(line));
     }
 
-    act_else_return(check_next_and_report_error(lexer::Token::OPERATIONS_AND_CONTROLS, ","),
-                    def._body_expr = parse_let_define());
+    PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::COMMA), def._body_expr = parse_let_define());
 
     PARSER_FULL_VERBOSE_ONLY(log_exit("parse_let_define"));
     return make_expr(def, PARSER_VERBOSE_LINE(line));
 }
 
-std::shared_ptr<ast::Expression> Parser::parse_brackets_and_neg()
+std::shared_ptr<ast::Expression> Parser::parse_neg()
 {
-    PARSER_FULL_VERBOSE_ONLY(log_enter("parse_brackets_and_neg"));
-    PARSER_VERBOSE_ONLY(int line = _next_token.value().get_line_number(););
+    PARSER_FULL_VERBOSE_ONLY(log_enter("parse_neg"));
+    PARSER_VERBOSE_ONLY(int line = _next_token->get_line_number(););
+    set_precedence_level(precedence_level(lexer::Token::NEG));
 
-    auto oper = _next_token.value().get_value();
-    if (oper == "~")
-    {
-        advance_and_return_if_eof();
+    PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
-        set_precedence_level(precedence_level("~", lexer::Token::OPERATIONS_AND_CONTROLS));
+    auto expr = parse_expr();
 
-        auto expr = parse_expr();
+    PARSER_FULL_VERBOSE_ONLY(log_exit("parse_neg"));
+    return make_expr(ast::UnaryExpression{ast::NegExpression(), expr}, PARSER_VERBOSE_LINE(line));
+}
 
-        PARSER_FULL_VERBOSE_ONLY(log_exit("parse_brackets_and_neg for ~"));
-        return make_expr(ast::UnaryExpression{ast::NegExpression(), expr}, PARSER_VERBOSE_LINE(line));
-    }
+std::shared_ptr<ast::Expression> Parser::parse_paren()
+{
+    PARSER_FULL_VERBOSE_ONLY(log_enter("parse_paren"));
+    PARSER_VERBOSE_ONLY(int line = _next_token->get_line_number(););
+
+    PARSER_ADVANCE_AND_RETURN_IF_EOF();
+
+    auto expr = parse_expr();
+    PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::RIGHT_PAREN));
+
+    PARSER_FULL_VERBOSE_ONLY(log_exit("parse_paren"));
+    return expr;
+}
+
+std::shared_ptr<ast::Expression> Parser::parse_curly_brackets()
+{
+    PARSER_FULL_VERBOSE_ONLY(log_enter("parse_brackets"));
+    PARSER_VERBOSE_ONLY(int line = _next_token->get_line_number(););
+
     // parse block
-    else if (oper == "{")
-    {
-        ast::ListExpression expr_list;
+    ast::ListExpression expr_list;
 
-        advance_and_return_if_eof();
+    PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
-        bool result = parse_list<std::shared_ptr<ast::Expression>, &Parser::parse_expr>(expr_list._exprs,
-                                                                                        lexer::Token::OPERATIONS_AND_CONTROLS, ";",
-                                                                                        true, lexer::Token::ERROR, "}");
-        return_if_false(result);
-        advance_else_return(check_next_and_report_error(lexer::Token::OPERATIONS_AND_CONTROLS, "}"));
+    bool result = parse_list<std::shared_ptr<ast::Expression>, &Parser::parse_expr>(expr_list._exprs, lexer::Token::SEMICOLON, true, lexer::Token::RIGHT_CURLY_BRACKET);
+    PARSER_RETURN_IF_FALSE(result);
+    PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::RIGHT_CURLY_BRACKET));
 
-        PARSER_FULL_VERBOSE_ONLY(log_exit("parse_brackets_and_neg for {"));
-        return make_expr(expr_list, PARSER_VERBOSE_LINE(line));
-    }
-    else if (oper == "(")
-    {
-        advance_and_return_if_eof();
-
-        auto expr = parse_expr();
-        advance_else_return(check_next_and_report_error(lexer::Token::OPERATIONS_AND_CONTROLS, ")"));
-
-        PARSER_FULL_VERBOSE_ONLY(log_exit("parse_brackets_and_neg for ("));
-        return expr;
-    }
-    else
-    {
-        report_and_return();
-    }
+    PARSER_FULL_VERBOSE_ONLY(log_exit("parse_brackets"));
+    return make_expr(expr_list, PARSER_VERBOSE_LINE(line));
 }
 
 bool Parser::parse_dispatch_list(std::vector<std::shared_ptr<ast::Expression>> &list)
 {
     PARSER_FULL_VERBOSE_ONLY(log_enter("parse_dispatch_list"));
 
-    PARSER_FULL_VERBOSE_ONLY(log("Current token: \"" + _next_token.value().get_value() + "\""););
-    if (check_next_and_report_error(lexer::Token::OPERATIONS_AND_CONTROLS, "("))
+    PARSER_FULL_VERBOSE_ONLY(log("Current token: \"" + _next_token->get_value() + "\""););
+    if (check_next_and_report_error(lexer::Token::LEFT_PAREN))
     {
         advance_token();
     }
@@ -552,18 +514,16 @@ bool Parser::parse_dispatch_list(std::vector<std::shared_ptr<ast::Expression>> &
         return false;
     }
 
-    if (!_next_token.value().same_token(lexer::Token::OPERATIONS_AND_CONTROLS, ")"))
+    if (!_next_token->same_token_type(lexer::Token::RIGHT_PAREN))
     {
-        bool result = parse_list<std::shared_ptr<ast::Expression>, &Parser::parse_expr>(list,
-                                                                                        lexer::Token::OPERATIONS_AND_CONTROLS, ",",
-                                                                                        true);
+        bool result = parse_list<std::shared_ptr<ast::Expression>, &Parser::parse_expr>(list, lexer::Token::COMMA, true);
         if (!result)
         {
             return false;
         }
     }
-    PARSER_FULL_VERBOSE_ONLY(log("Current token: \"" + _next_token.value().get_value() + "\""););
-    if (check_next_and_report_error(lexer::Token::OPERATIONS_AND_CONTROLS, ")"))
+    PARSER_FULL_VERBOSE_ONLY(log("Current token: \"" + _next_token->get_value() + "\""););
+    if (check_next_and_report_error(lexer::Token::RIGHT_PAREN))
     {
         advance_token();
     }
@@ -579,58 +539,34 @@ bool Parser::parse_dispatch_list(std::vector<std::shared_ptr<ast::Expression>> &
 // --------------------------------------- Parse arithmetic or logical operators ---------------------------------------
 bool Parser::token_is_left_assoc_operator() const
 {
-    if (_next_token.value().get_type() != lexer::Token::OPERATIONS_AND_CONTROLS)
-    {
-        return false;
-    }
-
-    auto oper = _next_token.value().get_value();
-    return oper == "<" || oper == "+" || oper == "-" || oper == "*" || oper == "/";
+    auto type = _next_token->get_type();
+    return _next_token->same_token_type(lexer::Token::LESS) || _next_token->same_token_type(lexer::Token::PLUS) ||
+           _next_token->same_token_type(lexer::Token::MINUS) ||
+           _next_token->same_token_type(lexer::Token::ASTERISK) || _next_token->same_token_type(lexer::Token::SLASH);
 }
 
 bool Parser::token_is_non_assoc_operator() const
 {
-    return _next_token.value().same_token(lexer::Token::OPERATIONS_AND_CONTROLS, "=") ||
-           _next_token.value().same_token(lexer::Token::LE, _next_token.value().get_value());
+    return _next_token->same_token_type(lexer::Token::EQUALS) ||
+           _next_token->same_token_type(lexer::Token::LE);
 }
 
-int Parser::precedence_level(const std::string &oper, const lexer::Token::TOKEN_TYPE &type) const
+int Parser::precedence_level(const lexer::Token::TOKEN_TYPE &type) const
 {
-    if (type == lexer::Token::ASSIGN)
-    {
-        return 0;
-    }
-    else if (type == lexer::Token::NOT)
-    {
-        return 1;
-    }
-    else if (oper == "<")
-    {
-        return 2;
-    }
-    if (oper == "=" || type == lexer::Token::LE)
-    {
-        return 3;
-    }
-    if (oper == "+" || oper == "-")
-    {
-        return 4;
-    }
-    if (oper == "*" || oper == "/")
-    {
-        return 5;
-    }
-    else if (oper == "~")
-    {
-        return 6;
-    }
-    else if (type == lexer::Token::ISVOID)
-    {
-        return 7;
-    }
-#ifdef PARSER_FULL_VERBOSE
-    assert(false && ("Parser::precedence_level: unexpected operator!"));
-#endif //PARSER_FULL_VERBOSE
+    static std::unordered_map<lexer::Token::TOKEN_TYPE, int> precedence{
+        {lexer::Token::ASSIGN, 0},
+        {lexer::Token::NOT, 1},
+        {lexer::Token::LESS, 2},
+        {lexer::Token::EQUALS, 3},
+        {lexer::Token::LE, 3},
+        {lexer::Token::PLUS, 4},
+        {lexer::Token::MINUS, 4},
+        {lexer::Token::ASTERISK, 5},
+        {lexer::Token::SLASH, 5},
+        {lexer::Token::NEG, 6},
+        {lexer::Token::ISVOID, 7}};
+
+    return precedence[type];
 }
 
 void Parser::restore_precedence_level()
@@ -651,40 +587,33 @@ void Parser::set_precedence_level(const int &lvl)
     _precedence_level.top() = lvl;
 }
 
-void Parser::push_precedence_level(const int &lvl)
-{
-    save_precedence_level();
-    set_precedence_level(lvl);
-}
-
 std::shared_ptr<ast::Expression> Parser::parse_operators(const std::shared_ptr<ast::Expression> &lhs)
 {
-    auto oper = _next_token.value().get_value();
-    if (_next_token.value().same_token(lexer::Token::OPERATIONS_AND_CONTROLS, "+"))
+    if (_next_token->same_token_type(lexer::Token::PLUS))
     {
         return parse_operator<ast::PlusExpression>(lhs);
     }
-    else if (_next_token.value().same_token(lexer::Token::OPERATIONS_AND_CONTROLS, "-"))
+    else if (_next_token->same_token_type(lexer::Token::MINUS))
     {
         return parse_operator<ast::MinusExpression>(lhs);
     }
-    else if (_next_token.value().same_token(lexer::Token::OPERATIONS_AND_CONTROLS, "*"))
+    else if (_next_token->same_token_type(lexer::Token::ASTERISK))
     {
         return parse_operator<ast::MulExpression>(lhs);
     }
-    else if (_next_token.value().same_token(lexer::Token::OPERATIONS_AND_CONTROLS, "/"))
+    else if (_next_token->same_token_type(lexer::Token::SLASH))
     {
         return parse_operator<ast::DivExpression>(lhs);
     }
-    else if (_next_token.value().same_token(lexer::Token::OPERATIONS_AND_CONTROLS, "<"))
+    else if (_next_token->same_token_type(lexer::Token::LESS))
     {
         return parse_operator<ast::LTExpression>(lhs);
     }
-    else if (_next_token.value().same_token(lexer::Token::OPERATIONS_AND_CONTROLS, "="))
+    else if (_next_token->same_token_type(lexer::Token::EQUALS))
     {
         return parse_operator<ast::EqExpression>(lhs);
     }
-    else if (_next_token.value().same_token(lexer::Token::LE, _next_token.value().get_value()))
+    else if (_next_token->same_token_type(lexer::Token::LE))
     {
         return parse_operator<ast::LEExpression>(lhs);
     }
@@ -700,9 +629,8 @@ std::shared_ptr<ast::Type> Parser::parse_type()
 
     auto type = std::make_shared<ast::Type>();
 
-    act_else_return(check_next_and_report_error(lexer::Token::TYPEID, _next_token.value().get_value()),
-                    type->_string = _next_token.value().get_value());
-    advance_and_return_if_eof();
+    PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::TYPEID), type->_string = _next_token->get_value());
+    PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
     PARSER_FULL_VERBOSE_ONLY(log_exit("parse_type"));
     return type;
@@ -714,9 +642,8 @@ std::shared_ptr<ast::ObjectExpression> Parser::parse_object()
 
     auto obj = std::make_shared<ast::ObjectExpression>();
 
-    act_else_return(check_next_and_report_error(lexer::Token::OBJECTID, _next_token.value().get_value()),
-                    obj->_object = _next_token.value().get_value());
-    advance_and_return_if_eof();
+    PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::OBJECTID), obj->_object = _next_token->get_value());
+    PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
     PARSER_FULL_VERBOSE_ONLY(log_exit("parse_object"));
     return obj;
@@ -725,32 +652,29 @@ std::shared_ptr<ast::ObjectExpression> Parser::parse_object()
 std::shared_ptr<ast::Expression> Parser::parse_expr_object()
 {
     PARSER_FULL_VERBOSE_ONLY(log_enter("parse_expr_object"));
-    PARSER_VERBOSE_ONLY(int line = _next_token.value().get_line_number(););
+    PARSER_VERBOSE_ONLY(int line = _next_token->get_line_number(););
 
     auto lhs = parse_object();
 
-    switch (_next_token.value().get_type())
+    switch (_next_token->get_type())
     {
     case lexer::Token::ASSIGN:
     {
-        advance_and_return_if_eof();
+        PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
         PARSER_FULL_VERBOSE_ONLY(log_exit("parse_expr_object for ASSIGN"));
         return make_expr(ast::AssignExpression{lhs, parse_expr()}, PARSER_VERBOSE_LINE(line));
     }
-    case lexer::Token::OPERATIONS_AND_CONTROLS:
+    case lexer::Token::LEFT_PAREN:
     {
-        if (_next_token.value().same_token(lexer::Token::OPERATIONS_AND_CONTROLS, "("))
-        {
-            ast::DispatchExpression dispatch;
-            dispatch._expr = make_expr(ast::ObjectExpression{"self"}, PARSER_VERBOSE_LINE(line));
-            dispatch._object = lhs;
+        ast::DispatchExpression dispatch;
+        dispatch._expr = make_expr(ast::ObjectExpression{"self"}, PARSER_VERBOSE_LINE(line));
+        dispatch._object = lhs;
 
-            return_if_false(parse_dispatch_list(dispatch._args));
+        PARSER_RETURN_IF_FALSE(parse_dispatch_list(dispatch._args));
 
-            PARSER_FULL_VERBOSE_ONLY(log_exit("parse_expr_object for ("));
-            return make_expr(dispatch, PARSER_VERBOSE_LINE(line));
-        }
+        PARSER_FULL_VERBOSE_ONLY(log_exit("parse_expr_object for ("));
+        return make_expr(dispatch, PARSER_VERBOSE_LINE(line));
     }
     }
 
@@ -761,10 +685,10 @@ std::shared_ptr<ast::Expression> Parser::parse_expr_object()
 std::shared_ptr<ast::Expression> Parser::parse_int()
 {
     PARSER_FULL_VERBOSE_ONLY(log_enter("parse_int"));
-    PARSER_VERBOSE_ONLY(int line = _next_token.value().get_line_number(););
+    PARSER_VERBOSE_ONLY(int line = _next_token->get_line_number(););
 
-    int value = std::stoi(_next_token.value().get_value());
-    advance_and_return_if_eof();
+    int value = std::stoi(_next_token->get_value());
+    PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
     PARSER_FULL_VERBOSE_ONLY(log_exit("parse_int"));
     return make_expr(ast::IntExpression{value}, PARSER_VERBOSE_LINE(line));
@@ -773,10 +697,10 @@ std::shared_ptr<ast::Expression> Parser::parse_int()
 std::shared_ptr<ast::Expression> Parser::parse_string()
 {
     PARSER_FULL_VERBOSE_ONLY(log_enter("parse_string"));
-    PARSER_VERBOSE_ONLY(int line = _next_token.value().get_line_number(););
+    PARSER_VERBOSE_ONLY(int line = _next_token->get_line_number(););
 
-    auto value = _next_token.value().get_value();
-    advance_and_return_if_eof();
+    auto value = _next_token->get_value();
+    PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
     PARSER_FULL_VERBOSE_ONLY(log_exit("parse_string"));
     return make_expr(ast::StringExpression{value}, PARSER_VERBOSE_LINE(line));
@@ -785,10 +709,10 @@ std::shared_ptr<ast::Expression> Parser::parse_string()
 std::shared_ptr<ast::Expression> Parser::parse_bool()
 {
     PARSER_FULL_VERBOSE_ONLY(log_enter("parse_bool"));
-    PARSER_VERBOSE_ONLY(int line = _next_token.value().get_line_number(););
+    PARSER_VERBOSE_ONLY(int line = _next_token->get_line_number(););
 
-    auto value = _next_token.value().get_value() == "true";
-    advance_and_return_if_eof();
+    auto value = _next_token->get_value() == "true";
+    PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
     PARSER_FULL_VERBOSE_ONLY(log_exit("parse_bool"));
     return make_expr(ast::BoolExpression{value}, PARSER_VERBOSE_LINE(line));
@@ -798,23 +722,22 @@ std::shared_ptr<ast::Expression> Parser::parse_maybe_dispatch_or_oper(
     const std::shared_ptr<ast::Expression> &expr)
 {
     PARSER_FULL_VERBOSE_ONLY(log_enter("parse_maybe_dispatch_or_oper"));
-    PARSER_VERBOSE_ONLY(int line = _next_token.value().get_line_number(););
+    PARSER_VERBOSE_ONLY(int line = _next_token->get_line_number(););
 
     ast::DispatchExpression dispatch;
     dispatch._expr = expr;
     bool is_dispatch = false;
 
-    auto oper = _next_token.value().get_value();
-    if (_next_token.value().same_token(lexer::Token::OPERATIONS_AND_CONTROLS, "@"))
+    auto oper = _next_token->get_value();
+    if (_next_token->same_token_type(lexer::Token::AT))
     {
         is_dispatch = true;
         dispatch._base = ast::StaticDispatchExpression();
 
-        advance_and_return_if_eof();
-        act_else_return(check_next_and_report_error(lexer::Token::TYPEID, _next_token.value().get_value()),
-                        std::get<ast::StaticDispatchExpression>(dispatch._base)._type = parse_type());
+        PARSER_ADVANCE_AND_RETURN_IF_EOF();
+        PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::TYPEID), std::get<ast::StaticDispatchExpression>(dispatch._base)._type = parse_type());
     }
-    else if (_next_token.value().same_token(lexer::Token::OPERATIONS_AND_CONTROLS, "."))
+    else if (_next_token->same_token_type(lexer::Token::DOT))
     {
         is_dispatch = true;
         dispatch._base = ast::ObjectDispatchExpression();
@@ -822,14 +745,12 @@ std::shared_ptr<ast::Expression> Parser::parse_maybe_dispatch_or_oper(
 
     if (is_dispatch)
     {
-        advance_else_return(check_next_and_report_error(lexer::Token::OPERATIONS_AND_CONTROLS, "."));
-        act_else_return(check_next_and_report_error(lexer::Token::OBJECTID, _next_token.value().get_value()),
-                        dispatch._object = parse_object());
+        PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::DOT));
+        PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::OBJECTID), dispatch._object = parse_object());
 
-        return_if_false(parse_dispatch_list(dispatch._args));
+        PARSER_RETURN_IF_FALSE(parse_dispatch_list(dispatch._args));
 
         PARSER_FULL_VERBOSE_ONLY(log_exit("parse_maybe_dispatch_or_oper for dispatch"));
-
         return parse_maybe_dispatch_or_oper(make_expr(dispatch, PARSER_VERBOSE_LINE(line)));
     }
     else
@@ -844,11 +765,14 @@ int main(int argc, char *argv[])
 {
     for (int i = 1; i < argc; i++)
     {
-        Parser p(std::make_shared<lexer::Lexer>(argv[i]));
-        auto ast = p.parse_program();
-        if (ast != nullptr)
+        Parser parser(std::make_shared<lexer::Lexer>(argv[i]));
+        if (auto ast = parser.parse_program())
         {
-            ast::dump_program(ast);
+            ast::dump_program(*ast);
+        }
+        else
+        {
+            std::cout << parser.get_error_msg() << std::endl;
         }
     }
 }

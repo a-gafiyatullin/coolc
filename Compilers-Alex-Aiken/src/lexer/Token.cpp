@@ -29,20 +29,29 @@ const std::vector<std::string> Token::_token_type_to_str = {
     "TYPEID",
     "OBJECTID",
     "STR_CONST",
-    /* error */
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
     "",
     "ERROR"};
-
-bool Token::same_token(const TOKEN_TYPE &type, const std::string &lexeme) const
-{
-    return _lexeme == lexeme && _type == type;
-}
 
 #ifdef LEXER_VERBOSE
 std::string Token::to_string() const
 {
     std::string out = "#" + std::to_string(_line_number) + " ";
-    if (_type == OPERATIONS_AND_CONTROLS)
+    if (_type >= SEMICOLON && _type <= COMMA)
     {
         out += "\'" + _lexeme + "\'";
     }
@@ -63,7 +72,7 @@ std::string Token::to_string() const
 }
 #endif // LEXER_VERBOSE
 
-const std::map<std::string, Token::TOKEN_TYPE> Token::_str_to_token_type = {
+const std::unordered_map<std::string, Token::TOKEN_TYPE> Token::_str_to_token_type = {
     {"class", Token::TOKEN_TYPE::CLASS},
     {"else", Token::TOKEN_TYPE::ELSE},
     {"fi", Token::TOKEN_TYPE::FI},
@@ -81,11 +90,25 @@ const std::map<std::string, Token::TOKEN_TYPE> Token::_str_to_token_type = {
     {"not", Token::TOKEN_TYPE::NOT},
     {"new", Token::TOKEN_TYPE::NEW},
     {"isvoid", Token::TOKEN_TYPE::ISVOID},
+    {";", Token::TOKEN_TYPE::SEMICOLON},
+    {"{", Token::TOKEN_TYPE::LEFT_CURLY_BRACKET},
+    {"}", Token::TOKEN_TYPE::RIGHT_CURLY_BRACKET},
+    {":", Token::TOKEN_TYPE::COLON},
+    {"(", Token::TOKEN_TYPE::LEFT_PAREN},
+    {")", Token::TOKEN_TYPE::RIGHT_PAREN},
+    {".", Token::TOKEN_TYPE::DOT},
+    {"@", Token::TOKEN_TYPE::AT},
+    {"~", Token::TOKEN_TYPE::NEG},
+    {"*", Token::TOKEN_TYPE::ASTERISK},
+    {"/", Token::TOKEN_TYPE::SLASH},
+    {"+", Token::TOKEN_TYPE::PLUS},
+    {"-", Token::TOKEN_TYPE::MINUS},
+    {"<", Token::TOKEN_TYPE::LESS},
+    {"=", Token::TOKEN_TYPE::EQUALS},
+    {",", Token::TOKEN_TYPE::COMMA},
     {"=>", Token::TOKEN_TYPE::DARROW},
     {"<-", Token::TOKEN_TYPE::ASSIGN},
     {"<=", Token::TOKEN_TYPE::LE}};
-
-const std::string Token::_control_characters = ";{}:().@~*/+-<=,";
 
 bool Token::is_boolean(const std::string &str)
 {

@@ -233,6 +233,8 @@ namespace ast
         PARSER_VERBOSE_ONLY(int _line_number);
     };
 
+#ifdef PARSER_VERBOSE
     // print ast
-    void dump_program(const std::shared_ptr<Program> &program);
+    void dump_program(const Program &program);
+#endif // PARSER_VERBOSE
 }

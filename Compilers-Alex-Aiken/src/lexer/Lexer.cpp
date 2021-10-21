@@ -364,11 +364,6 @@ std::optional<Token> Lexer::next()
                     LEXER_FULL_VERBOSE_ONLY(log_match("", it->str(), it->position()));
                     t = Token(Token::ERROR, "Unmatched *)", _line_number);
                 }
-                else if (Token::is_control_character(it->str()))
-                {
-                    LEXER_FULL_VERBOSE_ONLY(log_match("controls", it->str(), it->position()));
-                    t = Token(Token::OPERATIONS_AND_CONTROLS, it->str(), _line_number);
-                }
                 else if (Token::is_whitespace(it->str()))
                 {
                     LEXER_FULL_VERBOSE_ONLY(log_match("whitespace", it->str(), it->position()));

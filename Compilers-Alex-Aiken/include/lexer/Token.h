@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string>
 #include "utils/Utils.h"
-#include <map>
+#include <unordered_map>
 #include <algorithm>
 #include <vector>
 
@@ -46,18 +46,30 @@ namespace lexer
             OBJECTID,
             STR_CONST,
             /* other */
-            OPERATIONS_AND_CONTROLS,
+            SEMICOLON,
+            LEFT_CURLY_BRACKET,
+            RIGHT_CURLY_BRACKET,
+            COLON,
+            LEFT_PAREN,
+            RIGHT_PAREN,
+            DOT,
+            AT,
+            NEG,
+            ASTERISK,
+            SLASH,
+            PLUS,
+            MINUS,
+            LESS,
+            EQUALS,
+            COMMA,
             /* error */
             ERROR
         };
 
     protected:
         // name to token and token to name
-        static const std::map<std::string, TOKEN_TYPE> _str_to_token_type;
+        static const std::unordered_map<std::string, TOKEN_TYPE> _str_to_token_type;
         static const std::vector<std::string> _token_type_to_str;
-
-        // list of control characters
-        static const std::string _control_characters;
 
         TOKEN_TYPE _type;
         std::string _lexeme;
@@ -82,14 +94,12 @@ namespace lexer
         static bool is_boolean(const std::string &str);
         inline static bool is_typeid(const std::string &str) { return str[0] >= 'A' && str[0] <= 'Z' && !is_keyword(str); }
         inline static bool is_object(const std::string &str) { return str[0] >= 'a' && str[0] <= 'z' && !is_keyword(str); }
-        // null character can be found in  _control_characters, although it is not a control character
-        inline static bool is_control_character(const std::string &str) { return str[0] != 0 && _control_characters.find(str) != std::string::npos; }
         inline static bool is_close_par_comment(const std::string &str) { return str == "*)"; }
 
-        inline std::string get_type_as_str() const { return (_type != OPERATIONS_AND_CONTROLS ? _token_type_to_str[_type] : ""); };
+        inline std::string get_type_as_str() const { return (_type < SEMICOLON ? _token_type_to_str[_type] : ""); };
         inline int get_line_number() const { return _line_number; }
 
-        bool same_token(const TOKEN_TYPE &type, const std::string &lexeme) const;
+        inline bool same_token_type(const TOKEN_TYPE &type) const { return _type == type; }
 #ifdef LEXER_VERBOSE
         std::string to_string() const;
 
