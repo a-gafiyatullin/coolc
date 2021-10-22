@@ -1,6 +1,9 @@
+#pragma once
+
 #include "lexer/Lexer.h"
 #include "ast/AST.h"
 #include <stack>
+#include <functional>
 
 #ifdef PARSER_FULL_VERBOSE
 #include <cassert>
@@ -52,7 +55,7 @@ namespace parser
 
         std::string _error; // error message
 
-        inline void advance_token() { _next_token = _lexer->next(); }
+        inline void advance_token() { _next_token = std::move(_lexer->next()); }
 
         // error handling
         void report_error();
@@ -68,8 +71,8 @@ namespace parser
         // helper parse methods
 
         // parse using parse_func and push a result to container while _next_token is expected_lexeme or has expected_type
-        template <class T, T (Parser::*parse_func)()>
-        bool parse_list(std::vector<T> &container, const lexer::Token::TOKEN_TYPE &expected_type,
+        template <class T>
+        bool parse_list(std::vector<T> &container, std::function<T()> func, const lexer::Token::TOKEN_TYPE &expected_type,
                         bool skip_expected_token = false, const lexer::Token::TOKEN_TYPE &cutout_type = lexer::Token::ERROR);
 
         std::shared_ptr<ast::Expression> parse_if();
@@ -143,13 +146,13 @@ namespace parser
         return expr;
     }
 
-    template <class T, T (Parser::*parse_func)()>
-    bool Parser::parse_list(std::vector<T> &container, const lexer::Token::TOKEN_TYPE &expected_type,
+    template <class T>
+    bool Parser::parse_list(std::vector<T> &container, std::function<T()> func, const lexer::Token::TOKEN_TYPE &expected_type,
                             bool skip_expected_token, const lexer::Token::TOKEN_TYPE &cutout_type)
     {
         PARSER_FULL_VERBOSE_ONLY(log_enter("parse_list"));
 
-        auto elem = (this->*parse_func)();
+        auto elem = func();
         if (elem == nullptr)
             return false;
         container.push_back(elem);
@@ -170,8 +173,8 @@ namespace parser
                 PARSER_FULL_VERBOSE_ONLY(log_exit("parse_list by cutout"));
                 return true;
             }
-            // TO-DO: lamda
-            auto elem = (this->*parse_func)();
+
+            auto elem = func();
             if (elem == nullptr)
                 return false;
             container.push_back(elem);
@@ -212,15 +215,15 @@ namespace parser
             PARSER_FULL_VERBOSE_ONLY(log_exit("parse_operators for next operator"));
             if (precedence_level(type) < precedence_level(_next_token->get_type()))
             {
-                return make_expr(ast::BinaryExpression{T(), lhs, parse_operators(rhs)}, PARSER_VERBOSE_LINE(line));
+                return make_expr(std::move(ast::BinaryExpression{T(), lhs, parse_operators(rhs)}), PARSER_VERBOSE_LINE(line));
             }
             else
             {
-                return parse_operators(make_expr(ast::BinaryExpression{T(), lhs, rhs}, PARSER_VERBOSE_LINE(line)));
+                return parse_operators(make_expr(std::move(ast::BinaryExpression{T(), lhs, rhs}), PARSER_VERBOSE_LINE(line)));
             }
         }
 
         PARSER_FULL_VERBOSE_ONLY(log_exit("parse_operators"));
-        return make_expr(ast::BinaryExpression{T(), lhs, rhs}, PARSER_VERBOSE_LINE(line));
+        return make_expr(std::move(ast::BinaryExpression{T(), lhs, rhs}), PARSER_VERBOSE_LINE(line));
     }
 }

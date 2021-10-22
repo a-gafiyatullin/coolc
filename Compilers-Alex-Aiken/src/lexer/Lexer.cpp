@@ -336,7 +336,7 @@ std::optional<Token> Lexer::next()
 
                 if (Token::is_keyword(str_in_lowercase))
                 {
-                    LEXER_FULL_VERBOSE_ONLY(log_match("keyword", it->str(), it->position()));
+                    LEXER_FULL_VERBOSE_ONLY(log_match("keyword or symbol", it->str(), it->position()));
                     t = Token(Token::str_to_token(str_in_lowercase), it->str(), _line_number);
                 }
                 else if (Token::is_number(it->str()))
@@ -429,7 +429,7 @@ int main(int argc, char *argv[])
         auto token = l.next();
         while (token.has_value())
         {
-            token.value().display();
+            token->display();
             token = l.next();
         }
     }

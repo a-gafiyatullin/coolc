@@ -82,9 +82,6 @@ namespace lexer
         {
         }
 
-        inline std::string get_value() const { return _lexeme; }
-        inline TOKEN_TYPE get_type() const { return _type; }
-
         inline static TOKEN_TYPE str_to_token(const std::string &str) { return _str_to_token_type.find(str)->second; }
 
         // try to determine token type by the first character in str
@@ -96,10 +93,12 @@ namespace lexer
         inline static bool is_object(const std::string &str) { return str[0] >= 'a' && str[0] <= 'z' && !is_keyword(str); }
         inline static bool is_close_par_comment(const std::string &str) { return str == "*)"; }
 
-        inline std::string get_type_as_str() const { return (_type < SEMICOLON ? _token_type_to_str[_type] : ""); };
+        inline std::string get_type_as_str() const { return _token_type_to_str[_type]; };
         inline int get_line_number() const { return _line_number; }
-
         inline bool same_token_type(const TOKEN_TYPE &type) const { return _type == type; }
+        inline std::string get_value() const { return _lexeme; }
+        inline TOKEN_TYPE get_type() const { return _type; }
+
 #ifdef LEXER_VERBOSE
         std::string to_string() const;
 
