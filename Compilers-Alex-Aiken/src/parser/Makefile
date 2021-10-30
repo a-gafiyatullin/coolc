@@ -27,11 +27,11 @@ parser: compile-parser
 parser-full-verbose: PARSER_MODE = -DPARSER_FULL_VERBOSE -DPARSER_STANDALONE
 parser-full-verbose: compile-parser
 
-lexer.so:
-	cd ../lexer/ && $(MAKE) lexer-shared-release
+lexer.a:
+	cd ../lexer/ && $(MAKE) lexer-static
 
-compile-parser: lexer.so create_build_dir ${OBJS}
-	${CXX} ${LDFLAGS} ${OBJS} ${LIB_DIR}/lexer.so -o ${BIN_DIR}/new-parser
+compile-parser: lexer.a create_build_dir ${OBJS}
+	${CXX} ${LDFLAGS} ${OBJS} ${LIB_DIR}/lexer.a -o ${BIN_DIR}/new-parser
 
 create_build_dir:
 	rm -rf ${PARSER_BUILD_DIR}

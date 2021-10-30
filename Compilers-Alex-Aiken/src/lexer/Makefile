@@ -56,6 +56,12 @@ lexer-shared-debug: CXXFLAGS = ${DEBUG_CXXFLAGS}
 lexer-shared-debug: LDFLAGS += -g
 lexer-shared-debug: lexer-shared-release
 
+lexer-static: LEXER_MODE =
+lexer-static: CXXFLAGS += -fPIC
+lexer-static: LDFLAGS = -fPIC
+lexer-static: create_lib_dir create_build_dir ${OBJS}
+	ar rvs ${LIB_DIR}/lexer.a ${OBJS}
+
 dotest:
 	python3 ${TEST_DIR}/test.py -build
 
