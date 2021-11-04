@@ -1,0 +1,7 @@
+class Main inherits IO{
+ main(): Object {{ 
+                    let y:C <- 
+			(let x:A in x)
+	            in y; 
+                }};
+};

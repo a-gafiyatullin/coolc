@@ -1,0 +1,5 @@
+class Main {
+  a:SELF_TYPE <- new Main;
+  main() : Object {1};
+};
+

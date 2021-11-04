@@ -1,0 +1,7 @@
+class Main inherits IO{
+ x: Int;
+ main(): Object {{ 
+		   if ("a") then 3 else foo() fi;
+                }};
+ foo(): String {"test"};
+};
