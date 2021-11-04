@@ -21,13 +21,15 @@
 #define PARSER_VERBOSE
 #endif // PARSER_STANDALONE
 
-#ifdef PARSER_VERBOSE
-#define PARSER_VERBOSE_LINE(text) text
-#define PARSER_VERBOSE_ONLY(text) text
+#ifdef SEMANT_STANDALONE
+#define SEMANT_VERBOSE
+#endif // PARSER_STANDALONE
+
+#ifdef SEMANT_FULL_VERBOSE
+#define SEMANT_FULL_VERBOSE_ONLY(text) text
 #else
-#define PARSER_VERBOSE_LINE(text) 0
-#define PARSER_VERBOSE_ONLY(text)
-#endif // PARSER_VERBOSE
+#define SEMANT_FULL_VERBOSE_ONLY(text)
+#endif // SEMANT_FULL_VERBOSE
 
 #if defined(LEXER_VERBOSE) || defined(PARSER_VERBOSE)
 #include <string>

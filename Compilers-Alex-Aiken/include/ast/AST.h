@@ -27,7 +27,7 @@ namespace ast
     {
         std::vector<std::shared_ptr<Class>> _classes;
 
-        PARSER_VERBOSE_ONLY(int _line_number;);
+        int _line_number;
     };
 
     struct Class
@@ -36,8 +36,8 @@ namespace ast
         std::shared_ptr<Type> _parent;
         std::vector<std::shared_ptr<Feature>> _features;
 
-        PARSER_VERBOSE_ONLY(std::string _file_name;);
-        PARSER_VERBOSE_ONLY(int _line_number;);
+        std::string _file_name;
+        int _line_number;
     };
 
     struct AttrFeature
@@ -57,7 +57,7 @@ namespace ast
         std::shared_ptr<Type> _type;
         std::shared_ptr<Expression> _expr;
 
-        PARSER_VERBOSE_ONLY(int _line_number;);
+        int _line_number;
     };
 
     struct Formal
@@ -65,7 +65,7 @@ namespace ast
         std::shared_ptr<ObjectExpression> _object;
         std::shared_ptr<Type> _type;
 
-        PARSER_VERBOSE_ONLY(int _line_number;);
+        int _line_number;
     };
 
     struct Case
@@ -74,7 +74,7 @@ namespace ast
         std::shared_ptr<Type> _type;
         std::shared_ptr<Expression> _expr;
 
-        PARSER_VERBOSE_ONLY(int _line_number;);
+        int _line_number;
     };
 
     struct AssignExpression
@@ -230,11 +230,21 @@ namespace ast
                      NewExpression, ObjectExpression, IntExpression, StringExpression, BoolExpression>
             _data;
 
-        PARSER_VERBOSE_ONLY(int _line_number);
+        int _line_number;
+
+        std::shared_ptr<Type> _type;
     };
 
-#ifdef PARSER_VERBOSE
+    template <class... Ts>
+    struct overloaded : Ts...
+    {
+        using Ts::operator()...;
+    };
+    template <class... Ts>
+    overloaded(Ts...) -> overloaded<Ts...>;
+
+#if defined(PARSER_VERBOSE) || defined(SEMANT_VERBOSE)
     // print ast
     void dump_program(const Program &program);
-#endif // PARSER_VERBOSE
+#endif // PARSER_VERBOSE || SEMANT_VERBOSE
 }

@@ -62,6 +62,14 @@ parser-shared-debug: CXXFLAGS = ${DEBUG_CXXFLAGS}
 parser-shared-debug: LDFLAGS += -g
 parser-shared-debug: parser-shared-release
 
+parser-static: CXXFLAGS += -fPIC
+parser-static: LDFLAGS = -fPIC
+parser-static: create_lib_dir create_build_dir ${OBJS}
+	ar rvs ${LIB_DIR}/parser.a ${OBJS}
+
+parser-static-verbose: PARSER_MODE = -DPARSER_VERBOSE
+parser-static-verbose: parser-static
+
 dotest:
 	python3 ${TEST_DIR}/test.py -build
 

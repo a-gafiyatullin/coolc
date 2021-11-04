@@ -3,14 +3,6 @@
 namespace ast
 {
 #ifdef PARSER_VERBOSE
-    template <class... Ts>
-    struct overloaded : Ts...
-    {
-        using Ts::operator()...;
-    };
-    template <class... Ts>
-    overloaded(Ts...) -> overloaded<Ts...>;
-
     void dump_expression(const int &offset, const std::shared_ptr<Expression> &expr);
 
     void dump_line_and_name(const int &offset, const int &line_number, const std::string &name)
@@ -307,7 +299,7 @@ namespace ast
                               }},
                    expr->_data);
 
-        std::cout << std::string(offset, ' ') << ": _no_type" << std::endl;
+        std::cout << std::string(offset, ' ') << ": " << (expr->_type ? expr->_type->_string : "_no_type") << std::endl;
     }
 
     void dump_formal(const int &offset, const std::shared_ptr<Formal> &formal)

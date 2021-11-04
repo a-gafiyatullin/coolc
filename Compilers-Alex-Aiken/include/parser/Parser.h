@@ -141,7 +141,7 @@ namespace parser
     {
         auto expr = std::make_shared<ast::Expression>();
         expr->_data = std::forward<T>(variant);
-        PARSER_VERBOSE_ONLY(expr->_line_number = line);
+        expr->_line_number = line;
 
         return expr;
     }
@@ -198,7 +198,7 @@ namespace parser
         PARSER_FULL_VERBOSE_ONLY(log_enter("parse_operators"));
         std::shared_ptr<ast::Expression> res_expr = nullptr;
 
-        PARSER_VERBOSE_ONLY(int line = _next_token->get_line_number(););
+        int line = _next_token->get_line_number();
 
         PARSER_ADVANCE_AND_RETURN_IF_EOF();
         auto rhs = parse_expr();
@@ -215,15 +215,15 @@ namespace parser
             PARSER_FULL_VERBOSE_ONLY(log_exit("parse_operators for next operator"));
             if (precedence_level(type) < precedence_level(_next_token->get_type()))
             {
-                return make_expr(std::move(ast::BinaryExpression{T(), lhs, parse_operators(rhs)}), PARSER_VERBOSE_LINE(line));
+                return make_expr(std::move(ast::BinaryExpression{T(), lhs, parse_operators(rhs)}), line);
             }
             else
             {
-                return parse_operators(make_expr(std::move(ast::BinaryExpression{T(), lhs, rhs}), PARSER_VERBOSE_LINE(line)));
+                return parse_operators(make_expr(std::move(ast::BinaryExpression{T(), lhs, rhs}), line));
             }
         }
 
         PARSER_FULL_VERBOSE_ONLY(log_exit("parse_operators"));
-        return make_expr(std::move(ast::BinaryExpression{T(), lhs, rhs}), PARSER_VERBOSE_LINE(line));
+        return make_expr(std::move(ast::BinaryExpression{T(), lhs, rhs}), line);
     }
 }
