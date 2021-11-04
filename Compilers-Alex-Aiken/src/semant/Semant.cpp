@@ -347,7 +347,7 @@ bool Semant::check_expression_in_method(const std::shared_ptr<ast::Feature> &fea
     const ast::MethodFeature &this_method = std::get<ast::MethodFeature>(feature->_base);
     const auto class_node = _classes[_current_class->_string];
 
-    // return type if defined
+    // return type is defined
     SEMANT_RETURN_IF_FALSE_WITH_ERROR(check_exists(feature->_type),
                                       "Undefined return type " + feature->_type->_string + " in method " + feature->_object->_object + ".",
                                       feature->_line_number, false);
@@ -375,9 +375,9 @@ bool Semant::check_expression_in_method(const std::shared_ptr<ast::Feature> &fea
     // add formal parameters to scope and check method overriding
     for (const auto &formal : this_method._formals)
     {
+        // formal type if defined and not SELF_TYPE
         SEMANT_RETURN_IF_FALSE_WITH_ERROR(!same_type(formal->_type, _self_type),
                                           "Formal parameter " + formal->_object->_object + " cannot have type SELF_TYPE.", formal->_line_number, false);
-        // formal type if defined
         SEMANT_RETURN_IF_FALSE_WITH_ERROR(check_exists(formal->_type),
                                           "Class " + formal->_type->_string + " of formal parameter " + formal->_object->_object + " is undefined.",
                                           formal->_line_number, false);
@@ -588,6 +588,7 @@ std::shared_ptr<ast::Type> Semant::infer_new_type(const ast::NewExpression &new_
 {
     SEMANT_FULL_VERBOSE_ONLY(log_enter("NEW"));
 
+    // type if defined
     SEMANT_RETURN_IF_FALSE_WITH_ERROR(check_exists(new_._type), "'new' used with undefined class " + new_._type->_string + ".", -1, nullptr);
 
     SEMANT_FULL_VERBOSE_ONLY(log_exit("NEW"));
@@ -796,6 +797,14 @@ std::shared_ptr<ast::Type> Semant::infer_cases_type(ast::CaseExpression &cases, 
     for (auto &case_ : cases._cases)
     {
         scope.push_scope();
+
+        // type if defined and not SELF_TYPE
+        SEMANT_RETURN_IF_FALSE_WITH_ERROR(!same_type(case_->_type, _self_type),
+                                          "Identifier " + case_->_object->_object + " declared with type SELF_TYPE in case branch.",
+                                          case_->_line_number, nullptr);
+        SEMANT_RETURN_IF_FALSE_WITH_ERROR(check_exists(case_->_type),
+                                          "Class " + case_->_type->_string + " of case branch is undefined.", case_->_line_number, nullptr);
+
         SEMANT_RETURN_IF_FALSE_WITH_ERROR(scope.add_if_can(case_->_object->_object, case_->_type) == Scope::OK,
                                           "'" + case_->_object->_object + "' bound in 'case'.", case_->_line_number, nullptr);
 
@@ -827,6 +836,13 @@ std::shared_ptr<ast::Type> Semant::infer_dispatch_type(ast::DispatchExpression &
     if (is_static)
     {
         dispatch_expr_type = std::get<ast::StaticDispatchExpression>(disp._base)._type;
+
+        // type if defined and not SELF_TYPE
+        SEMANT_RETURN_IF_FALSE_WITH_ERROR(!same_type(dispatch_expr_type, _self_type), "Static dispatch to SELF_TYPE.", -1, nullptr);
+        SEMANT_RETURN_IF_FALSE_WITH_ERROR(check_exists(dispatch_expr_type),
+                                          "Static dispatch to undefined class " + dispatch_expr_type->_string + ".",
+                                          -1, nullptr);
+
         SEMANT_RETURN_IF_FALSE_WITH_ERROR(check_types_meet(disp._expr->_type, dispatch_expr_type),
                                           "Expression type " + disp._expr->_type->_string +
                                               " does not conform to declared static dispatch type " + dispatch_expr_type->_string + ".",
