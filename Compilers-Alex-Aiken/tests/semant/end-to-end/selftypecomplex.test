@@ -1,0 +1,12 @@
+class Main { main() : Int {0 }; };
+
+class A {
+  foo() : SELF_TYPE {self};
+};
+
+class B  {
+  a : A;
+  bar() : SELF_TYPE {self};
+
+  test(): Object { a.foo().bar() }
+};

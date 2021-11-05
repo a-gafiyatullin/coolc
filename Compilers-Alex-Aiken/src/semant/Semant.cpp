@@ -865,7 +865,7 @@ std::shared_ptr<ast::Type> Semant::infer_dispatch_type(ast::DispatchExpression &
     }
 
     SEMANT_FULL_VERBOSE_ONLY(log_exit("DISPATCH"));
-    return same_type(feature->_type, _self_type) ? dispatch_expr_type : feature->_type;
+    return same_type(feature->_type, _self_type) ? disp._expr->_type : feature->_type;
 }
 
 bool Semant::check_types_meet(const std::shared_ptr<ast::Type> &dynamic_type, const std::shared_ptr<ast::Type> &static_type) const

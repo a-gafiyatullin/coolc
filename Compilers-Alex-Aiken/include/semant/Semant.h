@@ -47,7 +47,6 @@ namespace semant
         void add(const std::string &name, const std::shared_ptr<ast::Type> &type) { _symbols.back()[name] = type; }
 
         std::shared_ptr<ast::Type> find(const std::string &name, const int &scope_shift = 0) const;
-        std::shared_ptr<ast::Type> find_in_previos_scope(const std::string &name) const;
 
 #ifdef SEMANT_FULL_VERBOSE
         void dump() const;
