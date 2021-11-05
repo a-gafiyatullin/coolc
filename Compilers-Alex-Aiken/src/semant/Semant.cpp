@@ -412,7 +412,7 @@ bool Semant::check_expression_in_method(const std::shared_ptr<ast::Feature> &fea
     if (feature->_expr)
     {
         SEMANT_RETURN_IF_FALSE(infer_expression_type(feature->_expr, scope), false);
-        SEMANT_RETURN_IF_FALSE_WITH_ERROR(check_types_meet(feature->_expr->_type, feature->_type, true),
+        SEMANT_RETURN_IF_FALSE_WITH_ERROR(check_types_meet(feature->_expr->_type, feature->_type),
                                           "Inferred return type " + feature->_expr->_type->_string + " of method " +
                                               feature->_object->_object + " does not conform to declared return type " + feature->_type->_string + ".",
                                           feature->_line_number, false);
@@ -436,7 +436,7 @@ bool Semant::check_expression_in_attribute(const std::shared_ptr<ast::Feature> &
     if (attr->_expr)
     {
         SEMANT_RETURN_IF_FALSE(infer_expression_type(attr->_expr, scope), false);
-        SEMANT_RETURN_IF_FALSE_WITH_ERROR(check_types_meet(attr->_expr->_type, attr->_type, true),
+        SEMANT_RETURN_IF_FALSE_WITH_ERROR(check_types_meet(attr->_expr->_type, attr->_type),
                                           "Inferred type " + attr->_expr->_type->_string + " of initialization of attribute a does not conform to declared type " +
                                               attr->_type->_string + ".",
                                           -1, false);
@@ -868,21 +868,21 @@ std::shared_ptr<ast::Type> Semant::infer_dispatch_type(ast::DispatchExpression &
     return same_type(feature->_type, _self_type) ? dispatch_expr_type : feature->_type;
 }
 
-bool Semant::check_types_meet(const std::shared_ptr<ast::Type> &t1, const std::shared_ptr<ast::Type> &t2, const bool &exact) const
+bool Semant::check_types_meet(const std::shared_ptr<ast::Type> &dynamic_type, const std::shared_ptr<ast::Type> &static_type) const
 {
-    if (exact && same_type(t2, _self_type))
+    if (same_type(static_type, _self_type))
     {
-        return same_type(t1, t2);
+        return same_type(dynamic_type, static_type);
     }
 
-    if (same_type(exact_type(t1), exact_type(t2)))
+    if (same_type(exact_type(dynamic_type), static_type))
     {
         return true;
     }
 
-    for (const auto &t : _classes.at(t2->_string)->_children)
+    for (const auto &t : _classes.at(static_type->_string)->_children)
     {
-        if (check_types_meet(t1, t->_class->_type))
+        if (check_types_meet(dynamic_type, t->_class->_type))
         {
             return true;
         }

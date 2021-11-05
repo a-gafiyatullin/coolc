@@ -3,7 +3,6 @@
 #include "ast/AST.h"
 #include <unordered_map>
 #include <algorithm>
-#include <set>
 
 #ifdef SEMANT_FULL_VERBOSE
 #include <cassert>
@@ -133,7 +132,7 @@ namespace semant
 
         // t1 is subtype of t2
         // this function is not сommutative !!!
-        bool check_types_meet(const std::shared_ptr<ast::Type> &t1, const std::shared_ptr<ast::Type> &t2, const bool &exact = false) const;
+        bool check_types_meet(const std::shared_ptr<ast::Type> &dynamic_type, const std::shared_ptr<ast::Type> &static_type) const;
         inline static bool same_type(const std::shared_ptr<ast::Type> &t1, const std::shared_ptr<ast::Type> &t2) { return t1->_string == t2->_string; }
         inline static bool is_bool(const std::shared_ptr<ast::Type> &t) { return same_type(t, _bool); }
         inline static bool is_int(const std::shared_ptr<ast::Type> &t) { return same_type(t, _int); }
