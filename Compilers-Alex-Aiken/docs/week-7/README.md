@@ -15,7 +15,7 @@
 
 # 12-02: Code Generation I
 - <b>beq r1 r2 label</b>:
-    - Branch to label if <b>r1 = 2</b>
+    - Branch to label if <b>r1 = r2</b>
 - <b>b label</b>:
     - Unconditional jump to label
 
@@ -24,3 +24,26 @@
     - Jump to label, save address of next instruction in <b>$ra</b>
 - <b>jr r</b>:
     - Jump to address in register <b>r</b>
+
+# 12-05: Temporaries
+- Let <b>NT(e) = #</b> of temps needed to evaluate <b>e</b>;
+- <b>NT(e1 + e2)</b>
+    - Needs at least as many temps as <b>NT(e1)</b>;
+    - Needs at least as many temps as <b>NT(e2) + 1</b>;
+- Space used for temps in <b>e1</b> can be reused for temps in <b>e2</b>.
+- Code generation must know how many temporaries are in use at each point
+- Add a new argument to code generation
+    - the position of the next available temporary
+- The temporary is used like a small, fixed-size stack
+
+# 12-06: Object Layout
+- Objects are laid out in contiguous memory
+- Each attribute stored at a fixed offset in the object
+    - The attribute is in the same place in every object of that class
+- When a method is invoked, the object is <b>self</b> and the fields are the object's attributes
+- The offset for an attribute is the same in a class and all of its subclassses
+- Every class has a fixed set of methods
+    - Including inherited methods
+- A <b>dispatch table</b> indexes these methods
+    - An array of method entry points
+    - A method <b>f</b> lives at a fixed offset in the dispatch table for a class and all of its subclasses
