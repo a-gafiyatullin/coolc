@@ -8,5 +8,5 @@ class B  {
   a : A;
   bar() : SELF_TYPE {self};
 
-  test(): Object { a.foo().bar() }
+  test(): Object { a.foo().bar() };
 };
