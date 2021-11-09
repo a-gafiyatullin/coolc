@@ -47,3 +47,15 @@
 - A <b>dispatch table</b> indexes these methods
     - An array of method entry points
     - A method <b>f</b> lives at a fixed offset in the dispatch table for a class and all of its subclasses
+
+# 13-01: Semantics Overview
+- <b>Operational semantics</b> describes program eveluation via execution rules on an abstract machine.
+- <b>Denotational semantics</b>
+    - Program's meaning is a mathematical function
+- <b>Axiomatic semantics</b>
+    - Program behaviour described via logical formulas
+
+# 13-02: Operational Semantics
+- A variable environment maps variables to locations:
+    - Keeps track of which variables are in scope;
+    - Tells up where those variables are
