@@ -1,21 +1,16 @@
 class Main {
- b:B <- new B;
- main(): Object { b@SELF_TYPE.foo(5,b,b,b) }; 
+    b:B <- new B;
+    main(): Object { b@SELF_TYPE.foo(5,b,b,b) }; 
 };
 
 class A {
     foo(a:Int, b: B, c:A, d:B) : Int {
        5
     };
-  
 };
 
 class B inherits A {
-
     foo(a:Int, b: B, c:A, d:B) : Int {
        6
     };  
 };
-
-
-

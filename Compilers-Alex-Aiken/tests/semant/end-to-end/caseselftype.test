@@ -1,13 +1,15 @@
-class Main { main() : Int {0 }; };
+class Main { main() : Int {0}; };
 
 
 class A {
 	moo:Object;
-	boo():Object {{ case moo of i:Int => i;
-			        b:SELF_TYPE => b;
-			        s:String => s;
-		     esac; }};
+	
+    boo():Object {
+                    {
+                        case moo of i:Int => i;
+			                b:SELF_TYPE => b;
+			                s:String => s;
+                        esac;
+                    }
+                };
 };
-
-
-
