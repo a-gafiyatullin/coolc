@@ -991,17 +991,3 @@ std::string Semant::get_error_msg() const
     }
     return prefix + _error_message;
 }
-
-#ifdef SEMANT_FULL_VERBOSE
-void Scope::dump() const
-{
-    for (const auto &class_scope : _symbols)
-    {
-        std::cout << "--------------------------" << std::endl;
-        for (const auto &symbol : class_scope)
-        {
-            std::cout << symbol.first << " = " << symbol.second->_string << std::endl;
-        }
-    }
-}
-#endif // SEMANT_FULL_VERBOSE
