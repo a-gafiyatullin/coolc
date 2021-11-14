@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    semant::Semant semant(programs);
+    semant::Semant semant(std::move(programs));
     auto result = semant.infer_types_and_check();
     if (result._program)
     {

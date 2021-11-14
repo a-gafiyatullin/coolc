@@ -48,7 +48,7 @@ std::shared_ptr<ast::Program> Semant::merge_to_one_program(const std::vector<std
     return program;
 }
 
-Semant::Semant(std::vector<std::shared_ptr<ast::Program>> &programs) : _program(merge_to_one_program(programs))
+Semant::Semant(std::vector<std::shared_ptr<ast::Program>> programs) : _program(merge_to_one_program(programs))
 {
     _object_parent = std::make_shared<ast::Type>();
     _object_parent->_string = "";
