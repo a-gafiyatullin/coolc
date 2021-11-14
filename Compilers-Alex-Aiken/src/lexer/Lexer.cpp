@@ -417,21 +417,3 @@ std::string Lexer::to_string() const
     return "#name \"" + _file_name + "\"";
 }
 #endif // LEXER_VERBOSE
-
-#ifdef LEXER_STANDALONE
-int main(int argc, char *argv[])
-{
-    for (int i = 1; i < argc; i++)
-    {
-        Lexer l(argv[i]);
-        l.display();
-
-        auto token = l.next();
-        while (token.has_value())
-        {
-            token->display();
-            token = l.next();
-        }
-    }
-}
-#endif //LEXER_STANDALONE

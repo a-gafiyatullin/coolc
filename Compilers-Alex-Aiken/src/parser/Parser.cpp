@@ -762,21 +762,3 @@ std::shared_ptr<ast::Expression> Parser::parse_maybe_dispatch_or_oper(
         return parse_operators(expr);
     }
 }
-
-#ifdef PARSER_STANDALONE
-int main(int argc, char *argv[])
-{
-    for (int i = 1; i < argc; i++)
-    {
-        Parser parser(std::make_shared<lexer::Lexer>(argv[i]));
-        if (auto ast = parser.parse_program())
-        {
-            ast::dump_program(*ast);
-        }
-        else
-        {
-            std::cout << parser.get_error_msg() << std::endl;
-        }
-    }
-}
-#endif //PARSER_STANDALONE

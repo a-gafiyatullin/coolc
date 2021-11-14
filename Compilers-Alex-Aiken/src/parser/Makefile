@@ -1,6 +1,6 @@
 ROOT= ../..
 
-SRC	= Parser.cpp ../ast/AST.cpp ../utils/Utils.cpp
+SRC	= Parser.cpp ../ast/AST.cpp ../utils/Utils.cpp ../coolc.cpp
 
 CXXINCLUDE = -I${ROOT}/include/
 PARSER_MODE = -DPARSER_STANDALONE
@@ -37,6 +37,7 @@ create_build_dir:
 	rm -rf ${PARSER_BUILD_DIR}
 	rm -rf ${UTILS_BUILD_DIR}
 	rm -rf ${AST_BUILD_DIR}
+	rm -rf ${BUILD_DIR}/coolc.o
 	mkdir -p ${PARSER_BUILD_DIR}
 	mkdir -p ${UTILS_BUILD_DIR}
 	mkdir -p ${AST_BUILD_DIR}

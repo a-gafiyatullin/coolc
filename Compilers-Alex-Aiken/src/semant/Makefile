@@ -1,6 +1,6 @@
 ROOT= ../..
 
-SRC	= Semant.cpp
+SRC	= Semant.cpp Scope.cpp ../coolc.cpp
 
 CXXINCLUDE = -I${ROOT}/include/
 SEMANT_MODE = -DSEMANT_STANDALONE
@@ -36,6 +36,7 @@ compile-semant: lexer.a parser.a create_build_dir ${OBJS}
 
 create_build_dir:
 	rm -rf ${SEMANT_BUILD_DIR}
+	rm -rf ${BUILD_DIR}/coolc.o
 	mkdir -p ${SEMANT_BUILD_DIR}
 
 create_lib_dir:

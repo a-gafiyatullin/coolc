@@ -1,6 +1,6 @@
 ROOT= ../..
 
-SRC	= Lexer.cpp Token.cpp ../utils/Utils.cpp
+SRC	= Lexer.cpp Token.cpp ../utils/Utils.cpp ../coolc.cpp
 
 CXXINCLUDE = -I${ROOT}/include/
 LEXER_MODE = -DLEXER_STANDALONE
@@ -32,6 +32,7 @@ compile-lexer: create_build_dir ${OBJS}
 create_build_dir:
 	rm -rf ${LEXER_BUILD_DIR}
 	rm -rf ${UTILS_BUILD_DIR}
+	rm -rf ${BUILD_DIR}/coolc.o
 	mkdir -p ${LEXER_BUILD_DIR}
 	mkdir -p ${UTILS_BUILD_DIR}
 

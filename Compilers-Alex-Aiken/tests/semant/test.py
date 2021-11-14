@@ -76,7 +76,7 @@ def do_tests_in_folder_with_ext(folder, ext, header, ignore_list):
             if filename in ignore_list:
                 if myresult.returncode == 0:
                     sys.stdout.write("%-55s %s\n" % (result, bcolors.OKGREEN + '[OK]' + bcolors.ENDC))
-            elif (myresult.stdout == reference_semant_result.stdout or myresult.stdout in reference_semant_result.stderr) and myresult.stderr == b'' and myresult.returncode == 0:
+            elif (myresult.stdout == reference_semant_result.stdout or myresult.stdout in reference_semant_result.stderr) and myresult.stderr == b'':
                 sys.stdout.write("%-55s %s\n" % (result, bcolors.OKGREEN + '[OK]' + bcolors.ENDC))
             else:
                 sys.stdout.write("%-55s %s\n\n" % (result, bcolors.FAIL +  '[FAILED]' + bcolors.ENDC))

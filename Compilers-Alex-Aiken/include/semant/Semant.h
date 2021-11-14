@@ -1,11 +1,9 @@
 #pragma once
 
-#include "ast/AST.h"
-#include <unordered_map>
+#include "Scope.h"
 #include <algorithm>
 
 #ifdef SEMANT_FULL_VERBOSE
-#include <cassert>
 #include <iostream>
 #endif // SEMANT_FULL_VERBOSE
 
@@ -17,51 +15,24 @@
         return retval;                                                   \
     }
 
-#define SEMANT_RETURN_IF_FALSE(cond, retval) \
-    if (!(cond))                             \
-    {                                        \
-        return retval;                       \
-    }
-
 namespace semant
 {
-    class Scope
+    struct ClassNode
     {
-    private:
-        std::vector<std::unordered_map<std::string, std::shared_ptr<ast::Type>>> _symbols; // vectors of maps for convenient way to model class scopes
+        std::shared_ptr<ast::Class> _class;
+        std::vector<std::shared_ptr<ClassNode>> _children;
+    };
 
-    public:
-        static const std::string _self; // cannot be names of symbols
-
-        enum ADD_RESULT
-        {
-            OK,
-            RESERVED,
-            REDEFINED
-        };
-
-        inline void push_scope() { _symbols.emplace_back(); }
-        inline void pop_scope() { _symbols.pop_back(); }
-
-        ADD_RESULT add_if_can(const std::string &name, const std::shared_ptr<ast::Type> &type);
-        void add(const std::string &name, const std::shared_ptr<ast::Type> &type) { _symbols.back()[name] = type; }
-
-        std::shared_ptr<ast::Type> find(const std::string &name, const int &scope_shift = 0) const;
-
-#ifdef SEMANT_FULL_VERBOSE
-        void dump() const;
-#endif // SEMANT_FULL_VERBOSE
+    struct SemantResult
+    {
+        std::shared_ptr<ClassNode> _root;
+        std::unordered_map<std::string, std::shared_ptr<ClassNode>> _classes;
+        std::shared_ptr<ast::Program> _program;
     };
 
     class Semant
     {
     private:
-        struct ClassNode
-        {
-            std::shared_ptr<ast::Class> _class;
-            std::vector<std::shared_ptr<ClassNode>> _children;
-        };
-
         // create error report from message, file name and line number
         std::string _error_message;
         std::string _error_file_name;
@@ -157,7 +128,7 @@ namespace semant
         explicit Semant(std::vector<std::shared_ptr<ast::Program>> &programs);
 
         // return one program that consists of classes from all programs
-        std::shared_ptr<ast::Program> infer_types_and_check();
+        SemantResult infer_types_and_check();
 
         std::string get_error_msg() const;
     };

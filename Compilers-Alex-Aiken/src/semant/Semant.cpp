@@ -22,36 +22,6 @@ void Semant::log_exit(const std::string &msg)
 }
 #endif // SEMANT_FULL_VERBOSE
 
-// ---------------------------------------- SCOPE ----------------------------------------
-const std::string Scope::_self = "self";
-
-Scope::ADD_RESULT Scope::add_if_can(const std::string &name, const std::shared_ptr<ast::Type> &type)
-{
-    SEMANT_RETURN_IF_FALSE(name != _self, RESERVED);
-
-    SEMANT_FULL_VERBOSE_ONLY(assert(_symbols.size() != 0));
-    SEMANT_RETURN_IF_FALSE(_symbols.back().find(name) == _symbols.back().end(), REDEFINED);
-
-    _symbols.back()[name] = type;
-    return OK;
-}
-
-std::shared_ptr<ast::Type> Scope::find(const std::string &name, const int &scope_shift) const
-{
-    SEMANT_FULL_VERBOSE_ONLY(dump());
-
-    for (auto class_scope = _symbols.rbegin() + scope_shift; class_scope != _symbols.rend(); class_scope++)
-    {
-        const auto symbol = class_scope->find(name);
-        if (symbol != class_scope->end())
-        {
-            return symbol->second;
-        }
-    }
-
-    return nullptr;
-}
-
 // ---------------------------------------- INITIALIZATION ----------------------------------------
 
 std::shared_ptr<ast::Type> Semant::_bool = nullptr;
@@ -86,9 +56,9 @@ Semant::Semant(std::vector<std::shared_ptr<ast::Program>> &programs) : _program(
 
 // ---------------------------------------- CLASS CHECK ----------------------------------------
 
-std::shared_ptr<Semant::ClassNode> Semant::create_basic_class(const std::string &name,
-                                                              const std::string &parent,
-                                                              const std::vector<std::pair<std::string, std::vector<std::pair<std::string, std::string>>>> methods)
+std::shared_ptr<ClassNode> Semant::create_basic_class(const std::string &name,
+                                                      const std::string &parent,
+                                                      const std::vector<std::pair<std::string, std::vector<std::pair<std::string, std::string>>>> methods)
 {
     auto class_ = std::make_shared<ClassNode>();
     class_->_class = std::make_shared<ast::Class>();
@@ -330,12 +300,12 @@ bool Semant::check_classes()
 
 // ---------------------------------------- TYPES CHECK ----------------------------------------
 
-std::shared_ptr<ast::Program> Semant::infer_types_and_check()
+SemantResult Semant::infer_types_and_check()
 {
-    SEMANT_RETURN_IF_FALSE(check_classes(), nullptr);
-    SEMANT_RETURN_IF_FALSE(check_expressions(), nullptr);
+    SEMANT_RETURN_IF_FALSE(check_classes(), SemantResult{});
+    SEMANT_RETURN_IF_FALSE(check_expressions(), SemantResult{});
 
-    return _program;
+    return SemantResult{_root, _classes, _program};
 }
 
 bool Semant::check_expression_in_method(const std::shared_ptr<ast::Feature> &feature, Scope &scope)
@@ -509,10 +479,8 @@ bool Semant::check_expressions_in_class(const std::shared_ptr<ClassNode> &node, 
 
 bool Semant::check_expressions()
 {
-    Scope scope;
-    scope.push_scope();
+    Scope scope(_self_type);
 
-    scope.add("self", _self_type);
     SEMANT_RETURN_IF_FALSE(check_expressions_in_class(_root, scope), false);
 
     scope.pop_scope();
@@ -749,7 +717,7 @@ std::shared_ptr<ast::Type> Semant::infer_assign_type(ast::AssignExpression &assi
     SEMANT_RETURN_IF_FALSE_WITH_ERROR(var_type = scope.find(assign._object->_object),
                                       "Assignment to undeclared variable " + assign._object->_object + ".", -1, nullptr);
 
-    SEMANT_RETURN_IF_FALSE_WITH_ERROR(assign._object->_object != Scope::_self, "Cannot assign to 'self'.", -1, nullptr);
+    SEMANT_RETURN_IF_FALSE_WITH_ERROR(Scope::can_assign(assign._object->_object), "Cannot assign to 'self'.", -1, nullptr);
     SEMANT_RETURN_IF_FALSE_WITH_ERROR(check_types_meet(assign._expr->_type, var_type),
                                       "Type " + assign._expr->_type->_string + " of assigned expression does not conform to declared type " +
                                           var_type->_string + " of identifier " + assign._object->_object + ".",
@@ -1037,37 +1005,3 @@ void Scope::dump() const
     }
 }
 #endif // SEMANT_FULL_VERBOSE
-
-#ifdef SEMANT_STANDALONE
-#include <parser/Parser.h>
-
-int main(int argc, char *argv[])
-{
-    std::vector<std::shared_ptr<ast::Program>> programs;
-    for (int i = 1; i < argc; i++)
-    {
-        parser::Parser parser(std::make_shared<lexer::Lexer>(argv[i]));
-        if (auto ast = parser.parse_program())
-        {
-            programs.push_back(ast);
-        }
-        else
-        {
-            std::cout << parser.get_error_msg() << std::endl;
-            return 0;
-        }
-    }
-
-    Semant semant(programs);
-    if (auto ast = semant.infer_types_and_check())
-    {
-        ast::dump_program(*ast);
-    }
-    else
-    {
-        std::cout << semant.get_error_msg() << std::endl;
-    }
-
-    return 0;
-}
-#endif // SEMANT_STANDALONE
