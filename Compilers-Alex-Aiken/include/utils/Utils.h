@@ -31,6 +31,12 @@
 #define SEMANT_FULL_VERBOSE_ONLY(text)
 #endif // SEMANT_FULL_VERBOSE
 
+#ifdef CODEGEN_FULL_VERBOSE
+#define CODEGEN_FULL_VERBOSE_ONLY(text) text
+#else
+#define CODEGEN_FULL_VERBOSE_ONLY(text)
+#endif // CODEGEN_FULL_VERBOSE
+
 #if defined(LEXER_VERBOSE) || defined(PARSER_VERBOSE)
 #include <string>
 

@@ -5,12 +5,9 @@ using namespace lexer;
 #ifdef LEXER_FULL_VERBOSE
 void Lexer::log_match(const std::string &type, const std::string &str, const int &pos)
 {
-    std::cout << "Matched " << type << " " << str << " in position " << pos << std::endl;
+    _logger.log("Matched " + type + " " + str + " in position " + std::to_string(pos));
 }
-void Lexer::log(const std::string &str) { std::cout << str << std::endl; }
 #endif //LEXER_FULL_VERBOSE
-
-const int Lexer::MAX_STR_CONST = 1025;
 
 const std::regex Lexer::_lexer_spec(
     // keywords
@@ -35,9 +32,8 @@ const std::regex Lexer::_lexer_spec(
 const std::regex Lexer::_str_symbols_regexs("\\\"|\\\\|\\x00");
 const std::regex Lexer::_comm_symbols_regexs("\\(\\*|\\*\\)");
 
-Lexer::Lexer(const std::string &input_file_name)
+Lexer::Lexer(const std::string &input_file_name) : _file_name(input_file_name)
 {
-    _file_name = input_file_name;
     _line_number = 0;
 
     _input_file.open(input_file_name);
@@ -95,7 +91,7 @@ Token Lexer::match_string(const std::string &start_string)
             std::getline(_input_file, processed_string);
             _line_number++;
 
-            LEXER_FULL_VERBOSE_ONLY(log("New line: " + processed_string));
+            LEXER_FULL_VERBOSE_ONLY(_logger.log("New line: " + processed_string));
             LEXER_FULL_VERBOSE_ONLY(log_match("new line symbol", "", 0));
 
             // we read a new line, so check if '\n' is escaped
@@ -222,7 +218,7 @@ std::optional<Token> Lexer::skip_comment(const std::string &start_string)
             std::getline(_input_file, processed_string);
             _line_number++;
 
-            LEXER_FULL_VERBOSE_ONLY(log("New line: " + processed_string));
+            LEXER_FULL_VERBOSE_ONLY(_logger.log("New line: " + processed_string));
         }
 
         std::smatch matches;
@@ -270,7 +266,7 @@ std::optional<Token> Lexer::next()
                 std::getline(_input_file, _current_line);
                 _line_number++;
 
-                LEXER_FULL_VERBOSE_ONLY(log("New line: " + _current_line));
+                LEXER_FULL_VERBOSE_ONLY(_logger.log("New line: " + _current_line));
             }
             if (_input_file.eof() && _current_line.empty())
             {
@@ -373,7 +369,7 @@ std::optional<Token> Lexer::next()
             }
             _current_line.clear();
 
-            LEXER_FULL_VERBOSE_ONLY(log("Start analyzing a rest of the string."));
+            LEXER_FULL_VERBOSE_ONLY(_logger.log("Start analyzing a rest of the string."));
 
             // analyze a rest of the string
             if (suffix_start != -1)
@@ -394,7 +390,7 @@ std::optional<Token> Lexer::next()
                 }
             }
 
-            LEXER_FULL_VERBOSE_ONLY(log("End analyzing the rest of the string."));
+            LEXER_FULL_VERBOSE_ONLY(_logger.log("End analyzing the rest of the string."));
         }
 
         auto t = _saved_tokens.front();

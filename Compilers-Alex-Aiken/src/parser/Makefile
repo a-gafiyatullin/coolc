@@ -22,18 +22,18 @@ LDFLAGS =
 OBJS = ${SRC:%.cpp=${PARSER_BUILD_DIR}/%.o}
 
 parser: PARSER_MODE = -DPARSER_STANDALONE
-parser: compile-parser
+parser: .compile-parser
 
 parser-full-verbose: PARSER_MODE = -DPARSER_FULL_VERBOSE -DPARSER_STANDALONE
-parser-full-verbose: compile-parser
+parser-full-verbose: .compile-parser
 
-lexer.a:
-	cd ../lexer/ && $(MAKE) lexer-static
+.lexer.a:
+	cd ../lexer/ && $(MAKE) lexer-static-release
 
-compile-parser: lexer.a create_build_dir ${OBJS}
+.compile-parser: .lexer.a .create_build_dir ${OBJS}
 	${CXX} ${LDFLAGS} ${OBJS} ${LIB_DIR}/lexer.a -o ${BIN_DIR}/new-parser
 
-create_build_dir:
+.create_build_dir:
 	rm -rf ${PARSER_BUILD_DIR}
 	rm -rf ${UTILS_BUILD_DIR}
 	rm -rf ${AST_BUILD_DIR}
@@ -42,7 +42,7 @@ create_build_dir:
 	mkdir -p ${UTILS_BUILD_DIR}
 	mkdir -p ${AST_BUILD_DIR}
 
-create_lib_dir:
+.create_lib_dir:
 	-mkdir -p ${ROOT}/lib
 
 parser-asan: CXXFLAGS = ${DEBUG_CXXFLAGS} -fsanitize=address -fno-omit-frame-pointer
@@ -53,23 +53,18 @@ parser-ubsan: CXXFLAGS = ${DEBUG_CXXFLAGS} -fsanitize=undefined -fno-omit-frame-
 parser-ubsan: LDFLAGS = -fsanitize=undefined -g
 parser-ubsan: parser
 
-parser-shared-release: PARSER_MODE =
-parser-shared-release: CXXFLAGS += -fPIC
-parser-shared-release: LDFLAGS = -shared -fPIC
-parser-shared-release: create_lib_dir create_build_dir ${OBJS}
-	${CXX} ${LDFLAGS} ${OBJS} -o ${LIB_DIR}/parser.so
+parser-static-release: PARSER_MODE =
+parser-static-release: .parser-static
 
-parser-shared-debug: CXXFLAGS = ${DEBUG_CXXFLAGS}
-parser-shared-debug: LDFLAGS += -g
-parser-shared-debug: parser-shared-release
-
-parser-static: CXXFLAGS += -fPIC
-parser-static: LDFLAGS = -fPIC
-parser-static: create_lib_dir create_build_dir ${OBJS}
+.parser-static: .create_lib_dir .create_build_dir ${OBJS}
 	ar rvs ${LIB_DIR}/parser.a ${OBJS}
 
+parser-static-debug: CXXFLAGS = ${DEBUG_CXXFLAGS}
+parser-static-debug: LDFLAGS += -g
+parser-static-debug: parser-static-release
+
 parser-static-verbose: PARSER_MODE = -DPARSER_VERBOSE
-parser-static-verbose: parser-static
+parser-static-verbose: .parser-static
 
 dotest:
 	python3 ${TEST_DIR}/test.py -build
@@ -84,4 +79,4 @@ ${PARSER_BUILD_DIR}/%.o: %.cpp
 	${CXX} ${CXXFLAGS} -c $< -o $@
 
 clean:
-	-rm -f ${OBJS} ${BIN_DIR}/new-parser ${LIB_DIR}/parser.so
+	-rm -f ${OBJS} ${BIN_DIR}/new-parser ${LIB_DIR}/parser.a

@@ -1,6 +1,6 @@
 ROOT= ../..
 
-SRC	= Lexer.cpp Token.cpp ../utils/Utils.cpp ../coolc.cpp
+SRC	= Lexer.cpp Token.cpp ../utils/Utils.cpp ../utils/logger/Logger.cpp ../coolc.cpp
 
 CXXINCLUDE = -I${ROOT}/include/
 LEXER_MODE = -DLEXER_STANDALONE
@@ -21,22 +21,23 @@ LDFLAGS =
 OBJS = ${SRC:%.cpp=${LEXER_BUILD_DIR}/%.o}
 
 lexer: LEXER_MODE = -DLEXER_STANDALONE
-lexer: compile-lexer
+lexer: .compile-lexer
 
 lexer-full-verbose: LEXER_MODE = -DLEXER_FULL_VERBOSE -DLEXER_STANDALONE
-lexer-full-verbose: compile-lexer
+lexer-full-verbose: .compile-lexer
 
-compile-lexer: create_build_dir ${OBJS}
+.compile-lexer: .create_build_dir ${OBJS}
 	${CXX} ${LDFLAGS} ${OBJS} -o ${BIN_DIR}/new-lexer
 
-create_build_dir:
+.create_build_dir:
 	rm -rf ${LEXER_BUILD_DIR}
 	rm -rf ${UTILS_BUILD_DIR}
 	rm -rf ${BUILD_DIR}/coolc.o
 	mkdir -p ${LEXER_BUILD_DIR}
 	mkdir -p ${UTILS_BUILD_DIR}
+	mkdir -p ${UTILS_BUILD_DIR}/logger
 
-create_lib_dir:
+.create_lib_dir:
 	-mkdir -p ${ROOT}/lib
 
 lexer-asan: CXXFLAGS = ${DEBUG_CXXFLAGS} -fsanitize=address -fno-omit-frame-pointer
@@ -47,21 +48,13 @@ lexer-ubsan: CXXFLAGS = ${DEBUG_CXXFLAGS} -fsanitize=undefined -fno-omit-frame-p
 lexer-ubsan: LDFLAGS = -fsanitize=undefined -g
 lexer-ubsan: lexer
 
-lexer-shared-release: LEXER_MODE =
-lexer-shared-release: CXXFLAGS += -fPIC
-lexer-shared-release: LDFLAGS = -shared -fPIC
-lexer-shared-release: create_lib_dir create_build_dir ${OBJS}
-	${CXX} ${LDFLAGS} ${OBJS} -o ${LIB_DIR}/lexer.so
-
-lexer-shared-debug: CXXFLAGS = ${DEBUG_CXXFLAGS}
-lexer-shared-debug: LDFLAGS += -g
-lexer-shared-debug: lexer-shared-release
-
-lexer-static: LEXER_MODE =
-lexer-static: CXXFLAGS += -fPIC
-lexer-static: LDFLAGS = -fPIC
-lexer-static: create_lib_dir create_build_dir ${OBJS}
+lexer-static-release: LEXER_MODE =
+lexer-static-release: .create_lib_dir .create_build_dir ${OBJS}
 	ar rvs ${LIB_DIR}/lexer.a ${OBJS}
+
+lexer-static-debug: CXXFLAGS = ${DEBUG_CXXFLAGS}
+lexer-static-debug: LDFLAGS += -g
+lexer-static-debug: lexer-static-release
 
 dotest:
 	python3 ${TEST_DIR}/test.py -build
@@ -76,4 +69,4 @@ ${LEXER_BUILD_DIR}/%.o: %.cpp
 	${CXX} ${CXXFLAGS} -c $< -o $@
 
 clean:
-	-rm -f ${OBJS} ${BIN_DIR}/new-lexer ${LIB_DIR}/lexer.so
+	-rm -f ${OBJS} ${BIN_DIR}/new-lexer ${LIB_DIR}/lexer.a

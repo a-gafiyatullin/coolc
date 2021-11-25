@@ -1,12 +1,13 @@
 ROOT= ../..
 
-SRC	= Semant.cpp Scope.cpp ../coolc.cpp
+SRC	= Semant.cpp Scope.cpp ../utils/logger/Logger.cpp ../coolc.cpp
 
 CXXINCLUDE = -I${ROOT}/include/
 SEMANT_MODE = -DSEMANT_STANDALONE
 
 BUILD_DIR = ${ROOT}/build
 SEMANT_BUILD_DIR = ${BUILD_DIR}/semant
+LOGGER_BUILD_DIR = ${BUILD_DIR}/utils/logger
 BIN_DIR = ${ROOT}/bin
 TEST_DIR = ${ROOT}/tests/semant
 LIB_DIR = ${ROOT}/lib
@@ -20,26 +21,28 @@ LDFLAGS =
 OBJS = ${SRC:%.cpp=${SEMANT_BUILD_DIR}/%.o}
 
 semant: SEMANT_MODE = -DSEMANT_STANDALONE
-semant: compile-semant
+semant: .compile-semant
 
 semant-full-verbose: SEMANT_MODE = -DSEMANT_FULL_VERBOSE -DSEMANT_STANDALONE
-semant-full-verbose: compile-semant
+semant-full-verbose: .compile-semant
 
-lexer.a:
-	cd ../lexer/ && $(MAKE) lexer-static
+.lexer.a:
+	cd ../lexer/ && $(MAKE) lexer-static-release
 
-parser.a:
+.parser.a:
 	cd ../parser/ && $(MAKE) parser-static-verbose
 
-compile-semant: lexer.a parser.a create_build_dir ${OBJS}
+.compile-semant: .lexer.a .parser.a .create_build_dir ${OBJS}
 	${CXX} ${LDFLAGS} ${OBJS} ${LIB_DIR}/lexer.a ${LIB_DIR}/parser.a -o ${BIN_DIR}/new-semant
 
-create_build_dir:
+.create_build_dir:
 	rm -rf ${SEMANT_BUILD_DIR}
+	rm -rf ${LOGGER_BUILD_DIR}
 	rm -rf ${BUILD_DIR}/coolc.o
 	mkdir -p ${SEMANT_BUILD_DIR}
+	mkdir -p ${LOGGER_BUILD_DIR}
 
-create_lib_dir:
+.create_lib_dir:
 	-mkdir -p ${ROOT}/lib
 
 semant-asan: CXXFLAGS = ${DEBUG_CXXFLAGS} -fsanitize=address -fno-omit-frame-pointer
@@ -50,15 +53,13 @@ semant-ubsan: CXXFLAGS = ${DEBUG_CXXFLAGS} -fsanitize=undefined -fno-omit-frame-
 semant-ubsan: LDFLAGS = -fsanitize=undefined -g
 semant-ubsan: semant
 
-semant-shared-release: SEMANT_MODE =
-semant-shared-release: CXXFLAGS += -fPIC
-semant-shared-release: LDFLAGS = -shared -fPIC
-semant-shared-release: create_lib_dir create_build_dir ${OBJS}
-	${CXX} ${LDFLAGS} ${OBJS} -o ${LIB_DIR}/semant.so
+semant-static-release: SEMANT_MODE =
+semant-static-release: .create_lib_dir .create_build_dir ${OBJS}
+	ar rvs ${LIB_DIR}/semant.a ${OBJS}
 
-semant-shared-debug: CXXFLAGS = ${DEBUG_CXXFLAGS}
-semant-shared-debug: LDFLAGS += -g
-semant-shared-debug: semant-shared-release
+semant-static-debug: CXXFLAGS = ${DEBUG_CXXFLAGS}
+semant-static-debug: LDFLAGS += -g
+semant-static-debug: semant-static-release
 
 dotest:
 	python3 ${TEST_DIR}/test.py -build
@@ -73,4 +74,4 @@ ${SEMANT_BUILD_DIR}/%.o: %.cpp
 	${CXX} ${CXXFLAGS} -c $< -o $@
 
 clean:
-	-rm -f ${OBJS} ${BIN_DIR}/new-semant ${LIB_DIR}/semant.so
+	-rm -f ${OBJS} ${BIN_DIR}/new-semant ${LIB_DIR}/semant.a

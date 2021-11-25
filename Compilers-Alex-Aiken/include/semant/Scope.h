@@ -6,6 +6,7 @@
 
 #ifdef SEMANT_FULL_VERBOSE
 #include <cassert>
+#include <iostream>
 #endif // SEMANT_FULL_VERBOSE
 
 #define SEMANT_RETURN_IF_FALSE(cond, retval) \

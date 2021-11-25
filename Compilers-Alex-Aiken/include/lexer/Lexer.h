@@ -6,15 +6,19 @@
 #include <optional>
 #include <queue>
 
+#ifdef LEXER_FULL_VERBOSE
+#include "utils/logger/Logger.h"
+#endif // LEXER_VERBOSE
+
 namespace lexer
 {
     class Lexer
     {
     protected:
-        static const int MAX_STR_CONST;
+        static constexpr int MAX_STR_CONST = 1025;
 
         std::ifstream _input_file;
-        std::string _file_name;
+        const std::string _file_name;
         int _line_number;
 
         static const std::regex _lexer_spec; // lexer specification that is used outside of Cool strings and Cool comments
@@ -34,8 +38,9 @@ namespace lexer
                                      std::string &error_msg, int &error_line_num);
 
 #ifdef LEXER_FULL_VERBOSE
+        Logger _logger;
+
         void log_match(const std::string &type, const std::string &str, const int &pos);
-        void log(const std::string &str);
 #endif //LEXER_FULL_VERBOSE
 
     public:
