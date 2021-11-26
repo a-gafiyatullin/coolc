@@ -124,6 +124,7 @@ namespace semant
         inline static std::shared_ptr<ast::Type> int_type() { return _int; }
         inline static std::shared_ptr<ast::Type> bool_type() { return _bool; }
         inline static std::shared_ptr<ast::Type> string_type() { return _string; }
+        inline static std::shared_ptr<ast::Type> self_type() { return _self_type; }
 
         // return class_ if type is SELF_TYPE or type
         static std::shared_ptr<ast::Type> exact_type(const std::shared_ptr<ast::Type> &type, const std::shared_ptr<ast::Type> &class_);
