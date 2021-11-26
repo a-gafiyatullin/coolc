@@ -324,10 +324,10 @@ _stack_overflow_msg: .asciiz " Stack overflow detected, COOL program aborted\n"
 #
 
 _GenGC_INITERROR:	.asciiz "GenGC: Unable to initialize the garbage collector.\n"
-_GenGC_COLLECT:		.asciiz "Garbage collecting ...\n"
+#_GenGC_COLLECT:		.asciiz "Garbage collecting ...\n"
 _GenGC_Major:		.asciiz "Major ...\n"
 _GenGC_Minor:		.asciiz "Minor ...\n"
-#_GenGC_COLLECT:		.asciiz ""
+_GenGC_COLLECT:		.asciiz ""
 _GenGC_MINORERROR:	.asciiz "GenGC: Error during minor garbage collection.\n"
 _GenGC_MAJORERROR:	.asciiz "GenGC: Error during major garbage collection.\n"
 _GenGC_Init_test_msg:   .asciiz "GenGC initialized in test mode.\n"
