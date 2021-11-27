@@ -195,15 +195,15 @@ namespace codegen
         void bne(const Register &op1_reg, const Register &op2_reg, const Label &label);
         // branch on greater than
         void bgt(const Register &op1_reg, const Register &op2_reg, const Label &label);
-        void bgt(const Register &op1_reg, const int32_t &op2_reg, const Label &label);
+        void bgt(const Register &op1_reg, const int32_t &op2_imm, const Label &label);
         // branch on less than
         void blt(const Register &op1_reg, const Register &op2_reg, const Label &label);
-        void blt(const Register &op1_reg, const int32_t &op2_reg, const Label &label);
+        void blt(const Register &op1_reg, const int32_t &op2_imm, const Label &label);
         // jump
         void j(const Label &label);
         // branch on equal
         void beq(const Register &op1_reg, const Register &op2_reg, const Label &label);
-        void beq(const Register &op1_reg, const int32_t &op2_reg, const Label &label);
+        void beq(const Register &op1_reg, const int32_t &op2_imm, const Label &label);
         // jump and link
         void jal(const Label &label);
         // jump and link register

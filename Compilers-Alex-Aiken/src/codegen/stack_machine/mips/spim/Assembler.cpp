@@ -149,10 +149,10 @@ void Assembler::beq(const Register &op1_reg, const Register &op2_reg, const Labe
                static_cast<std::string>(op2_reg) + " " + static_cast<std::string>(label));
 }
 
-void Assembler::beq(const Register &op1_reg, const int32_t &op2_reg, const Label &label)
+void Assembler::beq(const Register &op1_reg, const int32_t &op2_imm, const Label &label)
 {
     _code.save(std::string(_ident, ' ') + "beq\t\t" + static_cast<std::string>(op1_reg) + " " +
-               std::to_string(op2_reg) + " " + static_cast<std::string>(label));
+               std::to_string(op2_imm) + " " + static_cast<std::string>(label));
 }
 
 void Assembler::j(const Label &label)
@@ -298,10 +298,10 @@ void Assembler::bgt(const Register &op1_reg, const Register &op2_reg, const Labe
                static_cast<std::string>(op2_reg) + " " + static_cast<std::string>(label));
 }
 
-void Assembler::bgt(const Register &op1_reg, const int32_t &op2_reg, const Label &label)
+void Assembler::bgt(const Register &op1_reg, const int32_t &op2_imm, const Label &label)
 {
     _code.save(std::string(_ident, ' ') + "bgt\t\t" + static_cast<std::string>(op1_reg) + " " +
-               std::to_string(op2_reg) + " " + static_cast<std::string>(label));
+               std::to_string(op2_imm) + " " + static_cast<std::string>(label));
 }
 
 void Assembler::blt(const Register &op1_reg, const Register &op2_reg, const Label &label)
@@ -310,10 +310,10 @@ void Assembler::blt(const Register &op1_reg, const Register &op2_reg, const Labe
                static_cast<std::string>(op2_reg) + " " + static_cast<std::string>(label));
 }
 
-void Assembler::blt(const Register &op1_reg, const int32_t &op2_reg, const Label &label)
+void Assembler::blt(const Register &op1_reg, const int32_t &op2_imm, const Label &label)
 {
     _code.save(std::string(_ident, ' ') + "blt\t\t" + static_cast<std::string>(op1_reg) + " " +
-               std::to_string(op2_reg) + " " + static_cast<std::string>(label));
+               std::to_string(op2_imm) + " " + static_cast<std::string>(label));
 }
 
 #ifdef CODEGEN_FULL_VERBOSE

@@ -311,7 +311,6 @@ DataSection::DataSection(const std::shared_ptr<semant::ClassNode> &root)
     const Label memmrg_init(_asm, "_MemMgr_INITIALIZER");
     __ global(memmrg_init);
 
-    // TODO: twice call GC in bigexample.cl
     const Label memmrg_collector(_asm, "_MemMgr_COLLECTOR");
     {
         const AssemblerMarkSection mark(_asm, memmrg_init);

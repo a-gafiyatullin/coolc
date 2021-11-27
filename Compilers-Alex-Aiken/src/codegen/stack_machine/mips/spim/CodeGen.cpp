@@ -682,7 +682,7 @@ void CodeGen::emit_dispatch_expr(const ast::DispatchExpression &expr, SymbolTabl
 {
     CODEGEN_FULL_VERBOSE_ONLY(_logger.log_enter("gen dispatch expr"));
 
-    // all args in reverse order on stack
+    // put all args on stack. Callee have to get rid of them
     const int args_num = expr._args.size();
     // allocate space
     __ addiu(__ sp(), __ sp(), -(args_num * _WORD_SIZE));
