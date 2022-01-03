@@ -1,13 +1,12 @@
-CODEGEN_ROOT = ../../..
-ROOT= ${CODEGEN_ROOT}/../..
+ROOT = ../../..
 
-SRC	= Assembler.cpp CodeGen.cpp SymbolTable.cpp DataSection.cpp ${CODEGEN_ROOT}/../utils/logger/Logger.cpp ${CODEGEN_ROOT}/../coolc.cpp
+SRC	= Assembler.cpp CodeGen.cpp SymbolTable.cpp DataSection.cpp ../../utils/logger/Logger.cpp ../../coolc.cpp
 
 CXXINCLUDE = -I${ROOT}/include/
 CODEGEN_MODE = 
 
 BUILD_DIR = ${ROOT}/build
-CODEGEN_BUILD_DIR = ${BUILD_DIR}/codegen/stack_machine/mips/spim
+CODEGEN_BUILD_DIR = ${BUILD_DIR}/codegen/mips
 LOGGER_BUILD_DIR = ${BUILD_DIR}/utils/logger
 BIN_DIR = ${ROOT}/bin
 TEST_DIR = ${ROOT}/tests/codegen

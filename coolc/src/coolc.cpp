@@ -1,7 +1,7 @@
 #include "semant/Semant.h"
 #include "parser/Parser.h"
 #include "lexer/Lexer.h"
-#include "codegen/stack_machine/mips/spim/CodeGen.h"
+#include "codegen/mips/CodeGen.h"
 
 #ifdef LEXER_STANDALONE
 int main(int argc, char *argv[])

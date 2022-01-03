@@ -1,4 +1,4 @@
-#include "codegen/stack_machine/mips/spim/SymbolTable.h"
+#include "codegen/mips/SymbolTable.h"
 
 using namespace codegen;
 

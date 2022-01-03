@@ -1,4 +1,4 @@
-#include "codegen/stack_machine/mips/spim/CodeGen.h"
+#include "codegen/mips/CodeGen.h"
 
 using namespace codegen;
 

@@ -37,7 +37,7 @@ print(bcolors.BOLD + 'Test directory: ' + bcolors.ENDC + current_dir + '\n')
 if not rebuild_parser and os.path.exists(mycoolc):
     print('new-codegen already exists in bin directory. Skip building.\n')
 else:
-    os.chdir(root_dir + '/src/codegen/stack_machine/mips/spim')
+    os.chdir(root_dir + '/src/codegen/mips')
     if rebuild_with_asan:
         os.system('make codegen-asan')
     elif rebuild_with_ubsan:
