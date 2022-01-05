@@ -2,7 +2,7 @@ ROOT = ../../..
 
 SRC	= Assembler.cpp CodeGen.cpp SymbolTable.cpp DataSection.cpp ../../utils/logger/Logger.cpp ../../coolc.cpp
 
-CXXINCLUDE = -I${ROOT}/include/
+CXXINCLUDE = -I${ROOT}/src/
 CODEGEN_MODE = 
 
 BUILD_DIR = ${ROOT}/build

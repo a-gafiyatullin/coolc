@@ -2,7 +2,7 @@ ROOT= ../..
 
 SRC	= Lexer.cpp Token.cpp ../utils/Utils.cpp ../utils/logger/Logger.cpp ../coolc.cpp
 
-CXXINCLUDE = -I${ROOT}/include/
+CXXINCLUDE = -I${ROOT}/src/
 LEXER_MODE = -DLEXER_STANDALONE
 
 BUILD_DIR = ${ROOT}/build

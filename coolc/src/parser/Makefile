@@ -2,7 +2,7 @@ ROOT= ../..
 
 SRC	= Parser.cpp ../ast/AST.cpp ../utils/Utils.cpp ../coolc.cpp
 
-CXXINCLUDE = -I${ROOT}/include/
+CXXINCLUDE = -I${ROOT}/src/
 PARSER_MODE = -DPARSER_STANDALONE
 
 BUILD_DIR = ${ROOT}/build

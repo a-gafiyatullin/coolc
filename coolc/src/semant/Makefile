@@ -2,7 +2,7 @@ ROOT= ../..
 
 SRC	= Semant.cpp Scope.cpp ../utils/logger/Logger.cpp ../coolc.cpp
 
-CXXINCLUDE = -I${ROOT}/include/
+CXXINCLUDE = -I${ROOT}/src/
 SEMANT_MODE = -DSEMANT_STANDALONE
 
 BUILD_DIR = ${ROOT}/build
