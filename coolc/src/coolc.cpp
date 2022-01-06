@@ -2,13 +2,17 @@
 #include "lexer/Lexer.h"
 #include "parser/Parser.h"
 #include "semant/Semant.h"
+#include "utils/Utils.h"
 #include <fstream>
 
 int main(int argc, char *argv[])
 {
+    int files_start_idx = 1;
+    DEBUG_ONLY(files_start_idx = process_args(argv + 1, argc - 1));
+
     // lexer/parser stage
     std::vector<std::shared_ptr<ast::Program>> programs;
-    for (int i = 1; i < argc; i++)
+    for (int i = files_start_idx; i < argc; i++)
     {
         parser::Parser parser(std::make_shared<lexer::Lexer>(argv[i]));
         if (auto ast = parser.parse_program())

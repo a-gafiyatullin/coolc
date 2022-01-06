@@ -115,10 +115,6 @@ class Semant
         return _classes.find(type->_string) != _classes.end();
     }
 
-#ifdef DEBUG
-    std::shared_ptr<Logger> _logger;
-#endif // DEBUG
-
   public:
     /**
      * @brief Construct a new Semant

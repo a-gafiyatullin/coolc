@@ -1,6 +1,7 @@
 #include "utils/Utils.h"
 
 #ifdef DEBUG
+
 std::string get_printable_string(const std::string &str)
 {
     // transform escape sequencies
@@ -57,14 +58,14 @@ bool maybe_set(const char *arg, const char *flag_name, bool &flag)
         if (arg[0] == '+')
         {
             flag = true;
-            return true;
         }
+        return true;
     }
 
     return false;
 }
 
-int process_args(const char *args[], const int &args_num)
+int process_args(char *const args[], const int &args_num)
 {
     TraceLexer = false;
     PrintFinalAST = false;

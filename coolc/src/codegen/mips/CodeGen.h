@@ -108,8 +108,6 @@ class CodeGen
 
     void emit_gc_update(const Register &obj, const int &offset);
 
-    DEBUG_ONLY(std::shared_ptr<Logger> _logger);
-
   public:
     /**
      * @brief Construct a new CodeGen object

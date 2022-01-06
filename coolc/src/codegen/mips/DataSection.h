@@ -41,15 +41,6 @@ class ClassCode
     void set_disp_table_entry(const std::string &method_name);
     void inherit_disp_table(const ClassCode &code);
 
-#ifdef DEBUG
-    std::shared_ptr<Logger> _logger;
-
-    inline void set_parent_logger(const std::shared_ptr<Logger> logger)
-    {
-        _logger->set_parent_logger(logger);
-    }
-#endif // DEBUG
-
   public:
     /**
      * @brief Construct a new ClassCode
@@ -166,10 +157,6 @@ class DataSection
     int build_class_info(const std::shared_ptr<semant::ClassNode> &root); // emit necessary tables, find max child tag
 
     ClassCode &create_class_code(const std::shared_ptr<ast::Type> &klass);
-
-#ifdef DEBUG
-    std::shared_ptr<Logger> _logger;
-#endif // DEBUG
 
   public:
     /**
@@ -323,17 +310,5 @@ class DataSection
     {
         return _asm;
     }
-
-#ifdef DEBUG
-    /**
-     * @brief Set the parent logger
-     *
-     * @param logger Parent logger
-     */
-    inline void set_parent_logger(const std::shared_ptr<Logger> &logger)
-    {
-        _logger->set_parent_logger(logger);
-    }
-#endif // DEBUG
 };
 }; // namespace codegen

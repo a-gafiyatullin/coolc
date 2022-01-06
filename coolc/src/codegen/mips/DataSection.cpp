@@ -31,12 +31,12 @@ void ClassCode::set_disp_table_entry(const std::string &method_name)
 
     if (table_entry == _disp_table.end())
     {
-        CODEGEN_VERBOSE_ONLY(_logger->log("Adds method " + full_name + " to class " + _class->_string););
+        CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log("Adds method " + full_name + " to class " + _class->_string););
         _disp_table.push_back(std::move(full_name));
     }
     else
     {
-        CODEGEN_VERBOSE_ONLY(_logger->log("Changes method " + *table_entry + " on method " + full_name););
+        CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log("Changes method " + *table_entry + " on method " + full_name););
         *table_entry = std::move(full_name);
     }
 }
@@ -77,21 +77,21 @@ void ClassCode::inherit_disp_table(const ClassCode &code)
 {
     _disp_table = code._disp_table;
 
-#ifdef DEBUG
-    _logger->log(_class->_string + " inherits disp table from " + code._class->_string + ":");
-    std::for_each(_disp_table.begin(), _disp_table.end(), [this](const std::string &str) { this->_logger->log(str); });
-#endif // DEBUG
+    CODEGEN_VERBOSE_ONLY(
+        Logger::get_logger()->log(_class->_string + " inherits disp table from " + code._class->_string + ":");
+        std::for_each(_disp_table.begin(), _disp_table.end(),
+                      [this](const std::string &str) { Logger::get_logger()->log(str); }));
 }
 
 void ClassCode::inherit_fields(const ClassCode &code)
 {
     _fields_types = code._fields_types;
 
-#ifdef DEBUG
-    _logger->log(_class->_string + " inherits fields from " + code._class->_string + ":");
-    std::for_each(_fields_types.begin(), _fields_types.end(),
-                  [this](const auto &type) { this->_logger->log(type == nullptr ? "nullptr" : type->_string); });
-#endif // DEBUG
+    CODEGEN_VERBOSE_ONLY(
+        Logger::get_logger()->log(_class->_string + " inherits fields from " + code._class->_string + ":");
+        std::for_each(_fields_types.begin(), _fields_types.end(), [this](const auto &type) {
+            Logger::get_logger()->log(type == nullptr ? "nullptr" : type->_string);
+        }));
 }
 
 // ------------------------------------------ DataSection ------------------------------------------
@@ -254,11 +254,6 @@ DataSection::DataSection(const std::shared_ptr<semant::ClassNode> &root)
     const Label bool_tag(_asm, "_bool_tag");
     const Label string_tag(_asm, "_string_tag");
 
-#ifdef DEBUG
-    _logger = std::make_shared<Logger>();
-    _asm.set_parent_logger(_logger);
-#endif // DEBUG
-
     __ data_section();
     __ align(2);
 
@@ -366,8 +361,6 @@ int DataSection::build_class_info(const std::shared_ptr<semant::ClassNode> &node
     const auto &klass = node->_class;
     auto &code = create_class_code(klass->_type);
 
-    CODEGEN_VERBOSE_ONLY(code.set_parent_logger(_logger););
-
     // inherit dispatch table from parent
     code.inherit_disp_table(get_class_code(klass->_parent));
 
@@ -385,9 +378,9 @@ int DataSection::build_class_info(const std::shared_ptr<semant::ClassNode> &node
                   [&](const auto &node) { max_child_tag = std::max(max_child_tag, build_class_info(node)); });
 
     _tags.at(klass->_type->_string).second = max_child_tag;
-    CODEGEN_VERBOSE_ONLY(_logger->log("For class " + klass->_type->_string + " with tag " +
-                                      std::to_string(_tags.at(klass->_type->_string).first) + " last child has tag " +
-                                      std::to_string(max_child_tag)));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log("For class " + klass->_type->_string + " with tag " +
+                                                   std::to_string(_tags.at(klass->_type->_string).first) +
+                                                   " last child has tag " + std::to_string(max_child_tag)));
 
     return max_child_tag;
 }

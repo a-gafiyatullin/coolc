@@ -44,8 +44,6 @@ class Lexer
                                  int &error_line_num);
 
 #ifdef DEBUG
-    std::shared_ptr<Logger> _logger;
-
     void log_match(const std::string &type, const std::string &str, const int &pos);
 #endif // DEBUG
 

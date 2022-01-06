@@ -14,13 +14,6 @@ CodeGen::CodeGen(const std::shared_ptr<semant::ClassNode> &root)
       _dispatch_abort_label(_asm, "_dispatch_abort", Label::ALLOW_NO_BIND),
       _gen_gc_assign_label(_asm, "_GenGC_Assign", Label::ALLOW_NO_BIND) // GC
 {
-#ifdef DEBUG
-    _logger = std::make_shared<Logger>();
-
-    _data.set_parent_logger(_logger);
-    _asm.set_parent_logger(_logger);
-#endif // DEBUG
-
     // here we start generate methods code
     __ text_section();
 
@@ -35,7 +28,6 @@ CodeGen::CodeGen(const std::shared_ptr<semant::ClassNode> &root)
 CodeBuffer CodeGen::emit()
 {
     SymbolTable init_table;
-    DEBUG_ONLY(init_table.set_parent_logger(_logger););
     emit_class_code(_root, init_table);
 
     CodeBuffer data = _data.emit();
@@ -47,7 +39,7 @@ CodeBuffer CodeGen::emit()
 void CodeGen::emit_class_code(const std::shared_ptr<semant::ClassNode> &node, SymbolTable &table)
 {
     _current_class = node->_class;
-    CODEGEN_VERBOSE_ONLY(_logger->log_enter("gen class " + _current_class->_type->_string));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_enter("gen class " + _current_class->_type->_string));
 
     table.push_scope();
     add_fields_to_table(_current_class, table);    // add fields to table, setup ClassCode for prototype emitting
@@ -79,7 +71,7 @@ void CodeGen::emit_class_code(const std::shared_ptr<semant::ClassNode> &node, Sy
 
     table.pop_scope();
 
-    CODEGEN_VERBOSE_ONLY(_logger->log_exit("gen class " + _current_class->_type->_string));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_exit("gen class " + _current_class->_type->_string));
 }
 
 void CodeGen::add_fields_to_table(const std::shared_ptr<ast::Class> &klass, SymbolTable &table)
@@ -117,7 +109,7 @@ void CodeGen::add_fields_to_table(const std::shared_ptr<ast::Class> &klass, Symb
 
 void CodeGen::emit_binary_expr(const ast::BinaryExpression &expr, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(_logger->log_enter("gen binary expr"));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_enter("gen binary expr"));
 
     emit_expr(expr._lhs, table);
     // we hope to see the first argument in acc
@@ -214,12 +206,12 @@ void CodeGen::emit_binary_expr(const ast::BinaryExpression &expr, SymbolTable &t
         emit_store_int(_a0, t5);
     }
 
-    CODEGEN_VERBOSE_ONLY(_logger->log_exit("gen binary expr"));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_exit("gen binary expr"));
 }
 
 void CodeGen::emit_unary_expr(const ast::UnaryExpression &expr, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(_logger->log_enter("gen unary expr"));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_enter("gen unary expr"));
 
     emit_expr(expr._expr, table);
 
@@ -266,7 +258,7 @@ void CodeGen::emit_unary_expr(const ast::UnaryExpression &expr, SymbolTable &tab
         emit_store_int(_a0, t5);
     }
 
-    CODEGEN_VERBOSE_ONLY(_logger->log_exit("gen unary expr"));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_exit("gen unary expr"));
 }
 
 void CodeGen::emit_expr(const std::shared_ptr<ast::Expression> &expr, SymbolTable &table)
@@ -313,7 +305,7 @@ void CodeGen::emit_method_epilogue(const int &params_num)
 
 void CodeGen::emit_class_init_method(const std::shared_ptr<ast::Class> &klass, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(_logger->log_enter("gen init for class " + _current_class->_type->_string));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_enter("gen init for class " + _current_class->_type->_string));
 
     const AssemblerMarkSection mark(_asm, Label(_asm, DataSection::get_init_method_name(klass->_type->_string)));
 
@@ -343,12 +335,12 @@ void CodeGen::emit_class_init_method(const std::shared_ptr<ast::Class> &klass, S
     __ move(_a0, _s0); // return "this"
     emit_method_epilogue(0);
 
-    CODEGEN_VERBOSE_ONLY(_logger->log_exit("gen init for class " + _current_class->_type->_string));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_exit("gen init for class " + _current_class->_type->_string));
 }
 
 void CodeGen::emit_class_method(const std::shared_ptr<ast::Feature> &method, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(_logger->log_enter("gen method " + method->_object->_object));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_enter("gen method " + method->_object->_object));
 
     const AssemblerMarkSection mark(
         _asm, Label(_asm, DataSection::get_full_method_name(_current_class->_type->_string, method->_object->_object)));
@@ -370,7 +362,7 @@ void CodeGen::emit_class_method(const std::shared_ptr<ast::Feature> &method, Sym
 
     emit_method_epilogue(params_num);
 
-    CODEGEN_VERBOSE_ONLY(_logger->log_exit("gen method " + method->_object->_object));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_exit("gen method " + method->_object->_object));
 }
 
 void CodeGen::emit_bool_expr(const ast::BoolExpression &expr)
@@ -390,13 +382,13 @@ void CodeGen::emit_string_expr(const ast::StringExpression &expr)
 
 void CodeGen::emit_object_expr(const ast::ObjectExpression &expr, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(_logger->log_enter("gen object expr for " + expr._object));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_enter("gen object expr for " + expr._object));
 
     if (!semant::Scope::can_assign(expr._object))
     {
         __ move(_a0, _s0); // self object: just copy to acc
 
-        CODEGEN_VERBOSE_ONLY(_logger->log_exit("gen object expr for " + expr._object));
+        CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_exit("gen object expr for " + expr._object));
         return;
     }
 
@@ -410,12 +402,12 @@ void CodeGen::emit_object_expr(const ast::ObjectExpression &expr, SymbolTable &t
         __ lw(_a0, __ fp(), object._offset); // local object defined in let, case, formal parameter
     }
 
-    CODEGEN_VERBOSE_ONLY(_logger->log_exit("gen object expr for " + expr._object));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_exit("gen object expr for " + expr._object));
 }
 
 void CodeGen::emit_new_expr(const ast::NewExpression &expr)
 {
-    CODEGEN_VERBOSE_ONLY(_logger->log_enter("gen new expr"));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_enter("gen new expr"));
 
     // we know thw type
     if (!semant::Semant::is_self_type(expr._type))
@@ -442,7 +434,7 @@ void CodeGen::emit_new_expr(const ast::NewExpression &expr)
         __ jalr(t5);
     }
 
-    CODEGEN_VERBOSE_ONLY(_logger->log_exit("gen new expr"));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_exit("gen new expr"));
 }
 
 void CodeGen::emit_in_scope(const std::shared_ptr<ast::ObjectExpression> &object,
@@ -477,7 +469,7 @@ void CodeGen::emit_in_scope(const std::shared_ptr<ast::ObjectExpression> &object
 
 void CodeGen::emit_cases_expr(const ast::CaseExpression &expr, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(_logger->log_enter("gen case expr"));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_enter("gen case expr"));
 
     emit_expr(expr._expr, table);
 
@@ -538,12 +530,12 @@ void CodeGen::emit_cases_expr(const ast::CaseExpression &expr, SymbolTable &tabl
 
     const AssemblerMarkSection mark(_asm, continue_label);
 
-    CODEGEN_VERBOSE_ONLY(_logger->log_exit("gen case expr"));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_exit("gen case expr"));
 }
 
 void CodeGen::emit_let_expr(const ast::LetExpression &expr, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(_logger->log_enter("gen let expr"));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_enter("gen let expr"));
 
     if (expr._expr)
     {
@@ -552,18 +544,18 @@ void CodeGen::emit_let_expr(const ast::LetExpression &expr, SymbolTable &table)
 
     emit_in_scope(expr._object, expr._type, expr._body_expr, table, expr._expr != nullptr);
 
-    CODEGEN_VERBOSE_ONLY(_logger->log_exit("gen let expr"));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_exit("gen let expr"));
 }
 
 void CodeGen::emit_list_expr(const ast::ListExpression &expr, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(_logger->log_enter("gen list expr"));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_enter("gen list expr"));
 
     std::for_each(expr._exprs.begin(), expr._exprs.end(), [&](const auto &e) {
         emit_expr(e, table); // last expression value will be in acc
     });
 
-    CODEGEN_VERBOSE_ONLY(_logger->log_exit("gen list expr"));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_exit("gen list expr"));
 }
 
 void CodeGen::emit_branch_to_label_if_false(const Label &label)
@@ -574,7 +566,7 @@ void CodeGen::emit_branch_to_label_if_false(const Label &label)
 
 void CodeGen::emit_loop_expr(const ast::WhileExpression &expr, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(_logger->log_enter("gen loop expr"));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_enter("gen loop expr"));
 
     const Label loop_header_label(_asm, new_label_name());
     const Label loop_tail_label(_asm, new_label_name());
@@ -591,12 +583,12 @@ void CodeGen::emit_loop_expr(const ast::WhileExpression &expr, SymbolTable &tabl
 
     const AssemblerMarkSection mark(_asm, loop_tail_label); // continue
 
-    CODEGEN_VERBOSE_ONLY(_logger->log_exit("gen loop expr"));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_exit("gen loop expr"));
 }
 
 void CodeGen::emit_if_expr(const ast::IfExpression &expr, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(_logger->log_enter("gen if expr"));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_enter("gen if expr"));
 
     const Label false_branch_label(_asm, new_label_name());
     const Label continue_label(_asm, new_label_name());
@@ -616,12 +608,12 @@ void CodeGen::emit_if_expr(const ast::IfExpression &expr, SymbolTable &table)
 
     const AssemblerMarkSection mark(_asm, continue_label);
 
-    CODEGEN_VERBOSE_ONLY(_logger->log_exit("gen if expr"));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_exit("gen if expr"));
 }
 
 void CodeGen::emit_dispatch_expr(const ast::DispatchExpression &expr, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(_logger->log_enter("gen dispatch expr"));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_enter("gen dispatch expr"));
 
     // put all args on stack. Callee have to get rid of them
     const int args_num = expr._args.size();
@@ -668,12 +660,12 @@ void CodeGen::emit_dispatch_expr(const ast::DispatchExpression &expr, SymbolTabl
 
     const AssemblerMarkSection mark(_asm, continue_label);
 
-    CODEGEN_VERBOSE_ONLY(_logger->log_exit("gen dispatch expr"));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_exit("gen dispatch expr"));
 }
 
 void CodeGen::emit_assign_expr(const ast::AssignExpression &expr, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(_logger->log_enter("gen assign expr"));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_enter("gen assign expr"));
 
     emit_expr(expr._expr, table); // result in acc
     const auto &symbol = table.get_symbol(expr._object->_object);
@@ -688,7 +680,7 @@ void CodeGen::emit_assign_expr(const ast::AssignExpression &expr, SymbolTable &t
         __ sw(_a0, __ fp(), symbol._offset);
     }
 
-    CODEGEN_VERBOSE_ONLY(_logger->log_exit("gen assign expr"));
+    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log_exit("gen assign expr"));
 }
 
 void CodeGen::emit_load_int(const Register &int_obj, const Register &int_val)

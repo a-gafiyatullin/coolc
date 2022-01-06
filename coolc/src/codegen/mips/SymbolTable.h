@@ -53,10 +53,6 @@ class SymbolTable
   private:
     std::vector<std::unordered_map<std::string, Symbol>> _symbols; // class fields and locals offsets
 
-#ifdef DEBUG
-    std::shared_ptr<Logger> _logger;
-#endif // DEBUG
-
   public:
     /**
      * @brief Construct a new SymbolTable with initial scope
@@ -107,18 +103,6 @@ class SymbolTable
      * @return Number of symbols
      */
     int count() const;
-
-#ifdef DEBUG
-    /**
-     * @brief Set the parent logger
-     *
-     * @param logger Parent logger
-     */
-    inline void set_parent_logger(const std::shared_ptr<Logger> logger)
-    {
-        _logger->set_parent_logger(logger);
-    }
-#endif // DEBUG
 };
 
 }; // namespace codegen

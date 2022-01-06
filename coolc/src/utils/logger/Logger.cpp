@@ -1,37 +1,34 @@
 #include "utils/logger/Logger.h"
+#include <memory>
 
 #ifdef DEBUG
-int Logger::update_ident()
-{
-    if (_parent_logger)
-    {
-        _ident = _parent_logger->update_ident();
-    }
-
-    return _ident;
-}
+std::shared_ptr<Logger> Logger::LOGGER = nullptr;
 
 void Logger::log(const std::string &msg)
 {
-    update_ident();
     std::cout << std::string(_ident, ' ') << msg << std::endl;
 }
 
 void Logger::log_enter(const std::string &msg)
 {
-    if (!_parent_logger)
-    {
-        _ident += IDENT_SIZE;
-    }
+    _ident += IDENT_SIZE;
     log("Enter " + msg);
 }
 
 void Logger::log_exit(const std::string &msg)
 {
     log("Exit " + msg);
-    if (!_parent_logger)
-    {
-        _ident -= IDENT_SIZE;
-    }
+    _ident -= IDENT_SIZE;
 }
+
+std::shared_ptr<Logger> Logger::get_logger()
+{
+    if (!LOGGER)
+    {
+        LOGGER = std::make_shared<Logger>();
+    }
+
+    return LOGGER;
+}
+
 #endif // DEBUG

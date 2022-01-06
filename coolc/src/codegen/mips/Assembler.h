@@ -216,10 +216,6 @@ class Assembler
     // .ascii str
     void ascii(const std::string &str);
 
-#ifdef DEBUG
-    std::shared_ptr<Logger> _logger;
-#endif // DEBUG
-
   public:
     /**
      * @brief Construct a new Assembler
@@ -635,16 +631,6 @@ class Assembler
      *
      */
     void dump();
-
-    /**
-     * @brief Set parent logger
-     *
-     * @param logger Parent logger
-     */
-    inline void set_parent_logger(const std::shared_ptr<Logger> &logger)
-    {
-        _logger->set_parent_logger(logger);
-    }
 #endif // DEBUG
 
     friend class AssemblerMarkSection;
