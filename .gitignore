@@ -1,9 +1,5 @@
 *.s
 .vscode
-a.out
-.output
-.d
+.cache
 build
-hwbin
-*.so
 .a

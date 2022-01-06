@@ -9,17 +9,15 @@ CodeBuffer &CodeBuffer::operator+=(const CodeBuffer &buffer)
 }
 
 // ----------------------------------------------- Regsiters -----------------------------------------------
-const std::vector<std::string> Register::_REG_TO_STR = {"$sp", "$fp", "$ra",
-                                                        "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6",
-                                                        "$a0", "$a1",
-                                                        "$s0", "$zero"};
+const std::vector<std::string> Register::REG_TO_STR = {"$sp", "$fp", "$ra", "$t0", "$t1", "$t2", "$t3",
+                                                       "$t4", "$t5", "$t6", "$a0", "$a1", "$s0", "$zero"};
 
-Register::Register(Assembler &assembler, const REG &reg) : _asm(assembler), _reg(reg)
+Register::Register(Assembler &assembler, const Reg &reg) : _asm(assembler), _reg(reg)
 {
     // guarantee that we have not use this register yet
     if (_asm._used_registers.find(_reg) != _asm._used_registers.end())
     {
-        CODEGEN_FULL_VERBOSE_ONLY(_asm._logger.log("Register " + get_reg_name(reg) + " is being used!"));
+        CODEGEN_VERBOSE_ONLY(_asm._logger->log("Register " + get_reg_name(reg) + " is being used!"));
         assert(false && "Register::Register: register was already allocated!");
     }
     _asm._used_registers.insert(_reg);
@@ -33,25 +31,25 @@ Register::~Register()
 }
 
 // ----------------------------------------------- Labels -----------------------------------------------
-Label::Label(Assembler &assembler, const std::string &name, const LabelPolicy &policy)
-    : _name(name)
+Label::Label(Assembler &assembler, const std::string &name, const LabelPolicy &policy) : _name(name)
 {
-    CODEGEN_FULL_VERBOSE_ONLY(assembler._logger.log("Create Label: " + name));
+    CODEGEN_VERBOSE_ONLY(assembler._logger->log("Create Label: " + name));
     assembler._used_labels.insert(std::make_pair(name, policy));
 }
 // ----------------------------------------------- Assembler -----------------------------------------------
-const std::unordered_map<std::string, int> Assembler::_special_symbols = {{"\\", 92}};
-const std::regex Assembler::_special_symbols_regex("\\\\");
+const std::unordered_map<std::string, int> Assembler::SPECIAL_SYMBOLS = {{"\\", 92}};
+const std::regex Assembler::SPECIAL_SYMBOLS_REGEX("\\\\");
 
 Assembler::Assembler(CodeBuffer &code)
-    : _code(code), _ident(_IDENTATION),
-      _sp(*this, Register::$sp), _ra(*this, Register::$ra), _fp(*this, Register::$fp),
-      _sp_offset(0), _zero(*this, Register::$zero) {}
+    : _code(code), _ident(IDENTATION), _sp(*this, Register::$sp), _ra(*this, Register::$ra), _fp(*this, Register::$fp),
+      _sp_offset(0), _zero(*this, Register::$zero)
+{
+}
 
 void Assembler::sw(const Register &from_reg, const Register &to_reg, const int32_t &offset)
 {
-    _code.save(std::string(_ident, ' ') + "sw\t\t" + static_cast<std::string>(from_reg) + " " +
-               std::to_string(offset) + "(" + static_cast<std::string>(to_reg) + ")");
+    _code.save(std::string(_ident, ' ') + "sw\t\t" + static_cast<std::string>(from_reg) + " " + std::to_string(offset) +
+               "(" + static_cast<std::string>(to_reg) + ")");
 }
 
 void Assembler::addiu(const Register &result_reg, const Register &operand_reg, const int32_t &imm)
@@ -63,24 +61,26 @@ void Assembler::addiu(const Register &result_reg, const Register &operand_reg, c
 void Assembler::push(const Register &reg)
 {
     sw(reg, _sp, 0);
-    addiu(_sp, _sp, _PUSH_OFFSET);
-    _sp_offset += _PUSH_OFFSET;
+    addiu(_sp, _sp, PUSH_OFFSET);
+    _sp_offset += PUSH_OFFSET;
 }
 
 void Assembler::lw(const Register &to_reg, const Register &from_reg, const int32_t &offset)
 {
-    _code.save(std::string(_ident, ' ') + "lw\t\t" + static_cast<std::string>(to_reg) + " " +
-               std::to_string(offset) + "(" + static_cast<std::string>(from_reg) + ")");
+    _code.save(std::string(_ident, ' ') + "lw\t\t" + static_cast<std::string>(to_reg) + " " + std::to_string(offset) +
+               "(" + static_cast<std::string>(from_reg) + ")");
 }
 
 void Assembler::la(const Register &to_reg, const Label &label)
 {
-    _code.save(std::string(_ident, ' ') + "la\t\t" + static_cast<std::string>(to_reg) + " " + static_cast<std::string>(label));
+    _code.save(std::string(_ident, ' ') + "la\t\t" + static_cast<std::string>(to_reg) + " " +
+               static_cast<std::string>(label));
 }
 
 void Assembler::move(const Register &result_reg, const Register &from_reg)
 {
-    _code.save(std::string(_ident, ' ') + "move\t" + static_cast<std::string>(result_reg) + " " + static_cast<std::string>(from_reg));
+    _code.save(std::string(_ident, ' ') + "move\t" + static_cast<std::string>(result_reg) + " " +
+               static_cast<std::string>(from_reg));
 }
 
 void Assembler::sll(const Register &result_reg, const Register &op_reg, const int32_t &imm)
@@ -91,14 +91,14 @@ void Assembler::sll(const Register &result_reg, const Register &op_reg, const in
 
 void Assembler::pop(const Register &reg)
 {
-    lw(reg, _sp, _POP_OFFSET);
+    lw(reg, _sp, POP_OFFSET);
     pop();
 }
 
 void Assembler::pop()
 {
-    addiu(_sp, _sp, _POP_OFFSET);
-    _sp_offset += _POP_OFFSET;
+    addiu(_sp, _sp, POP_OFFSET);
+    _sp_offset += POP_OFFSET;
 }
 
 void Assembler::sub(const Register &result_reg, const Register &op1_reg, const Register &op2_reg)
@@ -127,7 +127,8 @@ void Assembler::mul(const Register &result_reg, const Register &op1_reg, const R
 
 void Assembler::div(const Register &result_reg, const Register &op1_reg, const Register &op2_reg)
 {
-    _code.save(std::string(_ident, ' ') + "div\t\t" + static_cast<std::string>(op1_reg) + " " + static_cast<std::string>(op2_reg));
+    _code.save(std::string(_ident, ' ') + "div\t\t" + static_cast<std::string>(op1_reg) + " " +
+               static_cast<std::string>(op2_reg));
     _code.save(std::string(_ident, ' ') + "mflo\t" + static_cast<std::string>(result_reg));
 }
 
@@ -170,7 +171,7 @@ void Assembler::jal(const Label &label)
     _code.save(std::string(_ident, ' ') + "jal\t\t" + static_cast<std::string>(label));
 }
 
-void Assembler::xor_(const Register &result_reg, const Register &op1_reg, const Register &op2_reg)
+void Assembler::xorr(const Register &result_reg, const Register &op1_reg, const Register &op2_reg)
 {
     _code.save(std::string(_ident, ' ') + "xor\t\t" + static_cast<std::string>(result_reg) + " " +
                static_cast<std::string>(op1_reg) + " " + static_cast<std::string>(op2_reg));
@@ -184,14 +185,13 @@ void Assembler::xori(const Register &result_reg, const Register &op_reg, const i
 
 Assembler::~Assembler()
 {
-    std::for_each(_used_labels.begin(), _used_labels.end(), [&](const auto &label)
-                  {
-                      if (!label.second)
-                      {
-                          CODEGEN_FULL_VERBOSE_ONLY(_logger.log("Label " + label.first + " was not binded!"));
-                          assert(false && "Assembler::~Assembler: non-binded label found!");
-                      }
-                  });
+    std::for_each(_used_labels.begin(), _used_labels.end(), [&](const auto &label) {
+        if (!label.second)
+        {
+            CODEGEN_VERBOSE_ONLY(_logger->log("Label " + label.first + " was not binded!"));
+            assert(false && "Assembler::~Assembler: non-binded label found!");
+        }
+    });
 }
 
 void Assembler::ascii(const std::string &str)
@@ -207,7 +207,7 @@ void Assembler::encode_string(const std::string &str)
         return;
     }
 
-    auto match_begin = std::sregex_iterator(str.begin(), str.end(), _special_symbols_regex);
+    auto match_begin = std::sregex_iterator(str.begin(), str.end(), SPECIAL_SYMBOLS_REGEX);
     auto match_end = std::sregex_iterator();
 
     // it is normal string
@@ -223,7 +223,7 @@ void Assembler::encode_string(const std::string &str)
         const auto this_match = it;
         const auto next_match = ++it;
 
-        byte(_special_symbols.at(this_match->str())); // encode special symbols in bytes
+        byte(SPECIAL_SYMBOLS.at(this_match->str())); // encode special symbols in bytes
 
         const int start_pos = this_match->position() + this_match->str().length();
         // the rest of the string up to the next special symbol encode in ascii
@@ -254,8 +254,7 @@ void Assembler::jalr(const Register &reg)
 
 void Assembler::cross_resolve_labels(Assembler &asm1, Assembler &asm2)
 {
-    auto adjust_bind_state = [](Assembler &other_asm, std::pair<const std::string, bool> &label)
-    {
+    auto adjust_bind_state = [](Assembler &other_asm, std::pair<const std::string, bool> &label) {
         if (!label.second)
         {
             const auto this_label = other_asm._used_labels.find(label.first);
@@ -266,24 +265,24 @@ void Assembler::cross_resolve_labels(Assembler &asm1, Assembler &asm2)
         }
     };
 
-#ifdef CODEGEN_FULL_VERBOSE
-    asm1._logger.log("ASSEMBLERS BEFORE CROSS-RESOLVING:\nASM1:");
+#ifdef DEBUG
+    asm1._logger->log("ASSEMBLERS BEFORE CROSS-RESOLVING:\nASM1:");
     asm1.dump();
-    asm2._logger.log("ASM2");
+    asm2._logger->log("ASM2");
     asm2.dump();
-#endif // CODEGEN_FULL_VERBOSE
+#endif // DEBUG
 
-    std::for_each(asm1._used_labels.begin(), asm1._used_labels.end(), [&asm2, &adjust_bind_state](auto &label)
-                  { adjust_bind_state(asm2, label); });
-    std::for_each(asm2._used_labels.begin(), asm2._used_labels.end(), [&asm1, &adjust_bind_state](auto &label)
-                  { adjust_bind_state(asm1, label); });
+    std::for_each(asm1._used_labels.begin(), asm1._used_labels.end(),
+                  [&asm2, &adjust_bind_state](auto &label) { adjust_bind_state(asm2, label); });
+    std::for_each(asm2._used_labels.begin(), asm2._used_labels.end(),
+                  [&asm1, &adjust_bind_state](auto &label) { adjust_bind_state(asm1, label); });
 
-#ifdef CODEGEN_FULL_VERBOSE
-    asm1._logger.log("ASSEMBLERS AFTER CROSS-RESOLVING:\nASM1:");
+#ifdef DEBUG
+    asm1._logger->log("ASSEMBLERS AFTER CROSS-RESOLVING:\nASM1:");
     asm1.dump();
-    asm2._logger.log("ASM2");
+    asm2._logger->log("ASM2");
     asm2.dump();
-#endif // CODEGEN_FULL_VERBOSE
+#endif // DEBUG
 }
 
 void Assembler::bne(const Register &op1_reg, const Register &op2_reg, const Label &label)
@@ -316,33 +315,32 @@ void Assembler::blt(const Register &op1_reg, const int32_t &op2_imm, const Label
                std::to_string(op2_imm) + " " + static_cast<std::string>(label));
 }
 
-#ifdef CODEGEN_FULL_VERBOSE
+#ifdef DEBUG
 void Assembler::dump()
 {
-    _logger.log("----------- Labels -----------");
-    std::for_each(_used_labels.begin(), _used_labels.end(), [&](const auto &label)
-                  { _logger.log(label.first + "\tstate: " + std::to_string(label.second)); });
+    _logger->log("----------- Labels -----------");
+    std::for_each(_used_labels.begin(), _used_labels.end(),
+                  [&](const auto &label) { _logger->log(label.first + "\tstate: " + std::to_string(label.second)); });
 
-    _logger.log("----------- Registers -----------");
-    std::for_each(_used_registers.begin(), _used_registers.end(), [&](const auto &reg)
-                  { _logger.log(Register::get_reg_name(reg)); });
+    _logger->log("----------- Registers -----------");
+    std::for_each(_used_registers.begin(), _used_registers.end(),
+                  [&](const auto &reg) { _logger->log(Register::get_reg_name(reg)); });
 }
-#endif // CODEGEN_FULL_VERBOSE
+#endif // DEBUG
 
 // ----------------------------------------------- AssemblerMarkSection -----------------------------------------------
-AssemblerMarkSection::AssemblerMarkSection(Assembler &assembler, const Label &label)
-    : _asm(assembler)
+AssemblerMarkSection::AssemblerMarkSection(Assembler &assembler, const Label &label) : _asm(assembler)
 {
     const std::string label_name = static_cast<std::string>(label);
     _asm._code.save(label_name + ":");
 
-    CODEGEN_FULL_VERBOSE_ONLY(assert(_asm._used_labels.find(label_name) != _asm._used_labels.end())); // impossible
+    CODEGEN_VERBOSE_ONLY(assert(_asm._used_labels.find(label_name) != _asm._used_labels.end())); // impossible
 
     // label was binded
     auto label_ptr = _asm._used_labels.find(label_name);
     if (label_ptr->second)
     {
-        CODEGEN_FULL_VERBOSE_ONLY(assembler._logger.log("Label " + label_name + " been already binded!"));
+        CODEGEN_VERBOSE_ONLY(assembler._logger->log("Label " + label_name + " been already binded!"));
         assert(false && "AssemblerMarkSection::AssemblerMarkSection: label has been already binded!");
     }
     label_ptr->second = true;

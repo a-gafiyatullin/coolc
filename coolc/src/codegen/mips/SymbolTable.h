@@ -1,57 +1,124 @@
 #pragma once
 
-#include <unordered_map>
-#include <cassert>
-#include <numeric>
-#include <vector>
 #include "utils/Utils.h"
+#include <cassert>
+#include <memory>
+#include <numeric>
+#include <unordered_map>
+#include <vector>
 
-#ifdef CODEGEN_FULL_VERBOSE
+#ifdef DEBUG
 #include "utils/logger/Logger.h"
-#endif // CODEGEN_FULL_VERBOSE
+#endif // DEBUG
 
 namespace codegen
 {
-    struct Symbol
+struct Symbol
+{
+    /**
+     * @brief Different base for FIELD and LOCAL
+     *
+     */
+    enum SymbolType
     {
-        // we should use different base for FIELD and LOCAL
-        enum SYMBOL_TYPE
-        {
-            FIELD,
-            LOCAL
-        };
-
-        const SYMBOL_TYPE _type;
-        const int _offset;
-
-        Symbol(const SYMBOL_TYPE &type, const int &offset) : _type(type), _offset(offset) {}
+        FIELD,
+        LOCAL
     };
 
-    // manage symbols in scopes
-    class SymbolTable
+    const SymbolType _type;
+
+    /**
+     * @brief Offset from base
+     *
+     */
+    const int _offset;
+
+    /**
+     * @brief Construct a new Symbol
+     *
+     * @param type Base type
+     * @param offset Offset from base
+     */
+    Symbol(const SymbolType &type, const int &offset) : _type(type), _offset(offset)
     {
-    private:
-        std::vector<std::unordered_map<std::string, Symbol>> _symbols; // class fields and locals offsets
-
-        CODEGEN_FULL_VERBOSE_ONLY(Logger _logger;);
-
-    public:
-        SymbolTable() : _symbols(1) {}
-
-        // find symbol
-        Symbol &get_symbol(const std::string &symbol);
-
-        // create Symbol with name "name" and offset [offset]
-        void add_symbol(const std::string &name, const Symbol::SYMBOL_TYPE &type, const int &offset);
-        // number of symbols
-        int count() const;
-
-        // scope managing
-        inline void push_scope() { _symbols.emplace_back(); }
-        inline void pop_scope() { _symbols.pop_back(); }
-
-#ifdef CODEGEN_FULL_VERBOSE
-        inline void set_parent_logger(Logger *logger) { _logger.set_parent_logger(logger); }
-#endif // CODEGEN_FULL_VERBOSE
-    };
+    }
 };
+
+/**
+ * @brief Manage symbols in scopes
+ *
+ */
+class SymbolTable
+{
+  private:
+    std::vector<std::unordered_map<std::string, Symbol>> _symbols; // class fields and locals offsets
+
+#ifdef DEBUG
+    std::shared_ptr<Logger> _logger;
+#endif // DEBUG
+
+  public:
+    /**
+     * @brief Construct a new SymbolTable with initial scope
+     *
+     */
+    SymbolTable() : _symbols(1)
+    {
+    }
+
+    /**
+     * @brief Find symbol
+     *
+     * @param symbol Symbol name
+     * @return Symbol object for this symbol
+     */
+    Symbol &get_symbol(const std::string &symbol);
+
+    /**
+     * @brief Create Symbol
+     *
+     * @param name Symbol name
+     * @param type Base type
+     * @param offset Offset from base
+     */
+    void add_symbol(const std::string &name, const Symbol::SymbolType &type, const int &offset);
+
+    /**
+     * @brief Push new scope
+     *
+     */
+    inline void push_scope()
+    {
+        _symbols.emplace_back();
+    }
+
+    /**
+     * @brief Pop current scope
+     *
+     */
+    inline void pop_scope()
+    {
+        _symbols.pop_back();
+    }
+
+    /**
+     * @brief Count number of symbol that are in the table
+     *
+     * @return Number of symbols
+     */
+    int count() const;
+
+#ifdef DEBUG
+    /**
+     * @brief Set the parent logger
+     *
+     * @param logger Parent logger
+     */
+    inline void set_parent_logger(const std::shared_ptr<Logger> logger)
+    {
+        _logger->set_parent_logger(logger);
+    }
+#endif // DEBUG
+};
+
+}; // namespace codegen

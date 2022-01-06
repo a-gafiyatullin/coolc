@@ -1,4 +1,5 @@
 #include "codegen/mips/DataSection.h"
+#include <memory>
 
 using namespace codegen;
 
@@ -7,39 +8,35 @@ using namespace codegen;
 // ------------------------------------------ ClassCode ------------------------------------------
 int ClassCode::get_method_index(const std::string &method_name) const
 {
-    return std::find_if(_disp_table.begin(), _disp_table.end(),
-                        [&method_name](const auto &method)
-                        {
-                            return method.substr(method.find('.') + 1) == method_name;
-                        }) -
+    return std::find_if(
+               _disp_table.begin(), _disp_table.end(),
+               [&method_name](const auto &method) { return method.substr(method.find('.') + 1) == method_name; }) -
            _disp_table.begin();
 }
 
 std::string ClassCode::get_method_full_name(const std::string &method_name) const
 {
-    return *std::find_if(_disp_table.begin(), _disp_table.end(),
-                         [&method_name](const auto &method)
-                         {
-                             return method.substr(method.find('.') + 1) == method_name;
-                         });
+    return *std::find_if(_disp_table.begin(), _disp_table.end(), [&method_name](const auto &method) {
+        return method.substr(method.find('.') + 1) == method_name;
+    });
 }
 
 void ClassCode::set_disp_table_entry(const std::string &method_name)
 {
     std::string full_name = std::move(DataSection::get_full_method_name(_class->_string, method_name));
 
-    auto table_entry = std::find_if(_disp_table.begin(), _disp_table.end(),
-                                    [&method_name](const std::string &entry)
-                                    { return entry.substr(entry.find('.') + 1) == method_name; });
+    auto table_entry = std::find_if(_disp_table.begin(), _disp_table.end(), [&method_name](const std::string &entry) {
+        return entry.substr(entry.find('.') + 1) == method_name;
+    });
 
     if (table_entry == _disp_table.end())
     {
-        CODEGEN_FULL_VERBOSE_ONLY(_logger.log("Adds method " + full_name + " to class " + _class->_string););
+        CODEGEN_VERBOSE_ONLY(_logger->log("Adds method " + full_name + " to class " + _class->_string););
         _disp_table.push_back(std::move(full_name));
     }
     else
     {
-        CODEGEN_FULL_VERBOSE_ONLY(_logger.log("Changes method " + *table_entry + " on method " + full_name););
+        CODEGEN_VERBOSE_ONLY(_logger->log("Changes method " + *table_entry + " on method " + full_name););
         *table_entry = std::move(full_name);
     }
 }
@@ -50,11 +47,7 @@ void ClassCode::construct_disp_table() const
 
     const AssemblerMarkSection mark(_asm, Label(_asm, DataSection::get_disp_table_name(_class->_string)));
 
-    std::for_each(_disp_table.begin(), _disp_table.end(),
-                  [&_asm](const auto &entry)
-                  {
-                      __ word(Label(_asm, entry));
-                  });
+    std::for_each(_disp_table.begin(), _disp_table.end(), [&_asm](const auto &entry) { __ word(Label(_asm, entry)); });
 }
 
 void ClassCode::construct_prototype() const
@@ -64,44 +57,41 @@ void ClassCode::construct_prototype() const
     const AssemblerMarkSection mark(_asm, Label(_asm, DataSection::get_prototype_name(_class->_string)));
 
     __ word(_data.get_tag(_class->_string));                                 // tag
-    __ word(_fields_types.size() + _OBJECT_BASE_SIZE_IN_WORDS);              // size in words
+    __ word(_fields_types.size() + OBJECT_BASE_SIZE_IN_WORDS);               // size in words
     __ word(Label(_asm, DataSection::get_disp_table_name(_class->_string))); // pointer to dispatch table
 
     // set all fields to void
-    std::for_each(_fields_types.begin(), _fields_types.end(),
-                  [&](const auto &type)
-                  {
-                      if (type == nullptr || !semant::Semant::is_trivial_type(type)) // some kind of dummy
-                      {
-                          __ word(0);
-                      }
-                      else
-                      {
-                          __ word(DataSection::emit_init_value(_asm, _data, type));
-                      }
-                  });
+    std::for_each(_fields_types.begin(), _fields_types.end(), [&](const auto &type) {
+        if (type == nullptr || !semant::Semant::is_trivial_type(type)) // some kind of dummy
+        {
+            __ word(0);
+        }
+        else
+        {
+            __ word(_data.emit_init_value(type));
+        }
+    });
 }
 
 void ClassCode::inherit_disp_table(const ClassCode &code)
 {
     _disp_table = code._disp_table;
 
-#ifdef CODEGEN_FULL_VERBOSE
-    _logger.log(_class->_string + " inherits disp table from " + code._class->_string + ":");
-    std::for_each(_disp_table.begin(), _disp_table.end(), [this](const std::string &str)
-                  { this->_logger.log(str); });
-#endif // CODEGEN_FULL_VERBOSE
+#ifdef DEBUG
+    _logger->log(_class->_string + " inherits disp table from " + code._class->_string + ":");
+    std::for_each(_disp_table.begin(), _disp_table.end(), [this](const std::string &str) { this->_logger->log(str); });
+#endif // DEBUG
 }
 
 void ClassCode::inherit_fields(const ClassCode &code)
 {
     _fields_types = code._fields_types;
 
-#ifdef CODEGEN_FULL_VERBOSE
-    _logger.log(_class->_string + " inherits fields from " + code._class->_string + ":");
-    std::for_each(_fields_types.begin(), _fields_types.end(), [this](const auto &type)
-                  { this->_logger.log(type == nullptr ? "nullptr" : type->_string); });
-#endif // CODEGEN_FULL_VERBOSE
+#ifdef DEBUG
+    _logger->log(_class->_string + " inherits fields from " + code._class->_string + ":");
+    std::for_each(_fields_types.begin(), _fields_types.end(),
+                  [this](const auto &type) { this->_logger->log(type == nullptr ? "nullptr" : type->_string); });
+#endif // DEBUG
 }
 
 // ------------------------------------------ DataSection ------------------------------------------
@@ -135,15 +125,16 @@ const Label &DataSection::declare_string_const(const std::string &str)
     if (_string_constants.find(str) == _string_constants.end())
     {
         const Label &size_label = declare_int_const(str.length());
-        _string_constants.insert({str, Label(_asm, static_cast<std::string>(_CONST_STRING_PREFIX) +
+        _string_constants.insert({str, Label(_asm, static_cast<std::string>(CONST_STRING_PREFIX) +
                                                        std::to_string(_string_constants.size()))});
 
         __ word(-1);
 
         const AssemblerMarkSection mark(_asm, _string_constants.find(str)->second);
         __ word(get_string_tag());
-        __ word(_STRING_CONST_BASE_SIZE_IN_WORDS + std::max(static_cast<int>(std::ceil(str.length() / 4.0)), 1)); // 4 + str len in bytes
-        __ word(Label(_asm, DataSection::get_disp_table_name(static_cast<std::string>(_STRING_TYPE))));
+        __ word(STRING_CONST_BASE_SIZE_IN_WORDS +
+                std::max(static_cast<int>(std::ceil(str.length() / 4.0)), 1)); // 4 + str len in bytes
+        __ word(Label(_asm, DataSection::get_disp_table_name(static_cast<std::string>(STRING_TYPE))));
         __ word(size_label);
         __ encode_string(str);
         __ byte(0);  // \0
@@ -158,15 +149,15 @@ const Label &DataSection::declare_bool_const(const bool &value)
     // maybe we already have such a constant
     if (_bool_constants.find(value) == _bool_constants.end())
     {
-        _bool_constants.insert(std::make_pair(value, Label(_asm, static_cast<std::string>(_CONST_BOOL_PREFIX) +
-                                                                     std::to_string(_bool_constants.size()))));
+        _bool_constants.insert(std::make_pair(
+            value, Label(_asm, static_cast<std::string>(CONST_BOOL_PREFIX) + std::to_string(_bool_constants.size()))));
 
         __ word(-1);
 
         const AssemblerMarkSection mark(_asm, _bool_constants.find(value)->second);
         __ word(get_bool_tag());
-        __ word(_BOOL_CONST_SIZE_IN_WORDS);
-        __ word(Label(_asm, DataSection::get_disp_table_name(static_cast<std::string>(_BOOL_TYPE))));
+        __ word(BOOL_CONST_SIZE_IN_WORDS);
+        __ word(Label(_asm, DataSection::get_disp_table_name(static_cast<std::string>(BOOL_TYPE))));
         __ word(value ? get_true_value() : get_false_value());
     }
 
@@ -178,32 +169,32 @@ const Label &DataSection::declare_int_const(const int32_t &value)
     // maybe we already have such a constant
     if (_int_constants.find(value) == _int_constants.end())
     {
-        _int_constants.insert(std::make_pair(value, Label(_asm, static_cast<std::string>(_CONST_INT_PREFIX) +
-                                                                    std::to_string(_int_constants.size()))));
+        _int_constants.insert(std::make_pair(
+            value, Label(_asm, static_cast<std::string>(CONST_INT_PREFIX) + std::to_string(_int_constants.size()))));
 
         __ word(-1);
 
         const AssemblerMarkSection mark(_asm, _int_constants.find(value)->second);
         __ word(get_int_tag());
-        __ word(_INT_CONST_SIZE_IN_WORDS);
-        __ word(Label(_asm, DataSection::get_disp_table_name(static_cast<std::string>(_INT_TYPE))));
+        __ word(INT_CONST_SIZE_IN_WORDS);
+        __ word(Label(_asm, DataSection::get_disp_table_name(static_cast<std::string>(INT_TYPE))));
         __ word(value);
     }
 
     return _int_constants.find(value)->second;
 }
 
-ClassCode &DataSection::create_class_code(const std::shared_ptr<ast::Type> &class_)
+ClassCode &DataSection::create_class_code(const std::shared_ptr<ast::Type> &klass)
 {
-    _class_codes.insert(std::make_pair(create_tag(class_->_string),
-                                       std::move(ClassCode(class_, declare_string_const(class_->_string), *this))));
-    return _class_codes.find(get_tag(class_->_string))->second;
+    _class_codes.insert(std::make_pair(create_tag(klass->_string),
+                                       std::move(ClassCode(klass, declare_string_const(klass->_string), *this))));
+    return _class_codes.find(get_tag(klass->_string))->second;
 }
 
-ClassCode &DataSection::get_class_code(const std::shared_ptr<ast::Type> &class_)
+ClassCode &DataSection::get_class_code(const std::shared_ptr<ast::Type> &klass)
 {
-    CODEGEN_FULL_VERBOSE_ONLY(assert(_class_codes.find(get_tag(class_->_string)) != _class_codes.end()));
-    return _class_codes.find(get_tag(class_->_string))->second;
+    CODEGEN_VERBOSE_ONLY(assert(_class_codes.find(get_tag(klass->_string)) != _class_codes.end()));
+    return _class_codes.find(get_tag(klass->_string))->second;
 }
 
 // A table, which at index (class tag) * 4 contains a pointer Data
@@ -232,21 +223,16 @@ void DataSection::get_class_obj_tab()
 
 void DataSection::get_all_prototypes()
 {
-    std::for_each(_class_codes.begin(), _class_codes.end(),
-                  [&](const auto &code)
-                  {
-                      __ word(-1);
-                      code.second.construct_prototype();
-                  });
+    std::for_each(_class_codes.begin(), _class_codes.end(), [&](const auto &code) {
+        __ word(-1);
+        code.second.construct_prototype();
+    });
 }
 
 void DataSection::get_all_dispatch_tab()
 {
     std::for_each(_class_codes.begin(), _class_codes.end(),
-                  [](const auto &code)
-                  {
-                      code.second.construct_disp_table();
-                  });
+                  [](const auto &code) { code.second.construct_disp_table(); });
 }
 
 std::string DataSection::get_full_method_name(const std::string &class_name, const std::string &method)
@@ -255,52 +241,54 @@ std::string DataSection::get_full_method_name(const std::string &class_name, con
 }
 
 DataSection::DataSection(const std::shared_ptr<semant::ClassNode> &root)
-    : _asm(_code),
-      _class_obj_tab(_asm, "class_objTab")
+    : _asm(_code), _class_obj_tab(_asm, "class_objTab")
 {
-    const Label class_nameTab(_asm, "class_nameTab");
-    const Label main_protObj(_asm, "Main_protObj");
-    const Label int_protObj(_asm, "Int_protObj");
-    const Label string_protObj(_asm, "String_protObj");
+    const Label class_name_tab(_asm, "class_nameTab");
+    const Label main_prot_obj(_asm, "Main_protObj");
+    const Label int_prot_obj(_asm, "Int_protObj");
+    const Label string_prot_obj(_asm, "String_protObj");
     const Label bool_const0(_asm, "bool_const0");
     const Label bool_const1(_asm, "bool_const1");
 
-    const Label _int_tag(_asm, "_int_tag");
-    const Label _bool_tag(_asm, "_bool_tag");
-    const Label _string_tag(_asm, "_string_tag");
+    const Label int_tag(_asm, "_int_tag");
+    const Label bool_tag(_asm, "_bool_tag");
+    const Label string_tag(_asm, "_string_tag");
 
-    CODEGEN_FULL_VERBOSE_ONLY(_asm.set_parent_logger(&_logger););
+#ifdef DEBUG
+    _logger = std::make_shared<Logger>();
+    _asm.set_parent_logger(_logger);
+#endif // DEBUG
 
     __ data_section();
     __ align(2);
 
-    __ global(class_nameTab);
-    __ global(main_protObj);
-    __ global(int_protObj);
-    __ global(string_protObj);
+    __ global(class_name_tab);
+    __ global(main_prot_obj);
+    __ global(int_prot_obj);
+    __ global(string_prot_obj);
     __ global(bool_const0);
     __ global(bool_const1);
-    __ global(_int_tag);
-    __ global(_bool_tag);
-    __ global(_string_tag);
+    __ global(int_tag);
+    __ global(bool_tag);
+    __ global(string_tag);
 
     // have to create Object tag before any other types for correct CaseExpression emitting
     create_tag(root->_class->_type->_string);
 
     // now create tags for basic types
     {
-        const AssemblerMarkSection mark(_asm, _int_tag);
-        __ word(create_tag(static_cast<std::string>(_INT_TYPE)));
+        const AssemblerMarkSection mark(_asm, int_tag);
+        __ word(create_tag(static_cast<std::string>(INT_TYPE)));
     }
 
     {
-        const AssemblerMarkSection mark(_asm, _bool_tag);
-        __ word(create_tag(static_cast<std::string>(_BOOL_TYPE)));
+        const AssemblerMarkSection mark(_asm, bool_tag);
+        __ word(create_tag(static_cast<std::string>(BOOL_TYPE)));
     }
 
     {
-        const AssemblerMarkSection mark(_asm, _string_tag);
-        __ word(create_tag(static_cast<std::string>(_STRING_TYPE)));
+        const AssemblerMarkSection mark(_asm, string_tag);
+        __ word(create_tag(static_cast<std::string>(STRING_TYPE)));
     }
 
     // let Object be Object parent. It's ok for now
@@ -331,7 +319,7 @@ DataSection::DataSection(const std::shared_ptr<semant::ClassNode> &root)
         __ word(-1);
 #else
         __ word(0);
-#endif //CODEGEN_GC_STRESS_TEST
+#endif // CODEGEN_GC_STRESS_TEST
     }
 
     declare_bool_const(false);
@@ -357,50 +345,49 @@ CodeBuffer DataSection::emit()
     return _code;
 }
 
-const Label &DataSection::emit_init_value(Assembler &_asm, DataSection &_data, const std::shared_ptr<ast::Type> &type)
+const Label &DataSection::emit_init_value(const std::shared_ptr<ast::Type> &type)
 {
     if (semant::Semant::is_string(type))
     {
-        return _data.declare_string_const("");
+        return declare_string_const("");
     }
     if (semant::Semant::is_int(type))
     {
-        return _data.declare_int_const(0);
+        return declare_int_const(0);
     }
     if (semant::Semant::is_bool(type))
     {
-        return _data.declare_bool_const(false);
+        return declare_bool_const(false);
     }
 }
 
 int DataSection::build_class_info(const std::shared_ptr<semant::ClassNode> &node)
 {
-    const auto &class_ = node->_class;
-    auto &code = create_class_code(class_->_type);
+    const auto &klass = node->_class;
+    auto &code = create_class_code(klass->_type);
 
-    CODEGEN_FULL_VERBOSE_ONLY(code.set_parent_logger(&_logger););
+    CODEGEN_VERBOSE_ONLY(code.set_parent_logger(_logger););
 
     // inherit dispatch table from parent
-    code.inherit_disp_table(get_class_code(class_->_parent));
+    code.inherit_disp_table(get_class_code(klass->_parent));
 
-    std::for_each(class_->_features.begin(), class_->_features.end(),
-                  [&code](const auto &feature)
-                  {
-                      if (std::holds_alternative<ast::MethodFeature>(feature->_base))
-                      {
-                          // add entry to dispatch table
-                          code.set_disp_table_entry(feature->_object->_object);
-                      }
-                  });
+    std::for_each(klass->_features.begin(), klass->_features.end(), [&code](const auto &feature) {
+        if (std::holds_alternative<ast::MethodFeature>(feature->_base))
+        {
+            // add entry to dispatch table
+            code.set_disp_table_entry(feature->_object->_object);
+        }
+    });
 
     // gen info for childs and get max child tag
-    int max_child_tag = get_tag(class_->_type->_string);
-    std::for_each(node->_children.begin(), node->_children.end(), [&](const auto &node)
-                  { max_child_tag = std::max(max_child_tag, build_class_info(node)); });
+    int max_child_tag = get_tag(klass->_type->_string);
+    std::for_each(node->_children.begin(), node->_children.end(),
+                  [&](const auto &node) { max_child_tag = std::max(max_child_tag, build_class_info(node)); });
 
-    _tags.at(class_->_type->_string).second = max_child_tag;
-    CODEGEN_FULL_VERBOSE_ONLY(_logger.log("For class " + class_->_type->_string + " with tag " + std::to_string(_tags.at(class_->_type->_string).first) +
-                                          " last child has tag " + std::to_string(max_child_tag)));
+    _tags.at(klass->_type->_string).second = max_child_tag;
+    CODEGEN_VERBOSE_ONLY(_logger->log("For class " + klass->_type->_string + " with tag " +
+                                      std::to_string(_tags.at(klass->_type->_string).first) + " last child has tag " +
+                                      std::to_string(max_child_tag)));
 
     return max_child_tag;
 }

@@ -1,238 +1,674 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include <set>
-#include <cassert>
-#include <algorithm>
-#include <functional>
-#include <unordered_map>
-#include <regex>
 #include "utils/Utils.h"
+#include <algorithm>
+#include <cassert>
+#include <functional>
+#include <regex>
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
-#ifdef CODEGEN_FULL_VERBOSE
+#ifdef DEBUG
 #include "utils/logger/Logger.h"
-#endif // CODEGEN_FULL_VERBOSE
+#endif // DEBUG
 
 namespace codegen
 {
-    class CodeBuffer
+
+/**
+ * @brief CodeBuffer contains the final assembler
+ *
+ */
+class CodeBuffer
+{
+  private:
+    std::string _buffer;
+
+  public:
+    CodeBuffer() = default;
+
+    /**
+     * @brief Construct a new Code Buffer
+     *
+     * @param buffer Initial buffer
+     */
+    CodeBuffer(const CodeBuffer &buffer) : _buffer(buffer._buffer)
     {
-    private:
-        std::string _buffer;
+    }
 
-    public:
-        CodeBuffer() = default;
-        CodeBuffer(const CodeBuffer &buffer) : _buffer(buffer._buffer) {}
-
-        inline void save(const std::string &command) { _buffer += command + "\n"; }
-
-        CodeBuffer &operator+=(const CodeBuffer &buffer);
-        operator std::string() const { return _buffer; }
-    };
-
-    class Assembler;
-
-    // not all mips regiters!
-    class Register
+    /**
+     * @brief Add new commands to buffer
+     *
+     * @param command New commands
+     */
+    inline void save(const std::string &command)
     {
-    public:
-        enum REG
-        {
-            $sp,
-            $fp,
-            $ra,
-            $t0,
-            $t1,
-            $t2,
-            $t3,
-            $t4,
-            $t5,
-            $t6,
-            $a0,
-            $a1,
-            $s0,
-            $zero
-        };
+        _buffer += command + "\n";
+    }
 
-        // registers are tracked in Assmebler
-        Register(Assembler &assembler, const REG &reg);
+    /**
+     * @brief Concat buffers
+     *
+     * @param buffer Other buffer
+     * @return This buffer with other buffer's content
+     */
+    CodeBuffer &operator+=(const CodeBuffer &buffer);
 
-        // delete register from Assembler
-        ~Register();
-
-        operator std::string() const { return _REG_TO_STR[_reg]; }
-        inline static std::string get_reg_name(const Register::REG &reg) { return _REG_TO_STR[reg]; }
-
-    private:
-        static const std::vector<std::string> _REG_TO_STR;
-
-        const REG _reg;
-        Assembler &_asm;
-    };
-
-    class AssemblerMarkSection;
-
-    class Label
+    /**
+     * @brief Cast to string
+     *
+     * @return Conten of the buffer
+     */
+    operator std::string() const
     {
-    private:
-        const std::string _name;
-
-    public:
-        enum LabelPolicy
-        {
-            MUST_BIND,
-            ALLOW_NO_BIND
-        };
-
-        Label(Assembler &assembler, const std::string &name, const LabelPolicy &policy = MUST_BIND);
-
-        operator std::string() const { return _name; }
-    };
-
-    // this assembler does not have all mips command!
-    class Assembler
-    {
-    private:
-        static constexpr int _IDENTATION = 4;
-
-        CodeBuffer &_code;
-        int _ident;
-
-        static constexpr int32_t _POP_OFFSET = 4;
-        static constexpr int32_t _PUSH_OFFSET = -4; // stack grows down
-
-        std::set<Register::REG> _used_registers;            // track registers
-        std::unordered_map<std::string, bool> _used_labels; // is label with given was binded?
-
-        // some reserved registers
-        const Register _sp;
-        const Register _ra;
-        const Register _fp;
-        const Register _zero;
-
-        // current sp offset
-        int _sp_offset;
-
-        const static std::unordered_map<std::string, int> _special_symbols; // idk, spim requries some strings to be converted to int
-        const static std::regex _special_symbols_regex;
-
-        // .ascii str
-        void ascii(const std::string &str);
-
-        CODEGEN_FULL_VERBOSE_ONLY(Logger _logger;);
-
-    public:
-        Assembler(CodeBuffer &code);
-        ~Assembler();
-
-        inline const Register &sp() const { return _sp; }
-        inline const Register &ra() const { return _ra; }
-        inline const Register &fp() const { return _fp; }
-        inline const Register &zero() const { return _zero; }
-
-        // .data
-        inline void data_section() { _code.save(std::string(_ident, ' ') + ".data"); }
-        // .text
-        inline void text_section() { _code.save(std::string(_ident, ' ') + ".text"); }
-
-        // .align words
-        inline void align(const int32_t &words) { _code.save(std::string(_ident, ' ') + ".align\t" + std::to_string(words)); }
-        // .global symbol
-        inline void global(const Label &symbol) { _code.save(std::string(_ident, ' ') + ".globl\t" + static_cast<std::string>(symbol)); }
-        // .word value
-        inline void word(const int32_t &value) { _code.save(std::string(_ident, ' ') + ".word\t" + std::to_string(value)); }
-        // .word symbol (like pointer)
-        inline void word(const Label &symbol) { _code.save(std::string(_ident, ' ') + ".word\t" + static_cast<std::string>(symbol)); }
-        // .byte value
-        inline void byte(const int8_t &value) { _code.save(std::string(_ident, ' ') + ".byte\t" + std::to_string(value)); }
-        // emit string with escape sequencies
-        void encode_string(const std::string &str);
-
-        // store reg to memory location
-        void sw(const Register &from_reg, const Register &to_reg, const int32_t &offset);
-        // load word
-        void lw(const Register &to_reg, const Register &from_reg, const int32_t &offset);
-        // load address
-        void la(const Register &to_reg, const Label &label);
-        // move
-        void move(const Register &result_reg, const Register &from_reg);
-        // load immediate
-        void li(const Register &reg, const int32_t &imm);
-
-        // add immediate unsigned
-        void addiu(const Register &result_reg, const Register &operand_reg, const int32_t &imm);
-
-        // push reg value on stack
-        void push(const Register &reg);
-        // push value to reg from stack
-        void pop(const Register &reg);
-        void pop();
-
-        // subtract
-        void sub(const Register &result_reg, const Register &op1_reg, const Register &op2_reg);
-        // add
-        void add(const Register &result_reg, const Register &op1_reg, const Register &op2_reg);
-        // addu
-        void addu(const Register &result_reg, const Register &op1_reg, const Register &op2_reg);
-        // multiply
-        void mul(const Register &result_reg, const Register &op1_reg, const Register &op2_reg);
-        // divide
-        void div(const Register &result_reg, const Register &op1_reg, const Register &op2_reg);
-
-        // xor
-        void xor_(const Register &result_reg, const Register &op1_reg, const Register &op2_reg);
-        // xor with immediate
-        void xori(const Register &result_reg, const Register &op_reg, const int32_t &imm);
-        // less than
-        void slt(const Register &result_reg, const Register &op1_reg, const Register &op2_reg);
-        // shift left logical
-        void sll(const Register &result_reg, const Register &op1_reg, const int32_t &imm);
-
-        // branch on less than or equal
-        void ble(const Register &op1_reg, const Register &op2_reg, const Label &label);
-        // branch on not equal
-        void bne(const Register &op1_reg, const Register &op2_reg, const Label &label);
-        // branch on greater than
-        void bgt(const Register &op1_reg, const Register &op2_reg, const Label &label);
-        void bgt(const Register &op1_reg, const int32_t &op2_imm, const Label &label);
-        // branch on less than
-        void blt(const Register &op1_reg, const Register &op2_reg, const Label &label);
-        void blt(const Register &op1_reg, const int32_t &op2_imm, const Label &label);
-        // jump
-        void j(const Label &label);
-        // branch on equal
-        void beq(const Register &op1_reg, const Register &op2_reg, const Label &label);
-        void beq(const Register &op1_reg, const int32_t &op2_imm, const Label &label);
-        // jump and link
-        void jal(const Label &label);
-        // jump and link register
-        void jalr(const Register &reg);
-        // jump register
-        void jr(const Register &reg);
-
-        // check if labels are binded at least in one assembler
-        static void cross_resolve_labels(Assembler &asm1, Assembler &asm2);
-
-        inline int sp_offset() const { return _sp_offset; }
-        void set_sp_offset(const int32_t &offset) { _sp_offset = offset; }
-
-#ifdef CODEGEN_FULL_VERBOSE
-        void dump();
-        inline void set_parent_logger(Logger *logger) { _logger.set_parent_logger(logger); }
-#endif // CODEGEN_FULL_VERBOSE
-
-        friend class AssemblerMarkSection;
-        friend class Register;
-        friend class Label;
-    };
-
-    class AssemblerMarkSection
-    {
-    private:
-        Assembler &_asm;
-
-    public:
-        AssemblerMarkSection(Assembler &assembler, const Label &label);
-    };
+        return _buffer;
+    }
 };
+
+class Assembler;
+
+/**
+ * @brief Register represenantion in Assembler
+ * Not all mips regiters!
+ */
+class Register
+{
+  public:
+    /**
+     * @brief Available registers
+     *
+     */
+    enum Reg
+    {
+        $sp,
+        $fp,
+        $ra,
+        $t0,
+        $t1,
+        $t2,
+        $t3,
+        $t4,
+        $t5,
+        $t6,
+        $a0,
+        $a1,
+        $s0,
+        $zero
+    };
+
+    /**
+     * @brief Reserve a register in Assembler
+     *
+     * @param assembler Assembler that controls this register
+     * @param reg Register name
+     */
+    Register(Assembler &assembler, const Reg &reg);
+
+    /**
+     * @brief Untrack Register from Assembler
+     *
+     */
+    ~Register();
+
+    /**
+     * @brief Cast to string
+     *
+     * @return Register name
+     */
+    operator std::string() const
+    {
+        return REG_TO_STR[_reg];
+    }
+
+    /**
+     * @brief Get the register name as string
+     *
+     * @param reg Register name as Reg
+     * @return Register name as string
+     */
+    inline static std::string get_reg_name(const Register::Reg &reg)
+    {
+        return REG_TO_STR[reg];
+    }
+
+  private:
+    static const std::vector<std::string> REG_TO_STR;
+
+    const Reg _reg;
+    Assembler &_asm;
+};
+
+class AssemblerMarkSection;
+
+/**
+ * @brief Label is target for jumps
+ *
+ */
+class Label
+{
+  private:
+    const std::string _name;
+
+  public:
+    /**
+     * @brief Controls if this label has to be binded or not
+     *
+     */
+    enum LabelPolicy
+    {
+        MUST_BIND,
+        ALLOW_NO_BIND
+    };
+
+    /**
+     * @brief Construct a new Label
+     *
+     * @param assembler Assembler that controls this label
+     * @param name Label name
+     * @param policy This label has to be binded or not
+     */
+    Label(Assembler &assembler, const std::string &name, const LabelPolicy &policy = MUST_BIND);
+
+    /**
+     * @brief Cast to string
+     *
+     * @return Label name
+     */
+    operator std::string() const
+    {
+        return _name;
+    }
+};
+
+/**
+ * @brief MIPS Assember
+ * Not all MIPS commands!
+ */
+class Assembler
+{
+  private:
+    static constexpr int IDENTATION = 4;
+
+    CodeBuffer &_code;
+    int _ident;
+
+    static constexpr int32_t POP_OFFSET = 4;
+    static constexpr int32_t PUSH_OFFSET = -4; // stack grows down
+
+    std::set<Register::Reg> _used_registers;            // track registers
+    std::unordered_map<std::string, bool> _used_labels; // is label with given was binded?
+
+    // some reserved registers
+    const Register _sp;
+    const Register _ra;
+    const Register _fp;
+    const Register _zero;
+
+    // current sp offset
+    int _sp_offset;
+
+    const static std::unordered_map<std::string, int>
+        SPECIAL_SYMBOLS; // idk, spim requries some strings to be converted to int
+    const static std::regex SPECIAL_SYMBOLS_REGEX;
+
+    // .ascii str
+    void ascii(const std::string &str);
+
+#ifdef DEBUG
+    std::shared_ptr<Logger> _logger;
+#endif // DEBUG
+
+  public:
+    /**
+     * @brief Construct a new Assembler
+     *
+     * @param code Emit code to this buffer
+     */
+    Assembler(CodeBuffer &code);
+
+    /**
+     * @brief Destroy the Assembler object and check labels bindings
+     *
+     */
+    ~Assembler();
+
+    /**
+     * @brief sp register
+     *
+     * @return sp register
+     */
+    inline const Register &sp() const
+    {
+        return _sp;
+    }
+
+    /**
+     * @brief ra register
+     *
+     * @return ra register
+     */
+    inline const Register &ra() const
+    {
+        return _ra;
+    }
+
+    /**
+     * @brief fp register
+     *
+     * @return fp register
+     */
+    inline const Register &fp() const
+    {
+        return _fp;
+    }
+
+    /**
+     * @brief zero register
+     *
+     * @return zero register
+     */
+    inline const Register &zero() const
+    {
+        return _zero;
+    }
+
+    /**
+     * @brief Create data section
+     *
+     */
+    inline void data_section()
+    {
+        _code.save(std::string(_ident, ' ') + ".data");
+    }
+
+    /**
+     * @brief Create text section
+     *
+     */
+    inline void text_section()
+    {
+        _code.save(std::string(_ident, ' ') + ".text");
+    }
+
+    /**
+     * @brief Align
+     *
+     * @param words words count
+     */
+    inline void align(const int32_t &words)
+    {
+        _code.save(std::string(_ident, ' ') + ".align\t" + std::to_string(words));
+    }
+
+    /**
+     * @brief Declare global symbol
+     *
+     * @param symbol Label object
+     */
+    inline void global(const Label &symbol)
+    {
+        _code.save(std::string(_ident, ' ') + ".globl\t" + static_cast<std::string>(symbol));
+    }
+
+    /**
+     * @brief Declare word
+     *
+     * @param value Word value
+     */
+    inline void word(const int32_t &value)
+    {
+        _code.save(std::string(_ident, ' ') + ".word\t" + std::to_string(value));
+    }
+
+    /**
+     * @brief Declare pointer
+     *
+     * @param symbol Label object
+     */
+    inline void word(const Label &symbol)
+    {
+        _code.save(std::string(_ident, ' ') + ".word\t" + static_cast<std::string>(symbol));
+    }
+
+    /**
+     * @brief Declare byte
+     *
+     * @param value Byte value
+     */
+    inline void byte(const int8_t &value)
+    {
+        _code.save(std::string(_ident, ' ') + ".byte\t" + std::to_string(value));
+    }
+
+    /**
+     * @brief Emit string with escape sequencies
+     *
+     * @param str String
+     */
+    void encode_string(const std::string &str);
+
+    /**
+     * @brief Store register value to memory location
+     *
+     * @param from_reg Register
+     * @param to_reg Base
+     * @param offset Offset
+     */
+    void sw(const Register &from_reg, const Register &to_reg, const int32_t &offset);
+
+    /**
+     * @brief Load word
+     *
+     * @param to_reg Destination register
+     * @param from_reg Base
+     * @param offset Offset
+     */
+    void lw(const Register &to_reg, const Register &from_reg, const int32_t &offset);
+
+    /**
+     * @brief Load address
+     *
+     * @param to_reg Destination register
+     * @param label Label object
+     */
+    void la(const Register &to_reg, const Label &label);
+
+    /**
+     * @brief Move
+     *
+     * @param result_reg Destination register
+     * @param from_reg Source register
+     */
+    void move(const Register &result_reg, const Register &from_reg);
+
+    /**
+     * @brief Load immediate
+     *
+     * @param reg Destination register
+     * @param imm Value
+     */
+    void li(const Register &reg, const int32_t &imm);
+
+    /**
+     * @brief Add immediate unsigned
+     *
+     * @param result_reg Destination register
+     * @param operand_reg Operand register
+     * @param imm Operand value
+     */
+    void addiu(const Register &result_reg, const Register &operand_reg, const int32_t &imm);
+
+    /**
+     * @brief Push register value on stack
+     *
+     * @param reg Register for push
+     */
+    void push(const Register &reg);
+
+    /**
+     * @brief Pop value to register from stack
+     *
+     * @param reg Register fot pop
+     */
+    void pop(const Register &reg);
+
+    /**
+     * @brief  Pop value from stack
+     *
+     */
+    void pop();
+
+    /**
+     * @brief Subtract
+     *
+     * @param result_reg Destination register
+     * @param op1_reg Operand register
+     * @param op2_reg Operand register
+     */
+    void sub(const Register &result_reg, const Register &op1_reg, const Register &op2_reg);
+
+    /**
+     * @brief Add
+     *
+     * @param result_reg Destination register
+     * @param op1_reg Operand register
+     * @param op2_reg Operand register
+     */
+    void add(const Register &result_reg, const Register &op1_reg, const Register &op2_reg);
+
+    /**
+     * @brief Add unsigned
+     *
+     * @param result_reg Destination register
+     * @param op1_reg Operand register
+     * @param op2_reg Operand register
+     */
+    void addu(const Register &result_reg, const Register &op1_reg, const Register &op2_reg);
+
+    /**
+     * @brief Multiply
+     *
+     * @param result_reg Destination register
+     * @param op1_reg Operand register
+     * @param op2_reg Operand register
+     */
+    void mul(const Register &result_reg, const Register &op1_reg, const Register &op2_reg);
+
+    /**
+     * @brief Divide
+     *
+     * @param result_reg Destination register
+     * @param op1_reg Operand register
+     * @param op2_reg Operand register
+     */
+    void div(const Register &result_reg, const Register &op1_reg, const Register &op2_reg);
+
+    /**
+     * @brief Xor
+     *
+     * @param result_reg Destination register
+     * @param op1_reg Operand register
+     * @param op2_reg Operand register
+     */
+    void xorr(const Register &result_reg, const Register &op1_reg, const Register &op2_reg);
+
+    /**
+     * @brief Xor
+     *
+     * @param result_reg Destination register
+     * @param op_reg Operand register
+     * @param imm Operand value
+     */
+    void xori(const Register &result_reg, const Register &op_reg, const int32_t &imm);
+
+    /**
+     * @brief Check if first operand is lesser than second
+     *
+     * @param result_reg Destination register
+     * @param op1_reg Operand register
+     * @param op2_reg Operand register
+     */
+    void slt(const Register &result_reg, const Register &op1_reg, const Register &op2_reg);
+
+    /**
+     * @brief Shift left logical
+     *
+     * @param result_reg Destination register
+     * @param op1_reg Operand register
+     * @param imm Number of bits
+     */
+    void sll(const Register &result_reg, const Register &op1_reg, const int32_t &imm);
+
+    /**
+     * @brief Branch on less than or equal
+     *
+     * @param op1_reg Operand register
+     * @param op2_reg Operand register
+     * @param label Branch target
+     */
+    void ble(const Register &op1_reg, const Register &op2_reg, const Label &label);
+
+    /**
+     * @brief Branch on not equal
+     *
+     * @param op1_reg Operand register
+     * @param op2_reg Operand register
+     * @param label Branch target
+     */
+    void bne(const Register &op1_reg, const Register &op2_reg, const Label &label);
+
+    /**
+     * @brief Branch on greater than
+     *
+     * @param op1_reg Operand register
+     * @param op2_reg Operand register
+     * @param label Branch target
+     */
+    void bgt(const Register &op1_reg, const Register &op2_reg, const Label &label);
+
+    /**
+     * @brief Branch on greater than
+     *
+     * @param op1_reg Operand register
+     * @param op2_imm Operand value
+     * @param label Branch target
+     */
+    void bgt(const Register &op1_reg, const int32_t &op2_imm, const Label &label);
+
+    /**
+     * @brief Branch on less than
+     *
+     * @param op1_reg Operand register
+     * @param op2_reg Operand register
+     * @param label Branch target
+     */
+    void blt(const Register &op1_reg, const Register &op2_reg, const Label &label);
+
+    /**
+     * @brief Branch on less than
+     *
+     * @param op1_reg Operand register
+     * @param op2_imm Operand value
+     * @param label Branch target
+     */
+    void blt(const Register &op1_reg, const int32_t &op2_imm, const Label &label);
+
+    /**
+     * @brief Uncinditional jump
+     *
+     * @param label Jump target
+     */
+    void j(const Label &label);
+
+    /**
+     * @brief Branch on equal
+     *
+     * @param op1_reg Operand register
+     * @param op2_reg Operand register
+     * @param label Branch target
+     */
+    void beq(const Register &op1_reg, const Register &op2_reg, const Label &label);
+
+    /**
+     * @brief Branch on equal
+     *
+     * @param op1_reg Operand register
+     * @param op2_imm Operand value
+     * @param label Branch target
+     */
+    void beq(const Register &op1_reg, const int32_t &op2_imm, const Label &label);
+
+    /**
+     * @brief Jump and link
+     *
+     * @param label Jump target
+     */
+    void jal(const Label &label);
+
+    /**
+     * @brief Jump and link by register value
+     *
+     * @param reg Address register
+     */
+    void jalr(const Register &reg);
+
+    /**
+     * @brief Jump by register value
+     *
+     * @param reg Address register
+     */
+    void jr(const Register &reg);
+
+    /**
+     * @brief Check if labels are binded at least in one assembler
+     *
+     * @param asm1 Assembler 1 for check
+     * @param asm2 Assembler 2 for check
+     */
+    static void cross_resolve_labels(Assembler &asm1, Assembler &asm2);
+
+    /**
+     * @brief Get current sp offset
+     *
+     * @return sp offset
+     */
+    inline int sp_offset() const
+    {
+        return _sp_offset;
+    }
+
+    /**
+     * @brief Set sp offset
+     *
+     * @param offset New offset
+     */
+    void set_sp_offset(const int32_t &offset)
+    {
+        _sp_offset = offset;
+    }
+
+#ifdef DEBUG
+    /**
+     * @brief Dump registers and labels for this assembler
+     *
+     */
+    void dump();
+
+    /**
+     * @brief Set parent logger
+     *
+     * @param logger Parent logger
+     */
+    inline void set_parent_logger(const std::shared_ptr<Logger> &logger)
+    {
+        _logger->set_parent_logger(logger);
+    }
+#endif // DEBUG
+
+    friend class AssemblerMarkSection;
+    friend class Register;
+    friend class Label;
+};
+
+/**
+ * @brief AssemblerMarkSection binds Labels
+ *
+ */
+class AssemblerMarkSection
+{
+  private:
+    Assembler &_asm;
+
+  public:
+    /**
+     * @brief Construct a new AssemblerMarkSection and bind Label
+     *
+     * @param assembler Assembler that will control this label
+     * @param label Label object
+     */
+    AssemblerMarkSection(Assembler &assembler, const Label &label);
+};
+
+}; // namespace codegen

@@ -1,0 +1,1 @@
+add_library(semant STATIC Scope.cpp Semant.cpp)

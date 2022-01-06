@@ -1,250 +1,252 @@
 #pragma once
 
-#include <vector>
-#include <variant>
-#include <memory>
 #include "utils/Utils.h"
+#include <memory>
+#include <variant>
+#include <vector>
 
-#ifdef PARSER_VERBOSE
-#include <iostream>
+#ifdef DEBUG
 #include <algorithm>
-#endif // PARSER_VERBOSE
+#include <iostream>
+#endif // DEBUG
 
 namespace ast
 {
-    // main structural elements
-    struct Program;
-    struct Class;
-    struct Feature;
-    struct Formal;
-    struct Case;
-    struct Expression;
+// main structural elements
+struct Program;
+struct Class;
+struct Feature;
+struct Formal;
+struct Case;
+struct Expression;
 
-    struct Type;
-    struct ObjectExpression;
+struct Type;
+struct ObjectExpression;
 
-    struct Program
-    {
-        std::vector<std::shared_ptr<Class>> _classes;
+struct Program
+{
+    std::vector<std::shared_ptr<Class>> _classes;
 
-        int _line_number;
-    };
+    int _line_number;
+};
 
-    struct Class
-    {
-        std::shared_ptr<Type> _type;
-        std::shared_ptr<Type> _parent;
-        std::vector<std::shared_ptr<Feature>> _features;
+struct Class
+{
+    std::shared_ptr<Type> _type;
+    std::shared_ptr<Type> _parent;
+    std::vector<std::shared_ptr<Feature>> _features;
 
-        std::string _file_name;
-        int _line_number;
-    };
+    std::string _file_name;
+    int _line_number;
+};
 
-    struct AttrFeature
-    {
-    };
+struct AttrFeature
+{
+};
 
-    struct MethodFeature
-    {
-        std::vector<std::shared_ptr<Formal>> _formals;
-    };
+struct MethodFeature
+{
+    std::vector<std::shared_ptr<Formal>> _formals;
+};
 
-    struct Feature
-    {
-        std::variant<AttrFeature, MethodFeature> _base;
+struct Feature
+{
+    std::variant<AttrFeature, MethodFeature> _base;
 
-        std::shared_ptr<ObjectExpression> _object;
-        std::shared_ptr<Type> _type;
-        std::shared_ptr<Expression> _expr;
+    std::shared_ptr<ObjectExpression> _object;
+    std::shared_ptr<Type> _type;
+    std::shared_ptr<Expression> _expr;
 
-        int _line_number;
-    };
+    int _line_number;
+};
 
-    struct Formal
-    {
-        std::shared_ptr<ObjectExpression> _object;
-        std::shared_ptr<Type> _type;
+struct Formal
+{
+    std::shared_ptr<ObjectExpression> _object;
+    std::shared_ptr<Type> _type;
 
-        int _line_number;
-    };
+    int _line_number;
+};
 
-    struct Case
-    {
-        std::shared_ptr<ObjectExpression> _object;
-        std::shared_ptr<Type> _type;
-        std::shared_ptr<Expression> _expr;
+struct Case
+{
+    std::shared_ptr<ObjectExpression> _object;
+    std::shared_ptr<Type> _type;
+    std::shared_ptr<Expression> _expr;
 
-        int _line_number;
-    };
+    int _line_number;
+};
 
-    struct AssignExpression
-    {
-        std::shared_ptr<ObjectExpression> _object;
-        std::shared_ptr<Expression> _expr;
-    };
+struct AssignExpression
+{
+    std::shared_ptr<ObjectExpression> _object;
+    std::shared_ptr<Expression> _expr;
+};
 
-    struct StaticDispatchExpression
-    {
-        std::shared_ptr<Type> _type;
-    };
+struct StaticDispatchExpression
+{
+    std::shared_ptr<Type> _type;
+};
 
-    struct ObjectDispatchExpression
-    {
-    };
+struct ObjectDispatchExpression
+{
+};
 
-    struct DispatchExpression
-    {
-        std::variant<ObjectDispatchExpression, StaticDispatchExpression> _base;
+struct DispatchExpression
+{
+    std::variant<ObjectDispatchExpression, StaticDispatchExpression> _base;
 
-        std::shared_ptr<Expression> _expr;
-        std::shared_ptr<ObjectExpression> _object;
-        std::vector<std::shared_ptr<Expression>> _args;
-    };
+    std::shared_ptr<Expression> _expr;
+    std::shared_ptr<ObjectExpression> _object;
+    std::vector<std::shared_ptr<Expression>> _args;
+};
 
-    struct IfExpression
-    {
-        std::shared_ptr<Expression> _predicate;
-        std::shared_ptr<Expression> _true_path_expr;
-        std::shared_ptr<Expression> _false_path_expr;
-    };
+struct IfExpression
+{
+    std::shared_ptr<Expression> _predicate;
+    std::shared_ptr<Expression> _true_path_expr;
+    std::shared_ptr<Expression> _false_path_expr;
+};
 
-    struct WhileExpression
-    {
-        std::shared_ptr<Expression> _predicate;
-        std::shared_ptr<Expression> _body_expr;
-    };
+struct WhileExpression
+{
+    std::shared_ptr<Expression> _predicate;
+    std::shared_ptr<Expression> _body_expr;
+};
 
-    struct ListExpression
-    {
-        std::vector<std::shared_ptr<Expression>> _exprs;
-    };
+struct ListExpression
+{
+    std::vector<std::shared_ptr<Expression>> _exprs;
+};
 
-    struct LetExpression
-    {
-        std::shared_ptr<ObjectExpression> _object;
-        std::shared_ptr<Type> _type;
-        std::shared_ptr<Expression> _expr;
+struct LetExpression
+{
+    std::shared_ptr<ObjectExpression> _object;
+    std::shared_ptr<Type> _type;
+    std::shared_ptr<Expression> _expr;
 
-        std::shared_ptr<Expression> _body_expr;
-    };
+    std::shared_ptr<Expression> _body_expr;
+};
 
-    struct CaseExpression
-    {
-        std::shared_ptr<Expression> _expr;
-        std::vector<std::shared_ptr<Case>> _cases;
-    };
+struct CaseExpression
+{
+    std::shared_ptr<Expression> _expr;
+    std::vector<std::shared_ptr<Case>> _cases;
+};
 
-    struct NewExpression
-    {
-        std::shared_ptr<Type> _type;
-    };
+struct NewExpression
+{
+    std::shared_ptr<Type> _type;
+};
 
-    // unary expressions
-    struct NotExpression
-    {
-    };
+// unary expressions
+struct NotExpression
+{
+};
 
-    struct IsVoidExpression
-    {
-    };
+struct IsVoidExpression
+{
+};
 
-    struct NegExpression
-    {
-    };
+struct NegExpression
+{
+};
 
-    struct UnaryExpression
-    {
-        std::variant<NegExpression, IsVoidExpression, NotExpression> _base;
-        std::shared_ptr<Expression> _expr;
-    };
+struct UnaryExpression
+{
+    std::variant<NegExpression, IsVoidExpression, NotExpression> _base;
+    std::shared_ptr<Expression> _expr;
+};
 
-    // binary expressions
-    struct MulExpression
-    {
-    };
+// binary expressions
+struct MulExpression
+{
+};
 
-    struct DivExpression
-    {
-    };
+struct DivExpression
+{
+};
 
-    struct PlusExpression
-    {
-    };
+struct PlusExpression
+{
+};
 
-    struct MinusExpression
-    {
-    };
+struct MinusExpression
+{
+};
 
-    struct LTExpression
-    {
-    };
+struct LTExpression
+{
+};
 
-    struct LEExpression
-    {
-    };
+struct LEExpression
+{
+};
 
-    struct EqExpression
-    {
-    };
+struct EqExpression
+{
+};
 
-    struct BinaryExpression
-    {
-        std::variant<EqExpression, LEExpression, LTExpression,
-                     MinusExpression, PlusExpression, DivExpression, MulExpression>
-            _base;
+struct BinaryExpression
+{
+    std::variant<EqExpression, LEExpression, LTExpression, MinusExpression, PlusExpression, DivExpression,
+                 MulExpression>
+        _base;
 
-        std::shared_ptr<Expression> _lhs;
-        std::shared_ptr<Expression> _rhs;
-    };
+    std::shared_ptr<Expression> _lhs;
+    std::shared_ptr<Expression> _rhs;
+};
 
-    // Atoms
-    struct ObjectExpression
-    {
-        std::string _object;
-    };
+// Atoms
+struct ObjectExpression
+{
+    std::string _object;
+};
 
-    struct IntExpression
-    {
-        int _value;
-    };
+struct IntExpression
+{
+    int _value;
+};
 
-    struct StringExpression
-    {
-        std::string _string;
-    };
+struct StringExpression
+{
+    std::string _string;
+};
 
-    struct BoolExpression
-    {
-        bool _value;
-    };
+struct BoolExpression
+{
+    bool _value;
+};
 
-    struct Type
-    {
-        std::string _string;
-    };
+struct Type
+{
+    std::string _string;
+};
 
-    struct Expression
-    {
-        std::variant<AssignExpression, DispatchExpression, BinaryExpression, UnaryExpression,
-                     IfExpression, WhileExpression, ListExpression, LetExpression, CaseExpression,
-                     NewExpression, ObjectExpression, IntExpression, StringExpression, BoolExpression>
-            _data;
+struct Expression
+{
+    std::variant<AssignExpression, DispatchExpression, BinaryExpression, UnaryExpression, IfExpression, WhileExpression,
+                 ListExpression, LetExpression, CaseExpression, NewExpression, ObjectExpression, IntExpression,
+                 StringExpression, BoolExpression>
+        _data;
 
-        int _line_number;
+    int _line_number;
 
-        std::shared_ptr<Type> _type;
-    };
+    std::shared_ptr<Type> _type;
+};
 
-    template <class... Ts>
-    struct overloaded : Ts...
-    {
-        using Ts::operator()...;
-    };
-    template <class... Ts>
-    overloaded(Ts...) -> overloaded<Ts...>;
+template <class... Ts> struct overloaded : Ts...
+{
+    using Ts::operator()...;
+};
+template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
-#if defined(PARSER_VERBOSE) || defined(SEMANT_VERBOSE)
-    // print ast
-    void dump_program(const Program &program);
-#endif // PARSER_VERBOSE || SEMANT_VERBOSE
-}
+#ifdef DEBUG
+/**
+ * @brief Print program AST
+ *
+ * @param program Program instance
+ */
+void dump_program(const Program &program);
+#endif // DEBUG
+} // namespace ast

@@ -1,25 +1,61 @@
 #pragma once
 
-#if defined(LEXER_FULL_VERBOSE) || defined(SEMANT_FULL_VERBOSE) || defined(CODEGEN_FULL_VERBOSE)
+#ifdef DEBUG
 #include <iostream>
+#include <memory>
 
+/**
+ * @brief Loggers hierarhy
+ *
+ */
 class Logger
 {
-private:
-    static constexpr int _IDENT_SIZE = 4;
+  private:
+    static constexpr int IDENT_SIZE = 4;
 
     int _ident;
-    Logger *_parent_logger;
+    std::shared_ptr<Logger> _parent_logger;
 
     int update_ident();
 
-public:
-    Logger() : _ident(0), _parent_logger(nullptr) {}
+  public:
+    /**
+     * @brief Construct a new Logger object
+     *
+     */
+    Logger() : _ident(0), _parent_logger(nullptr)
+    {
+    }
 
+    /**
+     * @brief Write log message with current indentation
+     *
+     * @param msg Message
+     */
     void log(const std::string &msg);
+
+    /**
+     * @brief Write log message with deeper indentation
+     *
+     * @param msg Message
+     */
     void log_enter(const std::string &msg);
+
+    /**
+     * @brief Write log message with less indentation
+     *
+     * @param msg Message
+     */
     void log_exit(const std::string &msg);
 
-    inline void set_parent_logger(Logger *logger) { _parent_logger = logger; }
+    /**
+     * @brief Set the parent logger object
+     *
+     * @param parent parent logger
+     */
+    inline void set_parent_logger(const std::shared_ptr<Logger> &logger)
+    {
+        _parent_logger = logger;
+    }
 };
-#endif // LEXER_FULL_VERBOSE || SEMANT_FULL_VERBOSE || CODEGEN_FULL_VERBOSE
+#endif // DEBUG

@@ -5,14 +5,14 @@ using namespace semant;
 Scope::Scope(const std::shared_ptr<ast::Type> &self_type)
 {
     _symbols.emplace_back();
-    _symbols.back()[static_cast<std::string>(_self)] = self_type;
+    _symbols.back()[static_cast<std::string>(SELF)] = self_type;
 }
 
-Scope::ADD_RESULT Scope::add_if_can(const std::string &name, const std::shared_ptr<ast::Type> &type)
+Scope::AddResult Scope::add_if_can(const std::string &name, const std::shared_ptr<ast::Type> &type)
 {
-    SEMANT_RETURN_IF_FALSE(name != _self, RESERVED);
+    SEMANT_RETURN_IF_FALSE(name != SELF, RESERVED);
 
-    SEMANT_FULL_VERBOSE_ONLY(assert(_symbols.size() != 0));
+    SEMANT_VERBOSE_ONLY(assert(_symbols.size() != 0));
     SEMANT_RETURN_IF_FALSE(_symbols.back().find(name) == _symbols.back().end(), REDEFINED);
 
     _symbols.back()[name] = type;
@@ -21,7 +21,7 @@ Scope::ADD_RESULT Scope::add_if_can(const std::string &name, const std::shared_p
 
 std::shared_ptr<ast::Type> Scope::find(const std::string &name, const int &scope_shift) const
 {
-    SEMANT_FULL_VERBOSE_ONLY(dump());
+    SEMANT_VERBOSE_ONLY(dump());
 
     for (auto class_scope = _symbols.rbegin() + scope_shift; class_scope != _symbols.rend(); class_scope++)
     {
@@ -35,7 +35,7 @@ std::shared_ptr<ast::Type> Scope::find(const std::string &name, const int &scope
     return nullptr;
 }
 
-#ifdef SEMANT_FULL_VERBOSE
+#ifdef DEBUG
 void Scope::dump() const
 {
     for (const auto &class_scope : _symbols)
@@ -47,4 +47,4 @@ void Scope::dump() const
         }
     }
 }
-#endif // SEMANT_FULL_VERBOSE
+#endif // DEBUG

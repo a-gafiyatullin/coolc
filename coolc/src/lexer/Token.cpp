@@ -2,52 +2,14 @@
 
 using namespace lexer;
 
-const std::vector<std::string> Token::_token_type_to_str = {
-    "CLASS",
-    "ELSE",
-    "FI",
-    "IF",
-    "IN",
-    "INHERITS",
-    "LET",
-    "LOOP",
-    "POOL",
-    "THEN",
-    "WHILE",
-    "CASE",
-    "ESAC",
-    "OF",
-    "NOT",
-    "NEW",
-    "ISVOID",
-    "DARROW",
-    "ASSIGN",
-    "LE",
+const std::vector<std::string> Token::TOKEN_TYPE_TO_STR = {
+    "CLASS", "ELSE", "FI", "IF", "IN", "INHERITS", "LET", "LOOP", "POOL", "THEN", "WHILE", "CASE", "ESAC", "OF", "NOT",
+    "NEW", "ISVOID", "DARROW", "ASSIGN", "LE",
     /* objects */
-    "INT_CONST",
-    "BOOL_CONST",
-    "TYPEID",
-    "OBJECTID",
-    "STR_CONST",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "ERROR"};
+    "INT_CONST", "BOOL_CONST", "TYPEID", "OBJECTID", "STR_CONST", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "", "", "", "ERROR"};
 
-#ifdef LEXER_VERBOSE
+#ifdef DEBUG
 std::string Token::to_string() const
 {
     std::string out = "#" + std::to_string(_line_number) + " ";
@@ -57,7 +19,7 @@ std::string Token::to_string() const
     }
     else
     {
-        out += _token_type_to_str[_type];
+        out += TOKEN_TYPE_TO_STR[_type];
         if (_type >= INT_CONST && _type < STR_CONST)
         {
             out += " " + _lexeme;
@@ -70,45 +32,45 @@ std::string Token::to_string() const
 
     return out;
 }
-#endif // LEXER_VERBOSE
+#endif // DEBUG
 
-const std::unordered_map<std::string, Token::TOKEN_TYPE> Token::_str_to_token_type = {
-    {"class", Token::TOKEN_TYPE::CLASS},
-    {"else", Token::TOKEN_TYPE::ELSE},
-    {"fi", Token::TOKEN_TYPE::FI},
-    {"if", Token::TOKEN_TYPE::IF},
-    {"in", Token::TOKEN_TYPE::IN},
-    {"inherits", Token::TOKEN_TYPE::INHERITS},
-    {"let", Token::TOKEN_TYPE::LET},
-    {"loop", Token::TOKEN_TYPE::LOOP},
-    {"pool", Token::TOKEN_TYPE::POOL},
-    {"then", Token::TOKEN_TYPE::THEN},
-    {"while", Token::TOKEN_TYPE::WHILE},
-    {"case", Token::TOKEN_TYPE::CASE},
-    {"esac", Token::TOKEN_TYPE::ESAC},
-    {"of", Token::TOKEN_TYPE::OF},
-    {"not", Token::TOKEN_TYPE::NOT},
-    {"new", Token::TOKEN_TYPE::NEW},
-    {"isvoid", Token::TOKEN_TYPE::ISVOID},
-    {";", Token::TOKEN_TYPE::SEMICOLON},
-    {"{", Token::TOKEN_TYPE::LEFT_CURLY_BRACKET},
-    {"}", Token::TOKEN_TYPE::RIGHT_CURLY_BRACKET},
-    {":", Token::TOKEN_TYPE::COLON},
-    {"(", Token::TOKEN_TYPE::LEFT_PAREN},
-    {")", Token::TOKEN_TYPE::RIGHT_PAREN},
-    {".", Token::TOKEN_TYPE::DOT},
-    {"@", Token::TOKEN_TYPE::AT},
-    {"~", Token::TOKEN_TYPE::NEG},
-    {"*", Token::TOKEN_TYPE::ASTERISK},
-    {"/", Token::TOKEN_TYPE::SLASH},
-    {"+", Token::TOKEN_TYPE::PLUS},
-    {"-", Token::TOKEN_TYPE::MINUS},
-    {"<", Token::TOKEN_TYPE::LESS},
-    {"=", Token::TOKEN_TYPE::EQUALS},
-    {",", Token::TOKEN_TYPE::COMMA},
-    {"=>", Token::TOKEN_TYPE::DARROW},
-    {"<-", Token::TOKEN_TYPE::ASSIGN},
-    {"<=", Token::TOKEN_TYPE::LE}};
+const std::unordered_map<std::string, Token::TokenType> Token::STR_TO_TOKEN_TYPE = {
+    {"class", Token::TokenType::CLASS},
+    {"else", Token::TokenType::ELSE},
+    {"fi", Token::TokenType::FI},
+    {"if", Token::TokenType::IF},
+    {"in", Token::TokenType::IN},
+    {"inherits", Token::TokenType::INHERITS},
+    {"let", Token::TokenType::LET},
+    {"loop", Token::TokenType::LOOP},
+    {"pool", Token::TokenType::POOL},
+    {"then", Token::TokenType::THEN},
+    {"while", Token::TokenType::WHILE},
+    {"case", Token::TokenType::CASE},
+    {"esac", Token::TokenType::ESAC},
+    {"of", Token::TokenType::OF},
+    {"not", Token::TokenType::NOT},
+    {"new", Token::TokenType::NEW},
+    {"isvoid", Token::TokenType::ISVOID},
+    {";", Token::TokenType::SEMICOLON},
+    {"{", Token::TokenType::LEFT_CURLY_BRACKET},
+    {"}", Token::TokenType::RIGHT_CURLY_BRACKET},
+    {":", Token::TokenType::COLON},
+    {"(", Token::TokenType::LEFT_PAREN},
+    {")", Token::TokenType::RIGHT_PAREN},
+    {".", Token::TokenType::DOT},
+    {"@", Token::TokenType::AT},
+    {"~", Token::TokenType::NEG},
+    {"*", Token::TokenType::ASTERISK},
+    {"/", Token::TokenType::SLASH},
+    {"+", Token::TokenType::PLUS},
+    {"-", Token::TokenType::MINUS},
+    {"<", Token::TokenType::LESS},
+    {"=", Token::TokenType::EQUALS},
+    {",", Token::TokenType::COMMA},
+    {"=>", Token::TokenType::DARROW},
+    {"<-", Token::TokenType::ASSIGN},
+    {"<=", Token::TokenType::LE}};
 
 bool Token::is_boolean(const std::string &str)
 {
