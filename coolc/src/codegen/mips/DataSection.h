@@ -3,6 +3,7 @@
 #include "Assembler.h"
 #include "ast/AST.h"
 #include "semant/Semant.h"
+#include "utils/Utils.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>

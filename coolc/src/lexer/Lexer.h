@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Token.h"
+#include "utils/Utils.h"
 #include <fstream>
 #include <optional>
 #include <queue>

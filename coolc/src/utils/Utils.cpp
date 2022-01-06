@@ -46,6 +46,7 @@ std::string get_printable_string(const std::string &str)
 }
 
 bool TraceLexer;
+bool TokensOnly;
 bool PrintFinalAST;
 bool TraceParser;
 bool TraceSemant;
@@ -65,16 +66,17 @@ bool maybe_set(const char *arg, const char *flag_name, bool &flag)
     return false;
 }
 
-int process_args(char *const args[], const int &args_num)
+std::vector<int> process_args(char *const args[], const int &args_num)
 {
     TraceLexer = false;
     PrintFinalAST = false;
     TraceParser = false;
     TraceSemant = false;
     TraceCodeGen = false;
+    TokensOnly = false;
 
-    int i = 0;
-    for (; i < args_num; i++)
+    std::vector<int> positions;
+    for (int i = 1; i < args_num; i++)
     {
         if (args[i][0] == '-' || args[i][0] == '+')
         {
@@ -98,10 +100,17 @@ int process_args(char *const args[], const int &args_num)
             {
                 continue;
             }
-            break;
+            if (maybe_set(args[i], "TokensOnly", TokensOnly))
+            {
+                continue;
+            }
+        }
+        else
+        {
+            positions.push_back(i);
         }
     }
 
-    return i;
+    return positions;
 }
 #endif // DEBUG

@@ -85,13 +85,13 @@ class Semant
 
     // ----------------------------- Type checking support -----------------------------
     // basic types
-    static std::shared_ptr<ast::Type> BOOL;
-    static std::shared_ptr<ast::Type> OBJECT;
-    static std::shared_ptr<ast::Type> INT;
-    static std::shared_ptr<ast::Type> SRING;
-    static std::shared_ptr<ast::Type> IO;
-    static std::shared_ptr<ast::Type> OBJECT_PARENT; // parent of class Object for algorithms
-    static std::shared_ptr<ast::Type> SELF_TYPE;
+    static std::shared_ptr<ast::Type> Bool;
+    static std::shared_ptr<ast::Type> Object;
+    static std::shared_ptr<ast::Type> Int;
+    static std::shared_ptr<ast::Type> String;
+    static std::shared_ptr<ast::Type> Io;
+    static std::shared_ptr<ast::Type> ObjectParent; // parent of class Object for algorithms
+    static std::shared_ptr<ast::Type> SelfType;
 
     // expressions type check helpers
 
@@ -156,7 +156,7 @@ class Semant
      */
     inline static bool is_bool(const std::shared_ptr<ast::Type> &t)
     {
-        return same_type(t, BOOL);
+        return same_type(t, Bool);
     }
 
     /**
@@ -167,7 +167,7 @@ class Semant
      */
     inline static bool is_int(const std::shared_ptr<ast::Type> &t)
     {
-        return same_type(t, INT);
+        return same_type(t, Int);
     }
 
     /**
@@ -178,7 +178,7 @@ class Semant
      */
     inline static bool is_string(const std::shared_ptr<ast::Type> &t)
     {
-        return same_type(t, SRING);
+        return same_type(t, String);
     }
 
     /**
@@ -189,7 +189,7 @@ class Semant
      */
     inline static bool is_self_type(const std::shared_ptr<ast::Type> &t)
     {
-        return same_type(t, SELF_TYPE);
+        return same_type(t, SelfType);
     }
 
     /**
@@ -199,7 +199,7 @@ class Semant
      */
     inline static std::shared_ptr<ast::Type> int_type()
     {
-        return INT;
+        return Int;
     }
 
     /**
@@ -209,7 +209,7 @@ class Semant
      */
     inline static std::shared_ptr<ast::Type> bool_type()
     {
-        return BOOL;
+        return Bool;
     }
 
     /**
@@ -219,7 +219,7 @@ class Semant
      */
     inline static std::shared_ptr<ast::Type> string_type()
     {
-        return SRING;
+        return String;
     }
 
     /**
@@ -229,7 +229,7 @@ class Semant
      */
     inline static std::shared_ptr<ast::Type> self_type()
     {
-        return SELF_TYPE;
+        return SelfType;
     }
 
     /**

@@ -22,8 +22,8 @@ std::shared_ptr<ast::Program> Semant::merge_to_one_program(const std::vector<std
 
 Semant::Semant(std::vector<std::shared_ptr<ast::Program>> programs) : _program(merge_to_one_program(programs))
 {
-    OBJECT_PARENT = std::make_shared<ast::Type>();
-    OBJECT_PARENT->_string = "";
+    ObjectParent = std::make_shared<ast::Type>();
+    ObjectParent->_string = "";
 }
 
 // ---------------------------------------- CLASS CHECK ----------------------------------------
@@ -95,18 +95,18 @@ bool Semant::check_class_hierarchy_for_cycle(const std::shared_ptr<ClassNode> &k
 
 bool Semant::is_not_basic_class(const std::shared_ptr<ast::Type> &klass)
 {
-    return !(same_type(klass, INT) || same_type(klass, BOOL) || same_type(klass, SRING) || same_type(klass, OBJECT) ||
-             same_type(klass, IO) || is_self_type(klass));
+    return !(same_type(klass, Int) || same_type(klass, Bool) || same_type(klass, String) || same_type(klass, Object) ||
+             same_type(klass, Io) || is_self_type(klass));
 }
 
 bool Semant::is_trivial_type(const std::shared_ptr<ast::Type> &klass)
 {
-    return same_type(klass, INT) || same_type(klass, BOOL) || same_type(klass, SRING);
+    return same_type(klass, Int) || same_type(klass, Bool) || same_type(klass, String);
 }
 
 bool Semant::is_inherit_allowed(const std::shared_ptr<ast::Type> &klass)
 {
-    return !(same_type(klass, INT) || same_type(klass, BOOL) || same_type(klass, SRING) || is_self_type(klass));
+    return !(same_type(klass, Int) || same_type(klass, Bool) || same_type(klass, String) || is_self_type(klass));
 }
 
 bool Semant::check_class_hierarchy()
@@ -242,9 +242,9 @@ bool Semant::check_classes()
     SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_enter("create basic classes"));
 
     _root = create_basic_class(
-        "Object", OBJECT_PARENT->_string,
+        "Object", ObjectParent->_string,
         {{"abort", {{"", "Object"}}}, {"type_name", {{"", "String"}}}, {"copy", {{"", "SELF_TYPE"}}}});
-    OBJECT = _root->_class->_type;
+    Object = _root->_class->_type;
 
     // add IO to hierarchy
     _root->_children.push_back(create_basic_class("IO", "Object",
@@ -252,26 +252,26 @@ bool Semant::check_classes()
                                                    {"out_int", {{"", "SELF_TYPE"}, {"x", "Int"}}},
                                                    {"in_string", {{"", "String"}}},
                                                    {"in_int", {{"", "Int"}}}}));
-    IO = _root->_children.back()->_class->_type;
+    Io = _root->_children.back()->_class->_type;
 
     // add Int to hierarchy
     _root->_children.push_back(create_basic_class("Int", "Object", {}));
-    INT = _root->_children.back()->_class->_type;
+    Int = _root->_children.back()->_class->_type;
 
     // add Bool to hierarchy
     _root->_children.push_back(create_basic_class("Bool", "Object", {}));
-    BOOL = _root->_children.back()->_class->_type;
+    Bool = _root->_children.back()->_class->_type;
 
     // add SELF_TYPE to hierarchy
     _root->_children.push_back(create_basic_class("SELF_TYPE", "Object", {}));
-    SELF_TYPE = _root->_children.back()->_class->_type;
+    SelfType = _root->_children.back()->_class->_type;
 
     // add String to hierarchy
     _root->_children.push_back(create_basic_class("String", "Object",
                                                   {{"length", {{"", "Int"}}},
                                                    {"concat", {{"", "String"}, {"s", "String"}}},
                                                    {"substr", {{"", "String"}, {"i", "Int"}, {"l", "Int"}}}}));
-    SRING = _root->_children.back()->_class->_type;
+    String = _root->_children.back()->_class->_type;
 
     SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_exit("create basic classes"));
 
@@ -482,7 +482,7 @@ bool Semant::check_expressions_in_class(const std::shared_ptr<ClassNode> &node, 
 
 bool Semant::check_expressions()
 {
-    Scope scope(SELF_TYPE);
+    Scope scope(SelfType);
 
     SEMANT_RETURN_IF_FALSE(check_expressions_in_class(_root, scope), false);
 
@@ -496,9 +496,9 @@ bool Semant::infer_expression_type(std::shared_ptr<ast::Expression> &expr, Scope
 {
     expr->_type = std::visit(
         ast::overloaded{
-            [&](ast::BoolExpression &bool_expr) -> std::shared_ptr<ast::Type> { return BOOL; },
-            [&](ast::StringExpression &str) -> std::shared_ptr<ast::Type> { return SRING; },
-            [&](ast::IntExpression &number) -> std::shared_ptr<ast::Type> { return INT; },
+            [&](ast::BoolExpression &bool_expr) -> std::shared_ptr<ast::Type> { return Bool; },
+            [&](ast::StringExpression &str) -> std::shared_ptr<ast::Type> { return String; },
+            [&](ast::IntExpression &number) -> std::shared_ptr<ast::Type> { return Int; },
             [&](ast::ObjectExpression &object) -> std::shared_ptr<ast::Type> {
                 return infer_object_type(object, scope);
             },
@@ -594,7 +594,7 @@ std::shared_ptr<ast::Type> Semant::infer_loop_type(ast::WhileExpression &loop, S
     SEMANT_RETURN_IF_FALSE(infer_expression_type(loop._body_expr, scope), nullptr);
 
     SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_exit("LOOP"));
-    return OBJECT;
+    return Object;
 }
 
 std::shared_ptr<ast::Type> Semant::infer_unary_type(ast::UnaryExpression &unary, Scope &scope)
@@ -604,20 +604,20 @@ std::shared_ptr<ast::Type> Semant::infer_unary_type(ast::UnaryExpression &unary,
     SEMANT_RETURN_IF_FALSE(infer_expression_type(unary._expr, scope), nullptr);
 
     const auto result = std::visit(
-        ast::overloaded{[&](const ast::IsVoidExpression &isvoid) -> std::shared_ptr<ast::Type> { return BOOL; },
+        ast::overloaded{[&](const ast::IsVoidExpression &isvoid) -> std::shared_ptr<ast::Type> { return Bool; },
                         [&](const ast::NotExpression &) -> std::shared_ptr<ast::Type> {
                             SEMANT_RETURN_IF_FALSE_WITH_ERROR(is_bool(unary._expr->_type),
                                                               "Argument of 'not' has type " +
                                                                   unary._expr->_type->_string + " instead of Bool.",
                                                               -1, nullptr);
-                            return BOOL;
+                            return Bool;
                         },
                         [&](const ast::NegExpression &neg) -> std::shared_ptr<ast::Type> {
                             SEMANT_RETURN_IF_FALSE_WITH_ERROR(is_int(unary._expr->_type),
                                                               "Argument of '~' has type " +
                                                                   unary._expr->_type->_string + " instead of Int.",
                                                               -1, nullptr);
-                            return INT;
+                            return Int;
                         }},
         unary._base);
 
@@ -639,27 +639,27 @@ std::shared_ptr<ast::Type> Semant::infer_binary_type(ast::BinaryExpression &bina
     {
         std::string op;
         std::visit(ast::overloaded{[&](const ast::MinusExpression &minus) {
-                                       result = INT;
+                                       result = Int;
                                        op = "-";
                                    },
                                    [&](const ast::PlusExpression &plus) {
-                                       result = INT;
+                                       result = Int;
                                        op = "+";
                                    },
                                    [&](const ast::DivExpression &div) {
-                                       result = INT;
+                                       result = Int;
                                        op = "/";
                                    },
                                    [&](const ast::MulExpression &mul) {
-                                       result = INT;
+                                       result = Int;
                                        op = "*";
                                    },
                                    [&](const ast::LTExpression &lt) {
-                                       result = BOOL;
+                                       result = Bool;
                                        op = "<";
                                    },
                                    [&](const ast::LEExpression &le) {
-                                       result = BOOL;
+                                       result = Bool;
                                        op = "<=";
                                    },
                                    [&](const ast::EqExpression &le) {
@@ -684,7 +684,7 @@ std::shared_ptr<ast::Type> Semant::infer_binary_type(ast::BinaryExpression &bina
             SEMANT_RETURN_IF_FALSE_WITH_ERROR(same_type(binary._lhs->_type, binary._rhs->_type),
                                               "Illegal comparison with a basic type.", -1, nullptr);
         }
-        result = BOOL;
+        result = Bool;
     }
 
     SEMANT_RETURN_IF_FALSE(result, nullptr);
@@ -877,13 +877,13 @@ std::shared_ptr<ast::Type> Semant::find_common_ancestor(const std::vector<std::s
         {
             all_self_type = is_self_type(classes[i]);
         }
-        if (same_type(lca, OBJECT))
+        if (same_type(lca, Object))
         {
             break;
         }
     }
 
-    return all_self_type ? SELF_TYPE : lca;
+    return all_self_type ? SelfType : lca;
 }
 
 std::shared_ptr<ast::Type> Semant::find_common_ancestor_of_two(const std::shared_ptr<ast::Type> &t1,
@@ -895,14 +895,14 @@ std::shared_ptr<ast::Type> Semant::find_common_ancestor_of_two(const std::shared
     auto t2_par = t2;
 
     // find depth of the t1
-    while (!same_type(_classes.at(t1_par->_string)->_class->_type, OBJECT))
+    while (!same_type(_classes.at(t1_par->_string)->_class->_type, Object))
     {
         h1++;
         t1_par = _classes.at(t1_par->_string)->_class->_parent;
     }
 
     // find depth of the t2
-    while (!same_type(_classes.at(t2_par->_string)->_class->_type, OBJECT))
+    while (!same_type(_classes.at(t2_par->_string)->_class->_type, Object))
     {
         h2++;
         t2_par = _classes.at(t2_par->_string)->_class->_parent;
@@ -938,7 +938,7 @@ std::shared_ptr<ast::Type> Semant::find_common_ancestor_of_two(const std::shared
 std::shared_ptr<ast::Feature> Semant::find_method(const std::string &name, const std::shared_ptr<ast::Type> &klass,
                                                   const bool &exact) const
 {
-    if (same_type(klass, OBJECT_PARENT))
+    if (same_type(klass, ObjectParent))
     {
         return nullptr;
     }
@@ -961,7 +961,7 @@ std::shared_ptr<ast::Feature> Semant::find_method(const std::string &name, const
 
     // find method in ancestors
     auto current_class = _classes.at(klass->_string)->_class->_parent;
-    while (!same_type(current_class, OBJECT_PARENT))
+    while (!same_type(current_class, ObjectParent))
     {
         for (const auto &m : _classes.at(current_class->_string)->_class->_features)
         {
@@ -1000,10 +1000,10 @@ std::shared_ptr<ast::Type> Semant::exact_type(const std::shared_ptr<ast::Type> &
     return is_self_type(type) ? klass : type;
 }
 
-std::shared_ptr<ast::Type> Semant::BOOL = nullptr;
-std::shared_ptr<ast::Type> Semant::OBJECT = nullptr;
-std::shared_ptr<ast::Type> Semant::INT = nullptr;
-std::shared_ptr<ast::Type> Semant::SRING = nullptr;
-std::shared_ptr<ast::Type> Semant::IO = nullptr;
-std::shared_ptr<ast::Type> Semant::OBJECT_PARENT = nullptr;
-std::shared_ptr<ast::Type> Semant::SELF_TYPE = nullptr;
+std::shared_ptr<ast::Type> Semant::Bool = nullptr;
+std::shared_ptr<ast::Type> Semant::Object = nullptr;
+std::shared_ptr<ast::Type> Semant::Int = nullptr;
+std::shared_ptr<ast::Type> Semant::String = nullptr;
+std::shared_ptr<ast::Type> Semant::Io = nullptr;
+std::shared_ptr<ast::Type> Semant::ObjectParent = nullptr;
+std::shared_ptr<ast::Type> Semant::SelfType = nullptr;

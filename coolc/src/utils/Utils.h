@@ -6,10 +6,12 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include <string.h>
 
 extern bool TraceLexer;
+extern bool TokensOnly;
 extern bool PrintFinalAST;
 extern bool TraceParser;
 extern bool TraceSemant;
@@ -20,9 +22,9 @@ extern bool TraceCodeGen;
  *
  * @param args All command line arguments
  * @param args_num Number of command line arguments
- * @return Position of the first non-flag command line argument
+ * @return Positions of the all non-flag command line argument
  */
-int process_args(char *const args[], const int &args_num);
+std::vector<int> process_args(char *const args[], const int &args_num);
 
 /**
  * @brief Get the printable string object

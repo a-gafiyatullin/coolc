@@ -547,12 +547,12 @@ bool Parser::token_is_non_assoc_operator() const
 
 int Parser::precedence_level(const lexer::Token::TokenType &type) const
 {
-    static const std::unordered_map<lexer::Token::TokenType, int> precedence{
+    static const std::unordered_map<lexer::Token::TokenType, int> PRECEDENCE{
         {lexer::Token::ASSIGN, 0}, {lexer::Token::NOT, 1},  {lexer::Token::LESS, 2},  {lexer::Token::EQUALS, 3},
         {lexer::Token::LE, 3},     {lexer::Token::PLUS, 4}, {lexer::Token::MINUS, 4}, {lexer::Token::ASTERISK, 5},
         {lexer::Token::SLASH, 5},  {lexer::Token::NEG, 6},  {lexer::Token::ISVOID, 7}};
 
-    return precedence.at(type);
+    return PRECEDENCE.at(type);
 }
 
 void Parser::restore_precedence_level()

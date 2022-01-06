@@ -3,17 +3,39 @@
 #include "parser/Parser.h"
 #include "semant/Semant.h"
 #include "utils/Utils.h"
+#include <algorithm>
 #include <fstream>
+#include <vector>
 
 int main(int argc, char *argv[])
 {
-    int files_start_idx = 1;
-    DEBUG_ONLY(files_start_idx = process_args(argv + 1, argc - 1));
+    std::vector<int> files;
+#ifdef DEBUG
+    files = process_args(argv, argc);
+#else
+    for (int i = 1; i < argc; i++)
+    {
+        files.push_back(i);
+    }
+#endif // DEBUG
 
     // lexer/parser stage
     std::vector<std::shared_ptr<ast::Program>> programs;
-    for (int i = files_start_idx; i < argc; i++)
+    for (const auto &i : files)
     {
+        DEBUG_ONLY(if (TokensOnly) {
+            lexer::Lexer l(argv[i]);
+            std::cout << "#name \"" << l.get_file_name() << "\"" << std::endl;
+
+            auto token = l.next();
+            while (token.has_value())
+            {
+                token = l.next();
+            }
+
+            continue;
+        });
+
         parser::Parser parser(std::make_shared<lexer::Lexer>(argv[i]));
         if (auto ast = parser.parse_program())
         {
@@ -25,6 +47,8 @@ int main(int argc, char *argv[])
             return -1;
         }
     }
+
+    DEBUG_ONLY(if (TokensOnly) { return 0; });
 
     // semant stage
     semant::Semant semant(std::move(programs));

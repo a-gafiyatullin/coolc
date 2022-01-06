@@ -1,5 +1,4 @@
 #include "codegen/mips/DataSection.h"
-#include <memory>
 
 using namespace codegen;
 
@@ -354,6 +353,7 @@ const Label &DataSection::emit_init_value(const std::shared_ptr<ast::Type> &type
     {
         return declare_bool_const(false);
     }
+    DEBUG_ONLY(assert(false && "DataSection::emit_init_value: Impossible type!"));
 }
 
 int DataSection::build_class_info(const std::shared_ptr<semant::ClassNode> &node)

@@ -1,5 +1,4 @@
 #include "lexer/Lexer.h"
-#include "utils/logger/Logger.h"
 
 using namespace lexer;
 
@@ -396,7 +395,7 @@ std::optional<Token> Lexer::next()
         auto t = _saved_tokens.front();
         _saved_tokens.pop();
 
-        LEXER_VERBOSE_ONLY(Logger::get_logger()->log("RESULT TOKEN: " + t.to_string()));
+        DEBUG_ONLY(if (TokensOnly) { Logger::get_logger()->log(t.to_string()); });
 
         return t;
     }
@@ -405,7 +404,7 @@ std::optional<Token> Lexer::next()
         auto t = _saved_tokens.front();
         _saved_tokens.pop();
 
-        LEXER_VERBOSE_ONLY(Logger::get_logger()->log("RESULT TOKEN: " + t.to_string()));
+        DEBUG_ONLY(if (TokensOnly) { Logger::get_logger()->log(t.to_string()); });
 
         return t;
     }
