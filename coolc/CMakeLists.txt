@@ -36,38 +36,37 @@ target_link_libraries(coolc lexer parser semant utils ast codegen)
 
 enable_testing()
 
-add_test(
-    NAME Lexer
-    COMMAND python3
-    
-    ${PROJECT_SOURCE_DIR}/tests/e2e.py
-    ${PROJECT_SOURCE_DIR}/tests/reference/bin/lexer
-    ""
-    ${PROJECT_SOURCE_DIR}/bin/coolc
-    "+TokensOnly"
-    ${PROJECT_SOURCE_DIR}/tests/lexer/end-to-end/
-    ".cool")
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_test(
+        NAME Lexer
+        COMMAND python3
+        ${PROJECT_SOURCE_DIR}/tests/e2e.py
+        ${PROJECT_SOURCE_DIR}/tests/reference/bin/lexer
+        ""
+        ${PROJECT_SOURCE_DIR}/bin/coolc
+        "+TokensOnly"
+        ${PROJECT_SOURCE_DIR}/tests/lexer/end-to-end/
+        ".cool")
 
-add_test(
-    NAME ParserSemant
-    COMMAND python3
-    
-    ${PROJECT_SOURCE_DIR}/tests/e2e.py
-    ${PROJECT_SOURCE_DIR}/tests/parser-semant/reference-coolc.sh
-    "${PROJECT_SOURCE_DIR}/tests/reference/bin"
-    ${PROJECT_SOURCE_DIR}/bin/coolc
-    "+PrintFinalAST"
-    ${PROJECT_SOURCE_DIR}/tests/parser-semant/end-to-end/
-    ".test")
+    add_test(
+        NAME ParserSemant
+        COMMAND python3
+        ${PROJECT_SOURCE_DIR}/tests/e2e.py
+        ${PROJECT_SOURCE_DIR}/tests/parser-semant/reference-coolc.sh
+        "${PROJECT_SOURCE_DIR}/tests/reference/bin"
+        ${PROJECT_SOURCE_DIR}/bin/coolc
+        "+PrintFinalAST"
+        ${PROJECT_SOURCE_DIR}/tests/parser-semant/end-to-end/
+        ".test")
 
-add_test(
-    NAME CodeGen
-    COMMAND python3
-    
-    ${PROJECT_SOURCE_DIR}/tests/e2e.py
-    ${PROJECT_SOURCE_DIR}/tests/codegen/mips/start-spim.sh
-    "${PROJECT_SOURCE_DIR}/tests/reference/bin ${PROJECT_SOURCE_DIR}/tests/reference/bin -g"
-    ${PROJECT_SOURCE_DIR}/tests/codegen/mips/start-spim.sh
-    "${PROJECT_SOURCE_DIR}/tests/reference/bin ${PROJECT_SOURCE_DIR}/bin"
-    ${PROJECT_SOURCE_DIR}/tests/codegen/mips/end-to-end/
-    ".cl")
+    add_test(
+        NAME CodeGen
+        COMMAND python3
+        ${PROJECT_SOURCE_DIR}/tests/e2e.py
+        ${PROJECT_SOURCE_DIR}/tests/codegen/mips/start-spim.sh
+        "${PROJECT_SOURCE_DIR}/tests/reference/bin ${PROJECT_SOURCE_DIR}/tests/reference/bin -g"
+        ${PROJECT_SOURCE_DIR}/tests/codegen/mips/start-spim.sh
+        "${PROJECT_SOURCE_DIR}/tests/reference/bin ${PROJECT_SOURCE_DIR}/bin"
+        ${PROJECT_SOURCE_DIR}/tests/codegen/mips/end-to-end/
+        ".cl")
+endif()

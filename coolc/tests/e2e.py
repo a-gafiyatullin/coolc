@@ -9,7 +9,6 @@ def get_process_out(command, path_to_file, flags):
     for key in flags.split(' '):
         args.append(key)
 
-    print(args)
     result = subprocess.run(
         args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return result.returncode, result.stdout, result.stderr
