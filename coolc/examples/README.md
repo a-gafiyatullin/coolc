@@ -26,6 +26,3 @@ stack_machine.cl|A simple stack machine.
 
 # Build example:
 <code>../bin/coolc stack_machine.cl atoi.cl</code>
-
-# Run example:
-<code>../bin/spim stack_machine.s</code>

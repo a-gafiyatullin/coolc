@@ -14,7 +14,7 @@ assistance with **coolc**.
 2. Configure and build COOLC:
     - Prerequirement: clang;
     - `cd coolc`
-    - `build [-release/-debug] [options]`<br>
+    - `build.sh [-release/-debug] [options]`<br>
     Some usefull options:
         - `-clean` --- clean build directory before compile.
         - `-asan` --- build with AddressSanitizer (Debug only).
