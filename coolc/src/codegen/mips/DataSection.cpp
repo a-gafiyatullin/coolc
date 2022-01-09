@@ -30,12 +30,12 @@ void ClassCode::set_disp_table_entry(const std::string &method_name)
 
     if (table_entry == _disp_table.end())
     {
-        CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log("Adds method " + full_name + " to class " + _class->_string););
+        CODEGEN_VERBOSE_ONLY(LOG("Adds method " + full_name + " to class " + _class->_string););
         _disp_table.push_back(std::move(full_name));
     }
     else
     {
-        CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log("Changes method " + *table_entry + " on method " + full_name););
+        CODEGEN_VERBOSE_ONLY(LOG("Changes method " + *table_entry + " on method " + full_name););
         *table_entry = std::move(full_name);
     }
 }
@@ -77,20 +77,17 @@ void ClassCode::inherit_disp_table(const ClassCode &code)
     _disp_table = code._disp_table;
 
     CODEGEN_VERBOSE_ONLY(
-        Logger::get_logger()->log(_class->_string + " inherits disp table from " + code._class->_string + ":");
-        std::for_each(_disp_table.begin(), _disp_table.end(),
-                      [this](const std::string &str) { Logger::get_logger()->log(str); }));
+        LOG(_class->_string + " inherits disp table from " + code._class->_string + ":");
+        std::for_each(_disp_table.begin(), _disp_table.end(), [this](const std::string &str) { LOG(str); }));
 }
 
 void ClassCode::inherit_fields(const ClassCode &code)
 {
     _fields_types = code._fields_types;
 
-    CODEGEN_VERBOSE_ONLY(
-        Logger::get_logger()->log(_class->_string + " inherits fields from " + code._class->_string + ":");
-        std::for_each(_fields_types.begin(), _fields_types.end(), [this](const auto &type) {
-            Logger::get_logger()->log(type == nullptr ? "nullptr" : type->_string);
-        }));
+    CODEGEN_VERBOSE_ONLY(LOG(_class->_string + " inherits fields from " + code._class->_string + ":");
+                         std::for_each(_fields_types.begin(), _fields_types.end(),
+                                       [this](const auto &type) { LOG(type == nullptr ? "nullptr" : type->_string); }));
 }
 
 // ------------------------------------------ DataSection ------------------------------------------
@@ -378,9 +375,9 @@ int DataSection::build_class_info(const std::shared_ptr<semant::ClassNode> &node
                   [&](const auto &node) { max_child_tag = std::max(max_child_tag, build_class_info(node)); });
 
     _tags.at(klass->_type->_string).second = max_child_tag;
-    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log("For class " + klass->_type->_string + " with tag " +
-                                                   std::to_string(_tags.at(klass->_type->_string).first) +
-                                                   " last child has tag " + std::to_string(max_child_tag)));
+    CODEGEN_VERBOSE_ONLY(LOG("For class " + klass->_type->_string + " with tag " +
+                             std::to_string(_tags.at(klass->_type->_string).first) + " last child has tag " +
+                             std::to_string(max_child_tag)));
 
     return max_child_tag;
 }

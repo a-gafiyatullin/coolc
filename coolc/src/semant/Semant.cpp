@@ -111,7 +111,7 @@ bool Semant::is_inherit_allowed(const std::shared_ptr<ast::Type> &klass)
 
 bool Semant::check_class_hierarchy()
 {
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_enter("check class hierarchy"));
+    SEMANT_VERBOSE_ONLY(LOG_ENTER("check class hierarchy"));
 
     std::vector<std::shared_ptr<ClassNode>> delayed_parent;
     for (const auto &klass : _program->_classes)
@@ -197,7 +197,7 @@ bool Semant::check_class_hierarchy()
         return false;
     }
 
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_exit("check class hierarchy"));
+    SEMANT_VERBOSE_ONLY(LOG_EXIT("check class hierarchy"));
     return true;
 }
 
@@ -206,7 +206,7 @@ const std::string Semant::MAIN_METHOD = "main";
 
 bool Semant::check_main()
 {
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_enter("check main"));
+    SEMANT_VERBOSE_ONLY(LOG_ENTER("check main"));
 
     bool found_main = false;
 
@@ -231,7 +231,7 @@ bool Semant::check_main()
     SEMANT_RETURN_IF_FALSE_WITH_ERROR(found_main, "No 'main' method in class Main.",
                                       _classes[MAIN_CLASS]->_class->_line_number, false);
 
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_exit("check main"));
+    SEMANT_VERBOSE_ONLY(LOG_EXIT("check main"));
     return true;
 }
 
@@ -239,7 +239,7 @@ bool Semant::check_classes()
 {
     // 1. We can inherit classes only from Object, IO and user defined classes
     // add Object to hierarchy
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_enter("create basic classes"));
+    SEMANT_VERBOSE_ONLY(LOG_ENTER("create basic classes"));
 
     _root = create_basic_class(
         "Object", ObjectParent->_string,
@@ -273,7 +273,7 @@ bool Semant::check_classes()
                                                    {"substr", {{"", "String"}, {"i", "Int"}, {"l", "Int"}}}}));
     String = _root->_children.back()->_class->_type;
 
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_exit("create basic classes"));
+    SEMANT_VERBOSE_ONLY(LOG_EXIT("create basic classes"));
 
     // 2. Add user defined classes to hierarchy
     SEMANT_RETURN_IF_FALSE(check_class_hierarchy(), false);
@@ -300,7 +300,7 @@ std::pair<std::shared_ptr<ClassNode>, std::shared_ptr<ast::Program>> Semant::inf
 
 bool Semant::check_expression_in_method(const std::shared_ptr<ast::Feature> &feature, Scope &scope)
 {
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_enter("check method " + feature->_object->_object));
+    SEMANT_VERBOSE_ONLY(LOG_ENTER("check method " + feature->_object->_object));
 
     scope.push_scope();
 
@@ -390,13 +390,13 @@ bool Semant::check_expression_in_method(const std::shared_ptr<ast::Feature> &fea
 
     scope.pop_scope();
 
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_exit("check method " + feature->_object->_object));
+    SEMANT_VERBOSE_ONLY(LOG_EXIT("check method " + feature->_object->_object));
     return true;
 }
 
 bool Semant::check_expression_in_attribute(const std::shared_ptr<ast::Feature> &attr, Scope &scope)
 {
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_enter("check attribute " + attr->_object->_object));
+    SEMANT_VERBOSE_ONLY(LOG_ENTER("check attribute " + attr->_object->_object));
 
     // type if defined
     SEMANT_RETURN_IF_FALSE_WITH_ERROR(check_exists(attr->_type),
@@ -414,13 +414,13 @@ bool Semant::check_expression_in_attribute(const std::shared_ptr<ast::Feature> &
                                           -1, false);
     }
 
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_exit("check attribute " + attr->_object->_object));
+    SEMANT_VERBOSE_ONLY(LOG_EXIT("check attribute " + attr->_object->_object));
     return true;
 }
 
 bool Semant::check_expressions_in_class(const std::shared_ptr<ClassNode> &node, Scope &scope)
 {
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_enter("check class " + node->_class->_type->_string));
+    SEMANT_VERBOSE_ONLY(LOG_ENTER("check class " + node->_class->_type->_string));
     _error_file_name = node->_class->_file_name; // save for error messages
 
     scope.push_scope();
@@ -476,7 +476,7 @@ bool Semant::check_expressions_in_class(const std::shared_ptr<ClassNode> &node, 
     _current_class = prev_class; // restore self type
     scope.pop_scope();
 
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_exit("check class " + node->_class->_type->_string));
+    SEMANT_VERBOSE_ONLY(LOG_EXIT("check class " + node->_class->_type->_string));
     return true;
 }
 
@@ -541,19 +541,19 @@ std::shared_ptr<ast::Type> Semant::infer_object_type(ast::ObjectExpression &obj,
 
 std::shared_ptr<ast::Type> Semant::infer_new_type(const ast::NewExpression &alloc)
 {
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_enter("NEW"));
+    SEMANT_VERBOSE_ONLY(LOG_ENTER("NEW"));
 
     // type if defined
     SEMANT_RETURN_IF_FALSE_WITH_ERROR(check_exists(alloc._type),
                                       "'new' used with undefined class " + alloc._type->_string + ".", -1, nullptr);
 
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_exit("NEW"));
+    SEMANT_VERBOSE_ONLY(LOG_EXIT("NEW"));
     return alloc._type;
 }
 
 std::shared_ptr<ast::Type> Semant::infer_let_type(ast::LetExpression &let, Scope &scope)
 {
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_enter("LET"));
+    SEMANT_VERBOSE_ONLY(LOG_ENTER("LET"));
 
     // type if defined
     SEMANT_RETURN_IF_FALSE_WITH_ERROR(check_exists(let._type),
@@ -579,13 +579,13 @@ std::shared_ptr<ast::Type> Semant::infer_let_type(ast::LetExpression &let, Scope
 
     scope.pop_scope();
 
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_exit("LET"));
+    SEMANT_VERBOSE_ONLY(LOG_EXIT("LET"));
     return let._body_expr->_type;
 }
 
 std::shared_ptr<ast::Type> Semant::infer_loop_type(ast::WhileExpression &loop, Scope &scope)
 {
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_enter("LOOP"));
+    SEMANT_VERBOSE_ONLY(LOG_ENTER("LOOP"));
 
     SEMANT_RETURN_IF_FALSE(infer_expression_type(loop._predicate, scope), nullptr);
     SEMANT_RETURN_IF_FALSE_WITH_ERROR(is_bool(loop._predicate->_type), "Loop condition does not have type Bool.", -1,
@@ -593,13 +593,13 @@ std::shared_ptr<ast::Type> Semant::infer_loop_type(ast::WhileExpression &loop, S
 
     SEMANT_RETURN_IF_FALSE(infer_expression_type(loop._body_expr, scope), nullptr);
 
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_exit("LOOP"));
+    SEMANT_VERBOSE_ONLY(LOG_EXIT("LOOP"));
     return Object;
 }
 
 std::shared_ptr<ast::Type> Semant::infer_unary_type(ast::UnaryExpression &unary, Scope &scope)
 {
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_enter("UNARY"));
+    SEMANT_VERBOSE_ONLY(LOG_ENTER("UNARY"));
 
     SEMANT_RETURN_IF_FALSE(infer_expression_type(unary._expr, scope), nullptr);
 
@@ -623,13 +623,13 @@ std::shared_ptr<ast::Type> Semant::infer_unary_type(ast::UnaryExpression &unary,
 
     SEMANT_RETURN_IF_FALSE(result, nullptr);
 
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_exit("UNARY"));
+    SEMANT_VERBOSE_ONLY(LOG_EXIT("UNARY"));
     return result;
 }
 
 std::shared_ptr<ast::Type> Semant::infer_binary_type(ast::BinaryExpression &binary, Scope &scope)
 {
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_enter("BINARY"));
+    SEMANT_VERBOSE_ONLY(LOG_ENTER("BINARY"));
 
     std::shared_ptr<ast::Type> result;
     SEMANT_RETURN_IF_FALSE(infer_expression_type(binary._lhs, scope), nullptr);
@@ -689,13 +689,13 @@ std::shared_ptr<ast::Type> Semant::infer_binary_type(ast::BinaryExpression &bina
 
     SEMANT_RETURN_IF_FALSE(result, nullptr);
 
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_exit("BINARY"));
+    SEMANT_VERBOSE_ONLY(LOG_EXIT("BINARY"));
     return result;
 }
 
 std::shared_ptr<ast::Type> Semant::infer_assign_type(ast::AssignExpression &assign, Scope &scope)
 {
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_enter("ASSIGN"));
+    SEMANT_VERBOSE_ONLY(LOG_ENTER("ASSIGN"));
 
     SEMANT_RETURN_IF_FALSE(infer_expression_type(assign._expr, scope), nullptr);
 
@@ -712,13 +712,13 @@ std::shared_ptr<ast::Type> Semant::infer_assign_type(ast::AssignExpression &assi
                                           var_type->_string + " of identifier " + assign._object->_object + ".",
                                       -1, nullptr);
 
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_exit("ASSIGN"));
+    SEMANT_VERBOSE_ONLY(LOG_EXIT("ASSIGN"));
     return assign._expr->_type;
 }
 
 std::shared_ptr<ast::Type> Semant::infer_if_type(ast::IfExpression &branch, Scope &scope)
 {
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_enter("IF"));
+    SEMANT_VERBOSE_ONLY(LOG_ENTER("IF"));
 
     SEMANT_RETURN_IF_FALSE(infer_expression_type(branch._predicate, scope), nullptr);
     SEMANT_RETURN_IF_FALSE_WITH_ERROR(is_bool(branch._predicate->_type), "Predicate of 'if' does not have type Bool.",
@@ -727,26 +727,26 @@ std::shared_ptr<ast::Type> Semant::infer_if_type(ast::IfExpression &branch, Scop
     SEMANT_RETURN_IF_FALSE(infer_expression_type(branch._true_path_expr, scope), nullptr);
     SEMANT_RETURN_IF_FALSE(infer_expression_type(branch._false_path_expr, scope), nullptr);
 
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_exit("IF"));
+    SEMANT_VERBOSE_ONLY(LOG_EXIT("IF"));
     return find_common_ancestor({branch._true_path_expr->_type, branch._false_path_expr->_type});
 }
 
 std::shared_ptr<ast::Type> Semant::infer_sequence_type(ast::ListExpression &seq, Scope &scope)
 {
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_enter("SEQUENCE"));
+    SEMANT_VERBOSE_ONLY(LOG_ENTER("SEQUENCE"));
 
     for (auto &expr : seq._exprs)
     {
         SEMANT_RETURN_IF_FALSE(infer_expression_type(expr, scope), nullptr);
     }
 
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_exit("SEQUENCE"));
+    SEMANT_VERBOSE_ONLY(LOG_EXIT("SEQUENCE"));
     return seq._exprs.back()->_type;
 }
 
 std::shared_ptr<ast::Type> Semant::infer_cases_type(ast::CaseExpression &cases, Scope &scope)
 {
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_enter("CASE"));
+    SEMANT_VERBOSE_ONLY(LOG_ENTER("CASE"));
 
     SEMANT_RETURN_IF_FALSE(infer_expression_type(cases._expr, scope), nullptr);
 
@@ -783,13 +783,13 @@ std::shared_ptr<ast::Type> Semant::infer_cases_type(ast::CaseExpression &cases, 
         classes.push_back(kase->_expr->_type);
     }
 
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_exit("CASE"));
+    SEMANT_VERBOSE_ONLY(LOG_EXIT("CASE"));
     return find_common_ancestor(classes);
 }
 
 std::shared_ptr<ast::Type> Semant::infer_dispatch_type(ast::DispatchExpression &disp, Scope &scope)
 {
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_enter("DISPATCH"));
+    SEMANT_VERBOSE_ONLY(LOG_ENTER("DISPATCH"));
 
     bool is_static = std::holds_alternative<ast::StaticDispatchExpression>(disp._base);
 
@@ -831,7 +831,7 @@ std::shared_ptr<ast::Type> Semant::infer_dispatch_type(ast::DispatchExpression &
             disp._args[i]->_line_number, nullptr);
     }
 
-    SEMANT_VERBOSE_ONLY(Logger::get_logger()->log_exit("DISPATCH"));
+    SEMANT_VERBOSE_ONLY(LOG_EXIT("DISPATCH"));
     return is_self_type(feature->_type) ? disp._expr->_type : feature->_type;
 }
 

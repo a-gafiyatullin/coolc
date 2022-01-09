@@ -46,4 +46,12 @@ class Logger
      */
     void log_exit(const std::string &msg);
 };
+
+#define LOG(msg) Logger::get_logger()->log(msg);
+#define LOG_ENTER(msg) Logger::get_logger()->log_enter(msg);
+#define LOG_EXIT(msg) Logger::get_logger()->log_exit(msg);
+#else
+#define LOG(msg)
+#define LOG_ENTER(msg)
+#define LOG_EXIT(msg)
 #endif // DEBUG

@@ -17,7 +17,7 @@ Register::Register(Assembler &assembler, const Reg &reg) : _asm(assembler), _reg
     // guarantee that we have not use this register yet
     if (_asm._used_registers.find(_reg) != _asm._used_registers.end())
     {
-        CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log("Register " + get_reg_name(reg) + " is being used!"));
+        CODEGEN_VERBOSE_ONLY(LOG("Register " + get_reg_name(reg) + " is being used!"));
         assert(false && "Register::Register: register was already allocated!");
     }
     _asm._used_registers.insert(_reg);
@@ -33,7 +33,7 @@ Register::~Register()
 // ----------------------------------------------- Labels -----------------------------------------------
 Label::Label(Assembler &assembler, const std::string &name, const LabelPolicy &policy) : _name(name)
 {
-    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log("Create Label: " + name));
+    CODEGEN_VERBOSE_ONLY(LOG("Create Label: " + name));
     assembler._used_labels.insert(std::make_pair(name, policy));
 }
 // ----------------------------------------------- Assembler -----------------------------------------------
@@ -188,7 +188,7 @@ Assembler::~Assembler()
     std::for_each(_used_labels.begin(), _used_labels.end(), [&](const auto &label) {
         if (!label.second)
         {
-            CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log("Label " + label.first + " was not binded!"));
+            CODEGEN_VERBOSE_ONLY(LOG("Label " + label.first + " was not binded!"));
             assert(false && "Assembler::~Assembler: non-binded label found!");
         }
     });
@@ -265,16 +265,14 @@ void Assembler::cross_resolve_labels(Assembler &asm1, Assembler &asm2)
         }
     };
 
-    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log("ASSEMBLERS BEFORE CROSS-RESOLVING:\nASM1:"); asm1.dump();
-                         Logger::get_logger()->log("ASM2"); asm2.dump());
+    CODEGEN_VERBOSE_ONLY(LOG("ASSEMBLERS BEFORE CROSS-RESOLVING:\nASM1:"); asm1.dump(); LOG("ASM2"); asm2.dump());
 
     std::for_each(asm1._used_labels.begin(), asm1._used_labels.end(),
                   [&asm2, &adjust_bind_state](auto &label) { adjust_bind_state(asm2, label); });
     std::for_each(asm2._used_labels.begin(), asm2._used_labels.end(),
                   [&asm1, &adjust_bind_state](auto &label) { adjust_bind_state(asm1, label); });
 
-    CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log("ASSEMBLERS AFTER CROSS-RESOLVING:\nASM1:"); asm1.dump();
-                         Logger::get_logger()->log("ASM2"); asm2.dump())
+    CODEGEN_VERBOSE_ONLY(LOG("ASSEMBLERS AFTER CROSS-RESOLVING:\nASM1:"); asm1.dump(); LOG("ASM2"); asm2.dump())
 }
 
 void Assembler::bne(const Register &op1_reg, const Register &op2_reg, const Label &label)
@@ -310,14 +308,13 @@ void Assembler::blt(const Register &op1_reg, const int32_t &op2_imm, const Label
 #ifdef DEBUG
 void Assembler::dump()
 {
-    Logger::get_logger()->log("----------- Labels -----------");
-    std::for_each(_used_labels.begin(), _used_labels.end(), [&](const auto &label) {
-        Logger::get_logger()->log(label.first + "\tstate: " + std::to_string(label.second));
-    });
+    LOG("----------- Labels -----------");
+    std::for_each(_used_labels.begin(), _used_labels.end(),
+                  [&](const auto &label) { LOG(label.first + "\tstate: " + std::to_string(label.second)); });
 
-    Logger::get_logger()->log("----------- Registers -----------");
+    LOG("----------- Registers -----------");
     std::for_each(_used_registers.begin(), _used_registers.end(),
-                  [&](const auto &reg) { Logger::get_logger()->log(Register::get_reg_name(reg)); });
+                  [&](const auto &reg) { LOG(Register::get_reg_name(reg)); });
 }
 #endif // DEBUG
 
@@ -333,7 +330,7 @@ AssemblerMarkSection::AssemblerMarkSection(Assembler &assembler, const Label &la
     auto label_ptr = _asm._used_labels.find(label_name);
     if (label_ptr->second)
     {
-        CODEGEN_VERBOSE_ONLY(Logger::get_logger()->log("Label " + label_name + " been already binded!"));
+        CODEGEN_VERBOSE_ONLY(LOG("Label " + label_name + " been already binded!"));
         assert(false && "AssemblerMarkSection::AssemblerMarkSection: label has been already binded!");
     }
     label_ptr->second = true;

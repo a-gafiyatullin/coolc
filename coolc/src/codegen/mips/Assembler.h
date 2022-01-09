@@ -291,7 +291,7 @@ class Assembler
     /**
      * @brief Align
      *
-     * @param words words count
+     * @param words Words count
      */
     inline void align(const int32_t &words)
     {

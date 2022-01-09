@@ -75,7 +75,7 @@ class Scope
      * @brief Check if assignment for given element is prohibited
      *
      * @param name Element name
-     * @return true if assignment is allowed
+     * @return True if assignment is allowed
      */
     inline static bool can_assign(const std::string &name)
     {

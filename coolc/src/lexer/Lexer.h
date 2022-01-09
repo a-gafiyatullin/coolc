@@ -9,6 +9,11 @@
 
 #ifdef DEBUG
 #include "utils/logger/Logger.h"
+
+#define LEXER_LOG_MATCH(type, str, pos)                                                                                \
+    (std::string) "Matched " + (std::string)type + " " + (std::string)str + " in position " + std::to_string((int)pos)
+#else
+#define LEXER_LOG_MATCH(type, str, pos)
 #endif // DEBUG
 
 namespace lexer
@@ -43,10 +48,6 @@ class Lexer
 
     void append_to_string_if_can(std::string &prefix, const std::string &suffix, std::string &error_msg,
                                  int &error_line_num);
-
-#ifdef DEBUG
-    void log_match(const std::string &type, const std::string &str, const int &pos);
-#endif // DEBUG
 
   public:
     /**

@@ -13,25 +13,25 @@
 /**
  * @brief Parse
  *
- * @param files indexes of files in argv
- * @param argv command line arguments
- * @return vector of programsэ ASTs for each file
+ * @param files Indexes of files in argv
+ * @param argv Command line arguments
+ * @return Vector of programs ASTs for each file
  */
 std::vector<std::shared_ptr<ast::Program>> do_parse(const std::vector<int> &files, char *argv[]);
 
 /**
  * @brief Do semantic analysis
  *
- * @param vector of programsэ ASTs for each file
- * @return one AST for all files
+ * @param programs Vector of programs' ASTs for each file
+ * @return One AST for all files
  */
 std::shared_ptr<semant::ClassNode> do_semant(const std::vector<std::shared_ptr<ast::Program>> &programs);
 
 /**
  * @brief Generate code
  *
- * @param program one AST for all files
- * @return buffer with instructions
+ * @param program One AST for all files
+ * @return Buffer with instructions
  */
 codegen::CodeBuffer do_codegen(const std::shared_ptr<semant::ClassNode> &program);
 
@@ -99,13 +99,13 @@ std::shared_ptr<semant::ClassNode> do_semant(const std::vector<std::shared_ptr<a
     semant::Semant semant(std::move(programs));
     const auto result = semant.infer_types_and_check();
 
-    DEBUG_ONLY(if (PrintFinalAST && result.second) { ast::dump_program(*(result.second)); });
-
     if (!result.second)
     {
         std::cout << semant.get_error_msg() << std::endl;
         exit(-1);
     }
+
+    DEBUG_ONLY(if (PrintFinalAST) { ast::dump_program(*(result.second)); });
 
     return result.first;
 }

@@ -37,6 +37,11 @@ target_link_libraries(coolc lexer parser semant utils ast codegen)
 enable_testing()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+
+    execute_process (
+        COMMAND bash -c "rm ${PROJECT_SOURCE_DIR}/tests/codegen/mips/end-to-end/*.s"
+    )
+
     add_test(
         NAME Lexer
         COMMAND python3

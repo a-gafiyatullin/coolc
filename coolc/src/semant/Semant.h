@@ -126,25 +126,23 @@ class Semant
     /**
      * @brief Infer empty types in AST
      *
-     * @return root of class hierarhy program that consists of classes from all programs
+     * @return Root of class hierarhy program that consists of classes from all programs
      */
     std::pair<std::shared_ptr<ClassNode>, std::shared_ptr<ast::Program>> infer_types_and_check();
-
-    // determine basic types
 
     /**
      * @brief Check if type is basic class
      *
-     * @param class_ Type for check
-     * @return true if type is basic class
+     * @param klass Type for check
+     * @return True if type is basic class
      */
     static bool is_not_basic_class(const std::shared_ptr<ast::Type> &klass);
 
     /**
      * @brief Check if type is trivial
      *
-     * @param class_ Type for check
-     * @return true if type is trivial
+     * @param klass Type for check
+     * @return True if type is trivial
      */
     static bool is_trivial_type(const std::shared_ptr<ast::Type> &klass);
 
@@ -152,7 +150,7 @@ class Semant
      * @brief Check if type is boolean
      *
      * @param t Type for check
-     * @return true if type is boolean
+     * @return True if type is boolean
      */
     inline static bool is_bool(const std::shared_ptr<ast::Type> &t)
     {
@@ -163,7 +161,7 @@ class Semant
      * @brief Check if type is int
      *
      * @param t Type for check
-     * @return true if type is int
+     * @return True if type is int
      */
     inline static bool is_int(const std::shared_ptr<ast::Type> &t)
     {
@@ -174,7 +172,7 @@ class Semant
      * @brief Check if type is string
      *
      * @param t Type for check
-     * @return true if type is string
+     * @return True if type is string
      */
     inline static bool is_string(const std::shared_ptr<ast::Type> &t)
     {
@@ -185,7 +183,7 @@ class Semant
      * @brief Check if type is SELF_TYPE
      *
      * @param t Type for check
-     * @return true if type is SELF_TYPE
+     * @return True if type is SELF_TYPE
      */
     inline static bool is_self_type(const std::shared_ptr<ast::Type> &t)
     {
@@ -223,9 +221,9 @@ class Semant
     }
 
     /**
-     * @brief Get SELT_TYPE type pointer
+     * @brief Get SELF_TYPE type pointer
      *
-     * @return SELT_TYPE type pointer
+     * @return SELF_TYPE type pointer
      */
     inline static std::shared_ptr<ast::Type> self_type()
     {
@@ -236,8 +234,8 @@ class Semant
      * @brief Calculate exact type for a given type
      *
      * @param type Type for check
-     * @param class_ Current class
-     * @return class_ if type is SELF_TYPE or type
+     * @param klass Current class
+     * @return Klass if type is SELF_TYPE or type
      */
     static std::shared_ptr<ast::Type> exact_type(const std::shared_ptr<ast::Type> &type,
                                                  const std::shared_ptr<ast::Type> &klass);
