@@ -4,6 +4,14 @@ project(coolc)
 option(ASAN "Build with AddressSanitizer" OFF)
 option(UBSAN "Build with UndefinedBehaviorSanitizer" OFF)
 
+execute_process (
+    COMMAND bash -c "rm -rf ${PROJECT_SOURCE_DIR}/bin"
+)
+
+execute_process (
+    COMMAND bash -c "rm -rf ${PROJECT_SOURCE_DIR}/lib"
+)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_CLANG_TIDY "clang-tidy;--extra-arg=-std=gnu++2a")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch")

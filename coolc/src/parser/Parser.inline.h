@@ -18,7 +18,7 @@ bool Parser::parse_list(std::vector<T> &container, std::function<T()> func,
                         const lexer::Token::TokenType &expected_type, bool skip_expected_token,
                         const lexer::Token::TokenType &cutout_type)
 {
-    PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_TOKEN("parse_list")));
+    PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_list")));
 
     auto elem = func();
     if (elem == nullptr)
@@ -38,7 +38,7 @@ bool Parser::parse_list(std::vector<T> &container, std::function<T()> func,
         // should we parse further?
         if (cutout_type == _next_token->get_type())
         {
-            PARSER_VERBOSE_ONLY(LOG_EXIT(PARSER_APPEND_TOKEN("parse_list by cutout")));
+            PARSER_VERBOSE_ONLY(LOG_EXIT(PARSER_APPEND_LINE_NUM("parse_list by cutout")));
             return true;
         }
 
@@ -48,7 +48,7 @@ bool Parser::parse_list(std::vector<T> &container, std::function<T()> func,
         container.push_back(elem);
     }
 
-    PARSER_VERBOSE_ONLY(LOG_EXIT(PARSER_APPEND_TOKEN("parse_list")));
+    PARSER_VERBOSE_ONLY(LOG_EXIT(PARSER_APPEND_LINE_NUM("parse_list")));
     return true;
 }
 
@@ -62,7 +62,7 @@ template <class T> std::shared_ptr<ast::Expression> Parser::parse_operator(const
     save_precedence_level();
     set_precedence_level(precedence_level(type));
 
-    PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_TOKEN("parse_operators")));
+    PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_operators")));
     std::shared_ptr<ast::Expression> res_expr = nullptr;
 
     int line = _next_token->get_line_number();
@@ -79,7 +79,7 @@ template <class T> std::shared_ptr<ast::Expression> Parser::parse_operator(const
         {
             PARSER_REPORT_AND_RETURN();
         }
-        PARSER_VERBOSE_ONLY(LOG_EXIT(PARSER_APPEND_TOKEN("parse_operators for next operator")));
+        PARSER_VERBOSE_ONLY(LOG_EXIT(PARSER_APPEND_LINE_NUM("parse_operators for next operator")));
         if (precedence_level(type) < precedence_level(_next_token->get_type()))
         {
             return make_expr(std::move(ast::BinaryExpression{T(), lhs, parse_operators(rhs)}), line);
@@ -90,6 +90,6 @@ template <class T> std::shared_ptr<ast::Expression> Parser::parse_operator(const
         }
     }
 
-    PARSER_VERBOSE_ONLY(LOG_EXIT(PARSER_APPEND_TOKEN("parse_operators")));
+    PARSER_VERBOSE_ONLY(LOG_EXIT(PARSER_APPEND_LINE_NUM("parse_operators")));
     return make_expr(std::move(ast::BinaryExpression{T(), lhs, rhs}), line);
 }
