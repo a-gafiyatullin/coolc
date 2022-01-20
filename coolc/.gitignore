@@ -5,4 +5,5 @@ build/
 .a
 lib/
 bin/
-.clangd
+.clangd/
+compile_commands.json
