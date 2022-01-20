@@ -1,5 +1,7 @@
 *.s
 .vscode
 .cache
-build
+build/
 .a
+lib/
+bin/
