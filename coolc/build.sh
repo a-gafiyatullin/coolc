@@ -60,6 +60,8 @@ fi
 cmake --no-warn-unused-cli -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE $result_args -DCMAKE_C_COMPILER:FILEPATH=$c_compiler -DCMAKE_CXX_COMPILER:FILEPATH=$cxx_compiler -H. -Bbuild -G "Unix Makefiles"
 cmake --build build --config $config --target all -j 10 --
 
+ln -sf build/compile_commands.json compile_commands.json
+
 if [ $test -eq 1 ]; then
     make -C build test
 fi
