@@ -6,8 +6,8 @@ config=""
 mode=0
 test=0
 
-c_compiler="/usr/bin/clang-10"
-cxx_compiler="/usr/bin/clang++-10"
+c_compiler="/usr/bin/clang"
+cxx_compiler="/usr/bin/clang++"
 
 for var in "$@"
 do
