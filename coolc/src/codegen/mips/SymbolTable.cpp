@@ -6,7 +6,7 @@ void SymbolTable::add_symbol(const std::string &name, const Symbol::SymbolType &
 {
     CODEGEN_VERBOSE_ONLY(LOG("Add symbol " + name + " with type " + ((type == Symbol::FIELD) ? "FIELD" : "LOCAL") +
                              " and offset " + std::to_string(offset)));
-    _symbols.back().insert(std::make_pair(name, Symbol(type, offset)));
+    _symbols.back().emplace(name, Symbol(type, offset));
 }
 
 Symbol &SymbolTable::get_symbol(const std::string &symbol)

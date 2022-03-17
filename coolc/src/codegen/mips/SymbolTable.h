@@ -6,6 +6,7 @@
 #include <numeric>
 #include <unordered_map>
 #include <vector>
+#include <string>
 
 #ifdef DEBUG
 #include "utils/logger/Logger.h"

@@ -4,6 +4,7 @@
 #include <memory>
 #include <variant>
 #include <vector>
+#include <string>
 
 #ifdef DEBUG
 #include <algorithm>
