@@ -2,11 +2,6 @@
 
 #include "DataSection.h"
 #include "SymbolTable.h"
-#include <memory>
-
-#ifdef DEBUG
-#include "utils/logger/Logger.h"
-#endif // DEBUG
 
 namespace codegen
 {
@@ -19,9 +14,10 @@ class CodeGen
 {
   private:
     // usefull constants
-    static constexpr int WORD_SIZE = 4;
     static constexpr int OBJECT_HEADER_SIZE_IN_BYTES = 3 * WORD_SIZE;
     static constexpr int DISPATCH_TABLE_OFFSET = 2 * WORD_SIZE;
+
+    const KlassBuilder _builder;
 
     // result asm code. Other CodeBuffers will be merged here
     CodeBuffer _code;  // main code buffer for main assembler

@@ -1,14 +1,15 @@
 #pragma once
 
-#ifdef DEBUG
 #include "utils/logger/Logger.h"
+
+#ifdef DEBUG
+#include <cassert>
 #include <iomanip>
 #include <memory>
 #include <sstream>
+#include <string.h>
 #include <string>
 #include <vector>
-
-#include <string.h>
 
 extern bool TraceLexer;
 extern bool TokensOnly;
@@ -56,10 +57,18 @@ std::string get_printable_string(const std::string &str);
         text;                                                                                                          \
     }
 
+#define GUARANTEE_DEBUG(expr) assert(expr)
+
 #else
 #define DEBUG_ONLY(code)
 #define LEXER_VERBOSE_ONLY(text)
 #define PARSER_VERBOSE_ONLY(text)
 #define SEMANT_VERBOSE_ONLY(text)
 #define CODEGEN_VERBOSE_ONLY(text)
+#define GUARANTEE_DEBUG(expr)
 #endif // DEBUG
+
+// TODO: add file and line number
+#define SHOULD_NOT_REACH_HERE() assert(false && "Should not reach here!")
+
+#define WORD_SIZE 4

@@ -6,13 +6,7 @@
 #include <functional>
 #include <regex>
 #include <set>
-#include <string>
 #include <unordered_map>
-#include <vector>
-
-#ifdef DEBUG
-#include "utils/logger/Logger.h"
-#endif // DEBUG
 
 namespace codegen
 {

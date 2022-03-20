@@ -3,11 +3,6 @@
 #include "Scope.h"
 #include <algorithm>
 
-#ifdef DEBUG
-#include "utils/logger/Logger.h"
-#include <cassert>
-#endif // DEBUG
-
 #define SEMANT_RETURN_IF_FALSE_WITH_ERROR(cond, error, line_num, retval)                                               \
     if (!(cond))                                                                                                       \
     {                                                                                                                  \
@@ -49,7 +44,8 @@ class Semant
     //                  ("method2", [("", "ret_type2"), ("arg3, "type3"), ("arg4", "type4")]) ]
     std::shared_ptr<ClassNode> create_basic_class(
         const std::string &name, const std::string &parent,
-        const std::vector<std::pair<std::string, std::vector<std::pair<std::string, std::string>>>> methods);
+        const std::vector<std::pair<std::string, std::vector<std::pair<std::string, std::string>>>> &methods,
+        const std::vector<std::shared_ptr<ast::Type>> &fields);
 
     // class check
     bool check_classes();
@@ -90,8 +86,8 @@ class Semant
     static std::shared_ptr<ast::Type> Int;
     static std::shared_ptr<ast::Type> String;
     static std::shared_ptr<ast::Type> Io;
-    static std::shared_ptr<ast::Type> ObjectParent; // parent of class Object for algorithms
     static std::shared_ptr<ast::Type> SelfType;
+    static std::shared_ptr<ast::Type> EmptyType; // special type for no type
 
     // expressions type check helpers
 
@@ -112,7 +108,7 @@ class Semant
                                               const bool &exact) const;
     inline bool check_exists(const std::shared_ptr<ast::Type> &type) const
     {
-        return _classes.find(type->_string) != _classes.end();
+        return _classes.find(type->_string) != _classes.end() || is_empty_type(type);
     }
 
   public:
@@ -191,6 +187,17 @@ class Semant
     }
 
     /**
+     * @brief Check if type is _EMPTY_TYPE
+     *
+     * @param t Type for check
+     * @return True if type is _EMPTY_TYPE
+     */
+    inline static bool is_empty_type(const std::shared_ptr<ast::Type> &t)
+    {
+        return same_type(t, EmptyType);
+    }
+
+    /**
      * @brief Get Int type pointer
      *
      * @return Int type pointer
@@ -228,6 +235,16 @@ class Semant
     inline static std::shared_ptr<ast::Type> self_type()
     {
         return SelfType;
+    }
+
+    /**
+     * @brief Get EmptyType type pointer
+     *
+     * @return EmptyType type pointer
+     */
+    inline static std::shared_ptr<ast::Type> empty_type()
+    {
+        return EmptyType;
     }
 
     /**

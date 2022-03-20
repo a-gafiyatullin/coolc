@@ -22,15 +22,14 @@ std::shared_ptr<ast::Program> Semant::merge_to_one_program(const std::vector<std
 
 Semant::Semant(std::vector<std::shared_ptr<ast::Program>> programs) : _program(merge_to_one_program(programs))
 {
-    ObjectParent = std::make_shared<ast::Type>();
-    ObjectParent->_string = "";
 }
 
 // ---------------------------------------- CLASS CHECK ----------------------------------------
 
 std::shared_ptr<ClassNode> Semant::create_basic_class(
     const std::string &name, const std::string &parent,
-    const std::vector<std::pair<std::string, std::vector<std::pair<std::string, std::string>>>> methods)
+    const std::vector<std::pair<std::string, std::vector<std::pair<std::string, std::string>>>> &methods,
+    const std::vector<std::shared_ptr<ast::Type>> &fields)
 {
     auto klass = std::make_shared<ClassNode>();
     klass->_class = std::make_shared<ast::Class>();
@@ -70,6 +69,18 @@ std::shared_ptr<ClassNode> Semant::create_basic_class(
         klass->_class->_features.push_back(feature);
     }
 
+    // add fields
+    for (const auto &f : fields)
+    {
+        auto feature = std::make_shared<ast::Feature>();
+        feature->_base = ast::AttrFeature();
+
+        feature->_object = std::make_shared<ast::ObjectExpression>();
+        feature->_type = f;
+
+        klass->_class->_features.push_back(feature);
+    }
+
     _classes.insert(std::make_pair(name, klass));
     return klass;
 }
@@ -95,18 +106,18 @@ bool Semant::check_class_hierarchy_for_cycle(const std::shared_ptr<ClassNode> &k
 
 bool Semant::is_not_basic_class(const std::shared_ptr<ast::Type> &klass)
 {
-    return !(same_type(klass, Int) || same_type(klass, Bool) || same_type(klass, String) || same_type(klass, Object) ||
-             same_type(klass, Io) || is_self_type(klass));
+    return !(is_int(klass) || is_bool(klass) || is_string(klass) || same_type(klass, Object) || same_type(klass, Io) ||
+             is_self_type(klass) || is_empty_type(klass) || same_type(klass, EmptyType));
 }
 
 bool Semant::is_trivial_type(const std::shared_ptr<ast::Type> &klass)
 {
-    return same_type(klass, Int) || same_type(klass, Bool) || same_type(klass, String);
+    return is_int(klass) || is_bool(klass) || is_string(klass);
 }
 
 bool Semant::is_inherit_allowed(const std::shared_ptr<ast::Type> &klass)
 {
-    return !(same_type(klass, Int) || same_type(klass, Bool) || same_type(klass, String) || is_self_type(klass));
+    return !(is_int(klass) || is_bool(klass) || is_string(klass) || is_self_type(klass) || is_empty_type(klass));
 }
 
 bool Semant::check_class_hierarchy()
@@ -241,9 +252,12 @@ bool Semant::check_classes()
     // add Object to hierarchy
     SEMANT_VERBOSE_ONLY(LOG_ENTER("create basic classes"));
 
+    EmptyType = std::make_shared<ast::Type>();
+    EmptyType->_string = "_EMPTY_TYPE";
+
     _root = create_basic_class(
-        "Object", ObjectParent->_string,
-        {{"abort", {{"", "Object"}}}, {"type_name", {{"", "String"}}}, {"copy", {{"", "SELF_TYPE"}}}});
+        "Object", EmptyType->_string,
+        {{"abort", {{"", "Object"}}}, {"type_name", {{"", "String"}}}, {"copy", {{"", "SELF_TYPE"}}}}, {});
     Object = _root->_class->_type;
 
     // add IO to hierarchy
@@ -251,26 +265,28 @@ bool Semant::check_classes()
                                                   {{"out_string", {{"", "SELF_TYPE"}, {"x", "String"}}},
                                                    {"out_int", {{"", "SELF_TYPE"}, {"x", "Int"}}},
                                                    {"in_string", {{"", "String"}}},
-                                                   {"in_int", {{"", "Int"}}}}));
+                                                   {"in_int", {{"", "Int"}}}},
+                                                  {}));
     Io = _root->_children.back()->_class->_type;
 
     // add Int to hierarchy
-    _root->_children.push_back(create_basic_class("Int", "Object", {}));
+    _root->_children.push_back(create_basic_class("Int", "Object", {}, {EmptyType}));
     Int = _root->_children.back()->_class->_type;
 
     // add Bool to hierarchy
-    _root->_children.push_back(create_basic_class("Bool", "Object", {}));
+    _root->_children.push_back(create_basic_class("Bool", "Object", {}, {EmptyType}));
     Bool = _root->_children.back()->_class->_type;
 
     // add SELF_TYPE to hierarchy
-    _root->_children.push_back(create_basic_class("SELF_TYPE", "Object", {}));
+    _root->_children.push_back(create_basic_class("SELF_TYPE", "Object", {}, {}));
     SelfType = _root->_children.back()->_class->_type;
 
     // add String to hierarchy
     _root->_children.push_back(create_basic_class("String", "Object",
                                                   {{"length", {{"", "Int"}}},
                                                    {"concat", {{"", "String"}, {"s", "String"}}},
-                                                   {"substr", {{"", "String"}, {"i", "Int"}, {"l", "Int"}}}}));
+                                                   {"substr", {{"", "String"}, {"i", "Int"}, {"l", "Int"}}}},
+                                                  {Int, EmptyType}));
     String = _root->_children.back()->_class->_type;
 
     SEMANT_VERBOSE_ONLY(LOG_EXIT("create basic classes"));
@@ -428,42 +444,46 @@ bool Semant::check_expressions_in_class(const std::shared_ptr<ClassNode> &node, 
     const auto prev_class = _current_class;
     _current_class = node->_class->_type; // current SELF_TYPE
 
-    // 1. Add class attributes to current scope and check if redefined
-    for (const auto &feature : node->_class->_features)
+    // Don't check basic classes
+    if (is_not_basic_class(_current_class))
     {
-        if (std::holds_alternative<ast::AttrFeature>(feature->_base))
+        // 1. Add class attributes to current scope and check if redefined
+        for (const auto &feature : node->_class->_features)
         {
-            const auto result = scope.add_if_can(feature->_object->_object, feature->_type);
-            _error_line_number = feature->_line_number;
-            if (result == Scope::RESERVED)
+            if (std::holds_alternative<ast::AttrFeature>(feature->_base))
             {
-                _error_message = "\'" + feature->_object->_object + "\' cannot be the name of an attribute.";
-                return false;
+                const auto result = scope.add_if_can(feature->_object->_object, feature->_type);
+                _error_line_number = feature->_line_number;
+                if (result == Scope::RESERVED)
+                {
+                    _error_message = "\'" + feature->_object->_object + "\' cannot be the name of an attribute.";
+                    return false;
+                }
+                else if (result == Scope::REDEFINED)
+                {
+                    _error_message = "Attribute " + feature->_object->_object + " is multiply defined in class.";
+                    return false;
+                }
+
+                // check if attribute is inherited from parent or redefined
+                const auto parent_attr = scope.find(feature->_object->_object, 1);
+                SEMANT_RETURN_IF_FALSE_WITH_ERROR(
+                    !parent_attr, "Attribute " + feature->_object->_object + " is an attribute of an inherited class.",
+                    feature->_line_number, false);
             }
-            else if (result == Scope::REDEFINED)
+        }
+
+        // 2. Check features types
+        for (const auto &feature : node->_class->_features)
+        {
+            if (std::holds_alternative<ast::AttrFeature>(feature->_base))
             {
-                _error_message = "Attribute " + feature->_object->_object + " is multiply defined in class.";
-                return false;
+                SEMANT_RETURN_IF_FALSE(check_expression_in_attribute(feature, scope), false);
             }
-
-            // check if attribute is inherited from parent or redefined
-            const auto parent_attr = scope.find(feature->_object->_object, 1);
-            SEMANT_RETURN_IF_FALSE_WITH_ERROR(
-                !parent_attr, "Attribute " + feature->_object->_object + " is an attribute of an inherited class.",
-                feature->_line_number, false);
-        }
-    }
-
-    // 2. Check features types
-    for (const auto &feature : node->_class->_features)
-    {
-        if (std::holds_alternative<ast::AttrFeature>(feature->_base))
-        {
-            SEMANT_RETURN_IF_FALSE(check_expression_in_attribute(feature, scope), false);
-        }
-        else
-        {
-            SEMANT_RETURN_IF_FALSE(check_expression_in_method(feature, scope), false);
+            else
+            {
+                SEMANT_RETURN_IF_FALSE(check_expression_in_method(feature, scope), false);
+            }
         }
     }
 
@@ -938,7 +958,7 @@ std::shared_ptr<ast::Type> Semant::find_common_ancestor_of_two(const std::shared
 std::shared_ptr<ast::Feature> Semant::find_method(const std::string &name, const std::shared_ptr<ast::Type> &klass,
                                                   const bool &exact) const
 {
-    if (same_type(klass, ObjectParent))
+    if (same_type(klass, EmptyType))
     {
         return nullptr;
     }
@@ -961,7 +981,7 @@ std::shared_ptr<ast::Feature> Semant::find_method(const std::string &name, const
 
     // find method in ancestors
     auto current_class = _classes.at(klass->_string)->_class->_parent;
-    while (!same_type(current_class, ObjectParent))
+    while (!same_type(current_class, EmptyType))
     {
         for (const auto &m : _classes.at(current_class->_string)->_class->_features)
         {
@@ -1005,5 +1025,5 @@ std::shared_ptr<ast::Type> Semant::Object = nullptr;
 std::shared_ptr<ast::Type> Semant::Int = nullptr;
 std::shared_ptr<ast::Type> Semant::String = nullptr;
 std::shared_ptr<ast::Type> Semant::Io = nullptr;
-std::shared_ptr<ast::Type> Semant::ObjectParent = nullptr;
 std::shared_ptr<ast::Type> Semant::SelfType = nullptr;
+std::shared_ptr<ast::Type> Semant::EmptyType = nullptr;

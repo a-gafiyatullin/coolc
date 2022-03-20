@@ -330,7 +330,7 @@ AssemblerMarkSection::AssemblerMarkSection(Assembler &assembler, const Label &la
     auto label_ptr = _asm._used_labels.find(label_name);
     if (label_ptr->second)
     {
-        CODEGEN_VERBOSE_ONLY(LOG("Label " + label_name + " been already binded!"));
+        CODEGEN_VERBOSE_ONLY(LOG("Label " + label_name + " has been already binded!"));
         assert(false && "AssemblerMarkSection::AssemblerMarkSection: label has been already binded!");
     }
     label_ptr->second = true;

@@ -36,7 +36,7 @@ add_subdirectory(src/lexer)
 add_subdirectory(src/parser)
 add_subdirectory(src/semant)
 add_subdirectory(src/utils)
-add_subdirectory(src/codegen/mips)
+add_subdirectory(src/codegen/)
 add_subdirectory(src/ast)
 
 add_executable(coolc src/coolc.cpp)

@@ -4,11 +4,6 @@
 #include "utils/Utils.h"
 #include <unordered_map>
 
-#ifdef DEBUG
-#include <cassert>
-#include <iostream>
-#endif // DEBUG
-
 #define SEMANT_RETURN_IF_FALSE(cond, retval)                                                                           \
     if (!(cond))                                                                                                       \
     {                                                                                                                  \
@@ -59,6 +54,7 @@ class Scope
      */
     inline void pop_scope()
     {
+        GUARANTEE_DEBUG(_symbols.size() != 0);
         _symbols.pop_back();
     }
 

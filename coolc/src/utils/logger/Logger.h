@@ -29,8 +29,10 @@ class Logger
      * @brief Write log message with current indentation
      *
      * @param msg Message
+     * @param cr Do carriage return
+     * @param do_ident Make idendation before message
      */
-    void log(const std::string &msg);
+    void log(const std::string &msg, const bool &cr = true, const bool &do_ident = true);
 
     /**
      * @brief Write log message with deeper indentation
@@ -48,10 +50,16 @@ class Logger
 };
 
 #define LOG(msg) Logger::get_logger()->log(msg);
+#define LOG_NO_CR(msg) Logger::get_logger()->log(msg, false);
+#define LOG_NO_CR_NO_IDENT(msg) Logger::get_logger()->log(msg, false, false);
+#define LOG_NO_IDENT(msg) Logger::get_logger()->log(msg, true, false);
 #define LOG_ENTER(msg) Logger::get_logger()->log_enter(msg);
 #define LOG_EXIT(msg) Logger::get_logger()->log_exit(msg);
 #else
 #define LOG(msg)
+#define LOG_NO_CR(msg)
+#define LOG_NO_CR_NO_IDENT(msg)
+#define LOG_NO_IDENT(msg)
 #define LOG_ENTER(msg)
 #define LOG_EXIT(msg)
 #endif // DEBUG

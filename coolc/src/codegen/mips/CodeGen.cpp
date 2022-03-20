@@ -5,9 +5,9 @@ using namespace codegen;
 #define __ _asm.
 
 CodeGen::CodeGen(const std::shared_ptr<semant::ClassNode> &root)
-    : _root(root), _data(root), _asm(_code), _a0(_asm, Register::$a0), _s0(_asm, Register::$s0), _label_num(0),
-      _equality_test_label(_asm, "equality_test",
-                           Label::ALLOW_NO_BIND), // don't check label binding during verification
+    : _builder(root), _root(root), _data(_builder), _asm(_code), _a0(_asm, Register::$a0), _s0(_asm, Register::$s0),
+      _label_num(0), _equality_test_label(_asm, "equality_test",
+                                          Label::ALLOW_NO_BIND), // don't check label binding during verification
       _object_copy_label(_asm, "Object.copy", Label::ALLOW_NO_BIND),
       _case_abort_label(_asm, "_case_abort", Label::ALLOW_NO_BIND),
       _case_abort2_label(_asm, "_case_abort2", Label::ALLOW_NO_BIND),
@@ -60,8 +60,11 @@ void CodeGen::emit_class_code(const std::shared_ptr<semant::ClassNode> &node, Sy
         // it is dummies for basic classes. There are external symbols
         std::for_each(_current_class->_features.begin(), _current_class->_features.end(), [&](const auto &feature) {
             // just register them in asm
-            Label(_asm, DataSection::get_full_method_name(_current_class->_type->_string, feature->_object->_object),
-                  Label::ALLOW_NO_BIND);
+            if (std::holds_alternative<ast::MethodFeature>(feature->_base))
+            {
+                Label(_asm, _builder.klass(_current_class->_type->_string)->method_full_name(feature->_object->_object),
+                      Label::ALLOW_NO_BIND);
+            }
         });
     }
 
@@ -76,34 +79,12 @@ void CodeGen::emit_class_code(const std::shared_ptr<semant::ClassNode> &node, Sy
 
 void CodeGen::add_fields_to_table(const std::shared_ptr<ast::Class> &klass, SymbolTable &table)
 {
-    auto &code = _data.get_class_code(klass->_type);
-
-    int fields_count = table.count();
-    const int start_offset = fields_count * WORD_SIZE + OBJECT_HEADER_SIZE_IN_BYTES;
-
-    // inherit parents fields types
-    code.inherit_fields(_data.get_class_code(klass->_parent));
-
-    // special case: String, Bool and Int. Don't create these fileds in table, because we wont use them
-    if (semant::Semant::is_string(klass->_type))
+    const auto &this_klass = _builder.klass(klass->_type->_string);
+    for (auto field = this_klass->fields_begin(); field != this_klass->fields_end(); field++)
     {
-        code.set_prototype_field(semant::Semant::int_type());
-        code.set_prototype_field(nullptr);
-    }
-    else if (semant::Semant::is_int(klass->_type) || semant::Semant::is_bool(klass->_type))
-    {
-        code.set_prototype_field(nullptr);
-    }
-
-    for (int i = 0; i < klass->_features.size(); i++)
-    {
-        if (std::holds_alternative<ast::AttrFeature>(klass->_features[i]->_base))
-        {
-            // save fields to local symbol table for further codegen
-            table.add_symbol(klass->_features[i]->_object->_object, Symbol::FIELD, start_offset + (i * WORD_SIZE));
-            code.set_prototype_field(semant::Semant::exact_type(klass->_features[i]->_type, klass->_type));
-            fields_count++;
-        }
+        // save fields to local symbol table for further codegen
+        table.add_symbol((*field)->_object->_object, Symbol::FIELD,
+                         this_klass->field_offset(field - this_klass->fields_begin()));
     }
 }
 
@@ -307,14 +288,14 @@ void CodeGen::emit_class_init_method(const std::shared_ptr<ast::Class> &klass, S
 {
     CODEGEN_VERBOSE_ONLY(LOG_ENTER("gen init for class " + _current_class->_type->_string));
 
-    const AssemblerMarkSection mark(_asm, Label(_asm, DataSection::get_init_method_name(klass->_type->_string)));
+    const AssemblerMarkSection mark(_asm, Label(_asm, _builder.klass(klass->_type->_string)->init_method_name()));
 
     emit_method_prologue();
 
-    if (klass->_parent->_string != klass->_type->_string) // Object moment
+    if (!semant::Semant::is_empty_type(klass->_parent)) // Object moment
     {
-        __ jal(Label(_asm, DataSection::get_init_method_name(
-                               klass->_parent->_string))); // receiver already is in acc, call parent constructor
+        __ jal(Label(_asm, _builder.klass(klass->_parent->_string)
+                               ->init_method_name())); // receiver already is in acc, call parent constructor
     }
 
     std::for_each(klass->_features.begin(), klass->_features.end(), [&](const auto &feature) {
@@ -343,7 +324,7 @@ void CodeGen::emit_class_method(const std::shared_ptr<ast::Feature> &method, Sym
     CODEGEN_VERBOSE_ONLY(LOG_ENTER("gen method " + method->_object->_object));
 
     const AssemblerMarkSection mark(
-        _asm, Label(_asm, DataSection::get_full_method_name(_current_class->_type->_string, method->_object->_object)));
+        _asm, Label(_asm, _builder.klass(_current_class->_type->_string)->method_full_name(method->_object->_object)));
 
     emit_method_prologue();
 
@@ -409,12 +390,14 @@ void CodeGen::emit_new_expr(const ast::NewExpression &expr)
 {
     CODEGEN_VERBOSE_ONLY(LOG_ENTER("gen new expr"));
 
-    // we know thw type
+    // we know the type
     if (!semant::Semant::is_self_type(expr._type))
     {
-        __ la(_a0, Label(_asm, DataSection::get_prototype_name(expr._type->_string)));
-        __ jal(_object_copy_label);                                                    // result in acc
-        __ jal(Label(_asm, DataSection::get_init_method_name((expr._type->_string)))); // result in acc
+        const auto &klass = _builder.klass(expr._type->_string);
+
+        __ la(_a0, Label(_asm, klass->prototype_name()));
+        __ jal(_object_copy_label);                     // result in acc
+        __ jal(Label(_asm, klass->init_method_name())); // result in acc
     }
     else
     {
@@ -492,7 +475,7 @@ void CodeGen::emit_cases_expr(const ast::CaseExpression &expr, SymbolTable &tabl
     auto cases = expr._cases;
     std::sort(cases.begin(), cases.end(),
               [&](const std::shared_ptr<ast::Case> &case_a, const std::shared_ptr<ast::Case> &case_b) {
-                  return _data.get_tag(case_b->_type->_string) < _data.get_tag(case_a->_type->_string);
+                  return _builder.tag(case_b->_type->_string) < _builder.tag(case_a->_type->_string);
               });
 
     // no, it is not void
@@ -506,12 +489,15 @@ void CodeGen::emit_cases_expr(const ast::CaseExpression &expr, SymbolTable &tabl
             __ lw(t1, _a0, 0); // if we here, so object is in acc. Load its tag to t1
 
             case_branch_name = (i < cases.size() - 1 ? new_label_name() : no_branch_name);
+
+            const auto &klass = _builder.klass(cases[i]->_type->_string);
+
             __ blt(
-                t1, _data.get_tag(cases[i]->_type->_string),
+                t1, klass->tag(),
                 Label(_asm,
                       case_branch_name)); // if object tag lower than the lowest tag for this branch, jump to next case
             __ bgt(
-                t1, _data.get_max_child_tag(cases[i]->_type->_string),
+                t1, klass->child_max_tag(),
                 Label(
                     _asm,
                     case_branch_name)); // if object tag higher that the highest tag for this branch, jump to next case
@@ -632,21 +618,20 @@ void CodeGen::emit_dispatch_expr(const ast::DispatchExpression &expr, SymbolTabl
     __ beq(_a0, __ zero(), dispatch_to_void_label);
 
     // not void
-    std::visit(ast::overloaded{
-                   [&](const ast::ObjectDispatchExpression &disp) {
-                       const int method_index =
-                           _data.get_class_code(semant::Semant::exact_type(expr._expr->_type, _current_class->_type))
-                               .get_method_index(expr._object->_object);
-                       __ lw(t1, _a0, DISPATCH_TABLE_OFFSET);   // load dispatch table
-                       __ lw(t1, t1, method_index * WORD_SIZE); // load method label
-                       __ jalr(t1);                             // jump to method
-                   },
-                   [&](const ast::StaticDispatchExpression &disp) {
-                       // we know exactly method name
-                       __ jal(
-                           Label(_asm, _data.get_class_code(disp._type).get_method_full_name(expr._object->_object)));
-                   }},
-               expr._base);
+    std::visit(
+        ast::overloaded{
+            [&](const ast::ObjectDispatchExpression &disp) {
+                __ lw(t1, _a0, DISPATCH_TABLE_OFFSET); // load dispatch table
+                __ lw(t1, t1,
+                      _builder.klass(semant::Semant::exact_type(expr._expr->_type, _current_class->_type)->_string)
+                          ->method_offset(expr._object->_object)); // load method label
+                __ jalr(t1);                                       // jump to method
+            },
+            [&](const ast::StaticDispatchExpression &disp) {
+                // we know exactly method name
+                __ jal(Label(_asm, _builder.klass(disp._type->_string)->method_full_name(expr._object->_object)));
+            }},
+        expr._base);
     const Label continue_label(_asm, new_label_name());
     __ j(continue_label);
 

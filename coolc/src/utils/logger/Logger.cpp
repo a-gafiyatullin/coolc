@@ -3,20 +3,30 @@
 #ifdef DEBUG
 std::shared_ptr<Logger> Logger::LOGGER = nullptr;
 
-void Logger::log(const std::string &msg)
+void Logger::log(const std::string &msg, const bool &cr, const bool &do_ident)
 {
-    std::cout << std::string(_ident, ' ') << msg << std::endl;
+    if (do_ident)
+    {
+        std::cout << std::string(_ident, ' ');
+    }
+
+    std::cout << msg;
+
+    if (cr)
+    {
+        std::cout << std::endl;
+    }
 }
 
 void Logger::log_enter(const std::string &msg)
 {
     _ident += IDENT_SIZE;
-    log("Enter " + msg);
+    log("ENTER " + msg);
 }
 
 void Logger::log_exit(const std::string &msg)
 {
-    log("Exit " + msg);
+    log("EXIT " + msg);
     _ident -= IDENT_SIZE;
 }
 
