@@ -18,7 +18,15 @@ class Klass
     friend class KlassBuilder;
 
   public:
-    static constexpr int HEADER_FIELDS = 3;
+    /*
+     * Header:
+     * 0) Reference Counter (not MIPS)
+     * 1) Tag
+     * 2) Size
+     * 3) Dispatch Table
+     */
+
+    static constexpr int HEADER_FIELDS = 4 MIPS_ONLY(-1);
 
   private:
     static constexpr std::string_view DISP_TAB_SUFFIX = "_dispTab";
@@ -116,16 +124,6 @@ class Klass
         GUARANTEE_DEBUG(field_num < _fields.size());
         return (field_num + HEADER_FIELDS) * WORD_SIZE;
     }
-
-    /**
-     * @brief Get fields number
-     *
-     * @return Fields number
-     */
-    inline size_t fields_num() const
-    {
-        return _fields.size() - HEADER_FIELDS;
-    }
     // ------------------------------------ METHODS ------------------------------------
 
     /**
@@ -164,7 +162,7 @@ class Klass
      * @brief Get offset in dispatch table for the given method
      *
      * @param method_name Name of the method
-     * @return Offset
+     * @return Offset in bytes
      */
     uint64_t method_offset(const std::string &method_name) const;
 
@@ -172,7 +170,7 @@ class Klass
      * @brief Construct full name of the method for this Class
      *
      * @param method_name Name of the method
-     * @return Full name
+     * @return Full name of the method
      */
     std::string method_full_name(const std::string &method_name) const;
 
@@ -180,7 +178,7 @@ class Klass
      * @brief Construct full name of the method for this Class
      *
      * @param n Method's number
-     * @return Full name
+     * @return Full name of the method
      */
     std::string method_full_name(const int &n) const;
 
@@ -189,7 +187,7 @@ class Klass
      *
      * @return Init method name
      */
-    inline std::string init_method_name() const
+    inline std::string init_method() const
     {
         return _klass->_string + static_cast<std::string>(INIT_SUFFIX);
     }
@@ -207,6 +205,7 @@ class Klass
 
     /**
      * @brief The biggest tag among all children of this class
+     *
      * @return Class tag
      */
     inline int child_max_tag() const
@@ -221,7 +220,7 @@ class Klass
      *
      * @return Dispatch table name
      */
-    inline std::string disp_table_name() const
+    inline std::string disp_table() const
     {
         return _klass->_string + static_cast<std::string>(DISP_TAB_SUFFIX);
     }
@@ -231,7 +230,7 @@ class Klass
      *
      * @return Prototype name
      */
-    inline std::string prototype_name() const
+    inline std::string prototype() const
     {
         return _klass->_string + static_cast<std::string>(PROTOTYPE_SUFFIX);
     }

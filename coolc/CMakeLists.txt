@@ -3,6 +3,7 @@ project(coolc)
 
 option(ASAN "Build with AddressSanitizer" OFF)
 option(UBSAN "Build with UndefinedBehaviorSanitizer" OFF)
+set(ARCH "MIPS" CACHE STRING "Target architecture")
 
 execute_process (
     COMMAND bash -c "rm -rf ${PROJECT_SOURCE_DIR}/bin"
@@ -14,8 +15,8 @@ execute_process (
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_CLANG_TIDY "clang-tidy;--extra-arg=-std=gnu++2a")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch -D${ARCH}")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -D${ARCH}")
 
 if(ASAN)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -fno-omit-frame-pointer")
@@ -44,42 +45,44 @@ target_link_libraries(coolc lexer parser semant utils ast codegen)
 
 enable_testing()
 
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+if(ARCH STREQUAL "MIPS")
+    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 
-    execute_process (
-        COMMAND bash -c "rm ${PROJECT_SOURCE_DIR}/tests/codegen/mips/end-to-end/*.s"
-    )
+        execute_process (
+            COMMAND bash -c "rm ${PROJECT_SOURCE_DIR}/tests/codegen/mips/end-to-end/*.s"
+        )
 
-    add_test(
-        NAME Lexer
-        COMMAND python3
-        ${PROJECT_SOURCE_DIR}/tests/e2e.py
-        ${PROJECT_SOURCE_DIR}/tests/reference/bin/lexer
-        ""
-        ${PROJECT_SOURCE_DIR}/bin/coolc
-        "+TokensOnly"
-        ${PROJECT_SOURCE_DIR}/tests/lexer/end-to-end/
-        ".cool")
+        add_test(
+            NAME Lexer
+            COMMAND python3
+            ${PROJECT_SOURCE_DIR}/tests/e2e.py
+            ${PROJECT_SOURCE_DIR}/tests/reference/bin/lexer
+            ""
+            ${PROJECT_SOURCE_DIR}/bin/coolc
+            "+TokensOnly"
+            ${PROJECT_SOURCE_DIR}/tests/lexer/end-to-end/
+            ".cool")
 
-    add_test(
-        NAME ParserSemant
-        COMMAND python3
-        ${PROJECT_SOURCE_DIR}/tests/e2e.py
-        ${PROJECT_SOURCE_DIR}/tests/parser-semant/reference-coolc.sh
-        "${PROJECT_SOURCE_DIR}/tests/reference/bin"
-        ${PROJECT_SOURCE_DIR}/bin/coolc
-        "+PrintFinalAST"
-        ${PROJECT_SOURCE_DIR}/tests/parser-semant/end-to-end/
-        ".test")
+        add_test(
+            NAME ParserSemant
+            COMMAND python3
+            ${PROJECT_SOURCE_DIR}/tests/e2e.py
+            ${PROJECT_SOURCE_DIR}/tests/parser-semant/reference-coolc.sh
+            "${PROJECT_SOURCE_DIR}/tests/reference/bin"
+            ${PROJECT_SOURCE_DIR}/bin/coolc
+            "+PrintFinalAST"
+            ${PROJECT_SOURCE_DIR}/tests/parser-semant/end-to-end/
+            ".test")
 
-    add_test(
-        NAME CodeGen
-        COMMAND python3
-        ${PROJECT_SOURCE_DIR}/tests/e2e.py
-        ${PROJECT_SOURCE_DIR}/tests/codegen/mips/start-spim.sh
-        "${PROJECT_SOURCE_DIR}/tests/reference/bin ${PROJECT_SOURCE_DIR}/tests/reference/bin -g"
-        ${PROJECT_SOURCE_DIR}/tests/codegen/mips/start-spim.sh
-        "${PROJECT_SOURCE_DIR}/tests/reference/bin ${PROJECT_SOURCE_DIR}/bin"
-        ${PROJECT_SOURCE_DIR}/tests/codegen/mips/end-to-end/
-        ".cl")
+        add_test(
+            NAME CodeGen
+            COMMAND python3
+            ${PROJECT_SOURCE_DIR}/tests/e2e.py
+            ${PROJECT_SOURCE_DIR}/tests/codegen/mips/start-spim.sh
+            "${PROJECT_SOURCE_DIR}/tests/reference/bin ${PROJECT_SOURCE_DIR}/tests/reference/bin -g"
+            ${PROJECT_SOURCE_DIR}/tests/codegen/mips/start-spim.sh
+            "${PROJECT_SOURCE_DIR}/tests/reference/bin ${PROJECT_SOURCE_DIR}/bin"
+            ${PROJECT_SOURCE_DIR}/tests/codegen/mips/end-to-end/
+            ".cl")
+    endif()
 endif()

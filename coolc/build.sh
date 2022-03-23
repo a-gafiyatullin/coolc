@@ -39,6 +39,10 @@ do
         result_args+=" -DUBSAN=ON"
         shift
     ;;
+    -mips)
+        result_args+=" -DARCH:STRING=MIPS"
+        shift
+    ;;
     -test)
         test=1
         shift

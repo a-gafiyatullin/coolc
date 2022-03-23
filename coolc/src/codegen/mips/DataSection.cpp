@@ -21,7 +21,7 @@ const Label &DataSection::declare_string_const(const std::string &str)
         __ word(string_klass->tag());
         __ word(STRING_CONST_BASE_SIZE_IN_WORDS +
                 std::max(static_cast<int>(std::ceil(str.length() / (double)WORD_SIZE)), 1)); // 4 + str len
-        __ word(Label(_asm, string_klass->disp_table_name()));
+        __ word(Label(_asm, string_klass->disp_table()));
         __ word(size_label);
         __ encode_string(str);
         __ byte(0);  // \0
@@ -46,7 +46,7 @@ const Label &DataSection::declare_bool_const(const bool &value)
         const AssemblerMarkSection mark(_asm, _bool_constants.find(value)->second);
         __ word(bool_klass->tag());
         __ word(BOOL_CONST_SIZE_IN_WORDS);
-        __ word(Label(_asm, bool_klass->disp_table_name()));
+        __ word(Label(_asm, bool_klass->disp_table()));
         __ word(value ? get_true_value() : get_false_value());
     }
 
@@ -68,7 +68,7 @@ const Label &DataSection::declare_int_const(const int32_t &value)
         const AssemblerMarkSection mark(_asm, _int_constants.find(value)->second);
         __ word(int_klass->tag());
         __ word(INT_CONST_SIZE_IN_WORDS);
-        __ word(Label(_asm, int_klass->disp_table_name()));
+        __ word(Label(_asm, int_klass->disp_table()));
         __ word(value);
     }
 
@@ -101,8 +101,8 @@ void DataSection::get_class_obj_tab()
 
     for (const auto &klass : _builder.klasses())
     {
-        __ word(Label(_asm, klass->prototype_name()));
-        __ word(Label(_asm, klass->init_method_name()));
+        __ word(Label(_asm, klass->prototype()));
+        __ word(Label(_asm, klass->init_method()));
     }
 }
 
@@ -112,11 +112,11 @@ void DataSection::get_all_prototypes()
         __ word(-1);
 
         const auto &klass = klass_iter.second;
-        const AssemblerMarkSection mark(_asm, Label(_asm, klass->prototype_name()));
+        const AssemblerMarkSection mark(_asm, Label(_asm, klass->prototype()));
 
-        __ word(klass->tag());                          // tag
-        __ word(klass->size() / WORD_SIZE);             // size in words
-        __ word(Label(_asm, klass->disp_table_name())); // pointer to dispatch table
+        __ word(klass->tag());                     // tag
+        __ word(klass->size() / WORD_SIZE);        // size in words
+        __ word(Label(_asm, klass->disp_table())); // pointer to dispatch table
 
         // set all fields to void
         std::for_each(klass->fields_begin(), klass->fields_end(), [&](const auto &field) {
@@ -139,7 +139,7 @@ void DataSection::get_all_dispatch_tab()
     std::for_each(_builder.begin(), _builder.end(), [&](const auto &klass_iter) {
         const auto &klass = klass_iter.second;
 
-        const AssemblerMarkSection mark(_asm, Label(_asm, klass->disp_table_name()));
+        const AssemblerMarkSection mark(_asm, Label(_asm, klass->disp_table()));
         for (int i = 0; i < klass->methods_num(); i++)
         {
             __ word(Label(_asm, klass->method_full_name(i)));

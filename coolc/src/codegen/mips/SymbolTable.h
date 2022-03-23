@@ -4,13 +4,9 @@
 #include <cassert>
 #include <memory>
 #include <numeric>
+#include <string>
 #include <unordered_map>
 #include <vector>
-#include <string>
-
-#ifdef DEBUG
-#include "utils/logger/Logger.h"
-#endif // DEBUG
 
 namespace codegen
 {
@@ -95,15 +91,9 @@ class SymbolTable
      */
     inline void pop_scope()
     {
+        GUARANTEE_DEBUG(!_symbols.empty());
         _symbols.pop_back();
     }
-
-    /**
-     * @brief Count number of symbol that are in the table
-     *
-     * @return Number of symbols
-     */
-    int count() const;
 };
 
 }; // namespace codegen

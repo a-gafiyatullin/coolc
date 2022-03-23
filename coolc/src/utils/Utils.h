@@ -72,3 +72,9 @@ std::string get_printable_string(const std::string &str);
 #define SHOULD_NOT_REACH_HERE() assert(false && "Should not reach here!")
 
 #define WORD_SIZE 4
+
+#ifdef MIPS
+#define MIPS_ONLY(code) code
+#else
+#define MIPS_ONLY(code)
+#endif // MIPS

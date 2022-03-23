@@ -21,10 +21,5 @@ Symbol &SymbolTable::get_symbol(const std::string &symbol)
         }
     }
     CODEGEN_VERBOSE_ONLY(LOG("Can't find symbol " + symbol));
-    assert(false && "SymbolTable::get_symbol: no such symbol!"); // bad situation
-}
-
-int SymbolTable::count() const
-{
-    return std::accumulate(_symbols.begin(), _symbols.end(), 0, [](int acc, const auto &s) { return acc + s.size(); });
+    SHOULD_NOT_REACH_HERE();
 }

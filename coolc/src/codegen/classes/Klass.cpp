@@ -29,7 +29,7 @@ void Klass::init_header()
     {
         _fields.push_back(std::make_shared<ast::Feature>());
         _fields.back()->_base = std::move(ast::AttrFeature());
-        _fields.back()->_type = semant::Semant::int_type();
+        _fields.back()->_type = semant::Semant::empty_type();
     }
 }
 

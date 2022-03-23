@@ -288,14 +288,14 @@ void CodeGen::emit_class_init_method(const std::shared_ptr<ast::Class> &klass, S
 {
     CODEGEN_VERBOSE_ONLY(LOG_ENTER("gen init for class " + _current_class->_type->_string));
 
-    const AssemblerMarkSection mark(_asm, Label(_asm, _builder.klass(klass->_type->_string)->init_method_name()));
+    const AssemblerMarkSection mark(_asm, Label(_asm, _builder.klass(klass->_type->_string)->init_method()));
 
     emit_method_prologue();
 
     if (!semant::Semant::is_empty_type(klass->_parent)) // Object moment
     {
         __ jal(Label(_asm, _builder.klass(klass->_parent->_string)
-                               ->init_method_name())); // receiver already is in acc, call parent constructor
+                               ->init_method())); // receiver already is in acc, call parent constructor
     }
 
     std::for_each(klass->_features.begin(), klass->_features.end(), [&](const auto &feature) {
@@ -395,9 +395,9 @@ void CodeGen::emit_new_expr(const ast::NewExpression &expr)
     {
         const auto &klass = _builder.klass(expr._type->_string);
 
-        __ la(_a0, Label(_asm, klass->prototype_name()));
-        __ jal(_object_copy_label);                     // result in acc
-        __ jal(Label(_asm, klass->init_method_name())); // result in acc
+        __ la(_a0, Label(_asm, klass->prototype()));
+        __ jal(_object_copy_label);                // result in acc
+        __ jal(Label(_asm, klass->init_method())); // result in acc
     }
     else
     {
