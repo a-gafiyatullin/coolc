@@ -17,7 +17,7 @@ do
         rm -rf build/
         rm lib/*.a
         mkdir build/
-        shift
+        exit 0
     ;;
     -release)
         mode=1

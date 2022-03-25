@@ -39,7 +39,7 @@ CodeBuffer CodeGen::emit()
 void CodeGen::emit_class_code(const std::shared_ptr<semant::ClassNode> &node, SymbolTable &table)
 {
     _current_class = node->_class;
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("gen class " + _current_class->_type->_string));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN CLASS " + _current_class->_type->_string));
 
     table.push_scope();
     add_fields_to_table(_current_class, table);    // add fields to table, setup ClassCode for prototype emitting
@@ -74,7 +74,7 @@ void CodeGen::emit_class_code(const std::shared_ptr<semant::ClassNode> &node, Sy
 
     table.pop_scope();
 
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("gen class " + _current_class->_type->_string));
+    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN CLASS " + _current_class->_type->_string));
 }
 
 void CodeGen::add_fields_to_table(const std::shared_ptr<ast::Class> &klass, SymbolTable &table)
@@ -90,7 +90,7 @@ void CodeGen::add_fields_to_table(const std::shared_ptr<ast::Class> &klass, Symb
 
 void CodeGen::emit_binary_expr(const ast::BinaryExpression &expr, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("gen binary expr"));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN BINARY EXPR"));
 
     emit_expr(expr._lhs, table);
     // we hope to see the first argument in acc
@@ -155,9 +155,9 @@ void CodeGen::emit_binary_expr(const ast::BinaryExpression &expr, SymbolTable &t
         // no, they dont have the same reference
         __ la(_a0, _data.declare_bool_const(true)); // if no, set a0 to true, a1 to false
         __ la(a1, _data.declare_bool_const(false));
-        __ jal(_equality_test_label);                                    // in a0 expect a0 if the same and a1 if false
-        emit_load_bool(_a0, _a0);                                        // real value in a0
-        __ beq(_a0, _data.get_true_value(), equal_primitive_vals_label); // do they have same type and value?
+        __ jal(_equality_test_label);                                // in a0 expect a0 if the same and a1 if false
+        emit_load_bool(_a0, _a0);                                    // real value in a0
+        __ beq(_a0, _data.true_value(), equal_primitive_vals_label); // do they have same type and value?
         // no, they dont have the same type and value
         __ la(_a0, _data.declare_bool_const(false)); // end of false branch
         __ j(equal_end_label);                       // jump to end
@@ -187,12 +187,12 @@ void CodeGen::emit_binary_expr(const ast::BinaryExpression &expr, SymbolTable &t
         emit_store_int(_a0, t5);
     }
 
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("gen binary expr"));
+    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN BINARY EXPR"));
 }
 
 void CodeGen::emit_unary_expr(const ast::UnaryExpression &expr, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("gen unary expr"));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN UNAXRY EXPR"));
 
     emit_expr(expr._expr, table);
 
@@ -221,7 +221,7 @@ void CodeGen::emit_unary_expr(const ast::UnaryExpression &expr, SymbolTable &tab
                                    // trait it as arith result
                                    __ move(t5, _a0);
                                    emit_load_bool(t5, t5);
-                                   __ xori(t5, t5, _data.get_true_value());
+                                   __ xori(t5, t5, _data.true_value());
                                    __ la(_a0, _data.declare_bool_const(false));
                                },
                                [&](const ast::NegExpression &neg) {
@@ -239,7 +239,7 @@ void CodeGen::emit_unary_expr(const ast::UnaryExpression &expr, SymbolTable &tab
         emit_store_int(_a0, t5);
     }
 
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("gen unary expr"));
+    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN UNAXRY EXPR"));
 }
 
 void CodeGen::emit_expr(const std::shared_ptr<ast::Expression> &expr, SymbolTable &table)
@@ -286,7 +286,7 @@ void CodeGen::emit_method_epilogue(const int &params_num)
 
 void CodeGen::emit_class_init_method(const std::shared_ptr<ast::Class> &klass, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("gen init for class " + _current_class->_type->_string));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN INIT METHOD FOR CLASS " + _current_class->_type->_string));
 
     const AssemblerMarkSection mark(_asm, Label(_asm, _builder.klass(klass->_type->_string)->init_method()));
 
@@ -305,7 +305,7 @@ void CodeGen::emit_class_init_method(const std::shared_ptr<ast::Class> &klass, S
             {
                 emit_expr(feature->_expr, table); // calculate expression
 
-                const auto &this_field = table.get_symbol(feature->_object->_object);
+                const auto &this_field = table.symbol(feature->_object->_object);
                 assert(this_field._type == Symbol::FIELD); // impossible
 
                 __ sw(_a0, _s0, this_field._offset); // save result to field in object
@@ -316,12 +316,12 @@ void CodeGen::emit_class_init_method(const std::shared_ptr<ast::Class> &klass, S
     __ move(_a0, _s0); // return "this"
     emit_method_epilogue(0);
 
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("gen init for class " + _current_class->_type->_string));
+    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN INIT METHOD FOR CLASS " + _current_class->_type->_string));
 }
 
 void CodeGen::emit_class_method(const std::shared_ptr<ast::Feature> &method, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("gen method " + method->_object->_object));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN METHOD " + method->_object->_object));
 
     const AssemblerMarkSection mark(
         _asm, Label(_asm, _builder.klass(_current_class->_type->_string)->method_full_name(method->_object->_object)));
@@ -343,7 +343,7 @@ void CodeGen::emit_class_method(const std::shared_ptr<ast::Feature> &method, Sym
 
     emit_method_epilogue(params_num);
 
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("gen method " + method->_object->_object));
+    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN METHOD " + method->_object->_object));
 }
 
 void CodeGen::emit_bool_expr(const ast::BoolExpression &expr)
@@ -363,17 +363,17 @@ void CodeGen::emit_string_expr(const ast::StringExpression &expr)
 
 void CodeGen::emit_object_expr(const ast::ObjectExpression &expr, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("gen object expr for " + expr._object));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN OBJECT EXPR FOR " + expr._object));
 
     if (!semant::Scope::can_assign(expr._object))
     {
         __ move(_a0, _s0); // self object: just copy to acc
 
-        CODEGEN_VERBOSE_ONLY(LOG_EXIT("gen object expr for " + expr._object));
+        CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN OBJECT EXPR FOR " + expr._object));
         return;
     }
 
-    const auto &object = table.get_symbol(expr._object);
+    const auto &object = table.symbol(expr._object);
     if (object._type == Symbol::FIELD)
     {
         __ lw(_a0, _s0, object._offset); // object field
@@ -383,12 +383,12 @@ void CodeGen::emit_object_expr(const ast::ObjectExpression &expr, SymbolTable &t
         __ lw(_a0, __ fp(), object._offset); // local object defined in let, case, formal parameter
     }
 
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("gen object expr for " + expr._object));
+    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN OBJECT EXPR FOR " + expr._object));
 }
 
 void CodeGen::emit_new_expr(const ast::NewExpression &expr)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("gen new expr"));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN NEW EXPR"));
 
     // we know the type
     if (!semant::Semant::is_self_type(expr._type))
@@ -417,7 +417,7 @@ void CodeGen::emit_new_expr(const ast::NewExpression &expr)
         __ jalr(t5);
     }
 
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("gen new expr"));
+    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN NEW EXPR"));
 }
 
 void CodeGen::emit_in_scope(const std::shared_ptr<ast::ObjectExpression> &object,
@@ -452,7 +452,7 @@ void CodeGen::emit_in_scope(const std::shared_ptr<ast::ObjectExpression> &object
 
 void CodeGen::emit_cases_expr(const ast::CaseExpression &expr, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("gen case expr"));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN CASE EXPR"));
 
     emit_expr(expr._expr, table);
 
@@ -516,12 +516,12 @@ void CodeGen::emit_cases_expr(const ast::CaseExpression &expr, SymbolTable &tabl
 
     const AssemblerMarkSection mark(_asm, continue_label);
 
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("gen case expr"));
+    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN CASE EXPR"));
 }
 
 void CodeGen::emit_let_expr(const ast::LetExpression &expr, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("gen let expr"));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN LET EXPR"));
 
     if (expr._expr)
     {
@@ -530,29 +530,29 @@ void CodeGen::emit_let_expr(const ast::LetExpression &expr, SymbolTable &table)
 
     emit_in_scope(expr._object, expr._type, expr._body_expr, table, expr._expr != nullptr);
 
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("gen let expr"));
+    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN LET EXPR"));
 }
 
 void CodeGen::emit_list_expr(const ast::ListExpression &expr, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("gen list expr"));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN LIST EXPR"));
 
     std::for_each(expr._exprs.begin(), expr._exprs.end(), [&](const auto &e) {
         emit_expr(e, table); // last expression value will be in acc
     });
 
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("gen list expr"));
+    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN LIST EXPR"));
 }
 
 void CodeGen::emit_branch_to_label_if_false(const Label &label)
 {
     emit_load_bool(_a0, _a0);
-    __ beq(_a0, DataSection::get_false_value(), label);
+    __ beq(_a0, DataSection::false_value(), label);
 }
 
 void CodeGen::emit_loop_expr(const ast::WhileExpression &expr, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("gen loop expr"));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN LOOP EXPR"));
 
     const Label loop_header_label(_asm, new_label_name());
     const Label loop_tail_label(_asm, new_label_name());
@@ -569,12 +569,12 @@ void CodeGen::emit_loop_expr(const ast::WhileExpression &expr, SymbolTable &tabl
 
     const AssemblerMarkSection mark(_asm, loop_tail_label); // continue
 
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("gen loop expr"));
+    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN LOOP EXPR"));
 }
 
 void CodeGen::emit_if_expr(const ast::IfExpression &expr, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("gen if expr"));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN IF EXPR"));
 
     const Label false_branch_label(_asm, new_label_name());
     const Label continue_label(_asm, new_label_name());
@@ -594,12 +594,12 @@ void CodeGen::emit_if_expr(const ast::IfExpression &expr, SymbolTable &table)
 
     const AssemblerMarkSection mark(_asm, continue_label);
 
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("gen if expr"));
+    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN IF EXPR"));
 }
 
 void CodeGen::emit_dispatch_expr(const ast::DispatchExpression &expr, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("gen dispatch expr"));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN DISPATCH EXPR"));
 
     // put all args on stack. Callee have to get rid of them
     const int args_num = expr._args.size();
@@ -645,15 +645,15 @@ void CodeGen::emit_dispatch_expr(const ast::DispatchExpression &expr, SymbolTabl
 
     const AssemblerMarkSection mark(_asm, continue_label);
 
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("gen dispatch expr"));
+    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN DISPATCH EXPR"));
 }
 
 void CodeGen::emit_assign_expr(const ast::AssignExpression &expr, SymbolTable &table)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("gen assign expr"));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN ASSIGN EXPR"));
 
     emit_expr(expr._expr, table); // result in acc
-    const auto &symbol = table.get_symbol(expr._object->_object);
+    const auto &symbol = table.symbol(expr._object->_object);
 
     if (symbol._type == Symbol::FIELD)
     {
@@ -665,7 +665,7 @@ void CodeGen::emit_assign_expr(const ast::AssignExpression &expr, SymbolTable &t
         __ sw(_a0, __ fp(), symbol._offset);
     }
 
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("gen assign expr"));
+    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN ASSIGN EXPR"));
 }
 
 void CodeGen::emit_load_int(const Register &int_obj, const Register &int_val)

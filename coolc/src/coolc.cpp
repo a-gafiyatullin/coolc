@@ -66,7 +66,7 @@ std::vector<std::shared_ptr<ast::Program>> do_parse(const std::vector<int> &file
     {
         DEBUG_ONLY(if (TokensOnly) {
             lexer::Lexer l(argv[i]);
-            std::cout << "#name \"" << l.get_file_name() << "\"" << std::endl;
+            std::cout << "#name \"" << l.file_name() << "\"" << std::endl;
 
             auto token = l.next();
             while (token.has_value())
@@ -84,7 +84,7 @@ std::vector<std::shared_ptr<ast::Program>> do_parse(const std::vector<int> &file
         }
         else
         {
-            std::cout << parser.get_error_msg() << std::endl;
+            std::cout << parser.error_msg() << std::endl;
             exit(-1);
         }
     }
@@ -101,7 +101,7 @@ std::shared_ptr<semant::ClassNode> do_semant(const std::vector<std::shared_ptr<a
 
     if (!result.second)
     {
-        std::cout << semant.get_error_msg() << std::endl;
+        std::cout << semant.error_msg() << std::endl;
         exit(-1);
     }
 

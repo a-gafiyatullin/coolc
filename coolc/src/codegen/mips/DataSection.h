@@ -97,7 +97,7 @@ class DataSection
      *
      * @return True value
      */
-    inline static int32_t get_true_value()
+    inline static int32_t true_value()
     {
         return TRUE;
     }
@@ -107,7 +107,7 @@ class DataSection
      *
      * @return False value
      */
-    inline static int32_t get_false_value()
+    inline static int32_t false_value()
     {
         return FALSE;
     }

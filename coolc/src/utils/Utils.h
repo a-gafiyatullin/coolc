@@ -68,7 +68,6 @@ std::string get_printable_string(const std::string &str);
 #define GUARANTEE_DEBUG(expr)
 #endif // DEBUG
 
-// TODO: add file and line number
 #define SHOULD_NOT_REACH_HERE() assert(false && "Should not reach here!")
 
 #define WORD_SIZE 4

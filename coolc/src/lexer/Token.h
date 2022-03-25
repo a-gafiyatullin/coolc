@@ -180,7 +180,7 @@ class Token
      *
      * @return std::string for type
      */
-    inline std::string get_type_as_str() const
+    inline std::string type_as_str() const
     {
         return TOKEN_TYPE_TO_STR[_type];
     }
@@ -190,7 +190,7 @@ class Token
      *
      * @return the line number
      */
-    inline int get_line_number() const
+    inline int line_number() const
     {
         return _line_number;
     }
@@ -211,7 +211,7 @@ class Token
      *
      * @return the lexeme
      */
-    inline std::string get_value() const
+    inline std::string value() const
     {
         return _lexeme;
     }
@@ -221,7 +221,7 @@ class Token
      *
      * @return the type
      */
-    inline TokenType get_type() const
+    inline TokenType type() const
     {
         return _type;
     }

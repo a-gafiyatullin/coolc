@@ -25,7 +25,7 @@ bool Parser::parse_list(std::vector<T> &container, std::function<T()> func,
         return false;
     container.push_back(elem);
 
-    while (_next_token.has_value() && _next_token->get_type() == expected_type)
+    while (_next_token.has_value() && _next_token->type() == expected_type)
     {
         if (skip_expected_token)
         {
@@ -36,7 +36,7 @@ bool Parser::parse_list(std::vector<T> &container, std::function<T()> func,
             }
         }
         // should we parse further?
-        if (cutout_type == _next_token->get_type())
+        if (cutout_type == _next_token->type())
         {
             PARSER_VERBOSE_ONLY(LOG_EXIT(PARSER_APPEND_LINE_NUM("parse_list by cutout")));
             return true;
@@ -54,7 +54,7 @@ bool Parser::parse_list(std::vector<T> &container, std::function<T()> func,
 
 template <class T> std::shared_ptr<ast::Expression> Parser::parse_operator(const std::shared_ptr<ast::Expression> &lhs)
 {
-    auto type = _next_token->get_type();
+    auto type = _next_token->type();
 
     if (precedence_level(type) <= current_precedence_level())
         return lhs;
@@ -65,7 +65,7 @@ template <class T> std::shared_ptr<ast::Expression> Parser::parse_operator(const
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_operators")));
     std::shared_ptr<ast::Expression> res_expr = nullptr;
 
-    int line = _next_token->get_line_number();
+    int line = _next_token->line_number();
 
     PARSER_ADVANCE_AND_RETURN_IF_EOF();
     auto rhs = parse_expr();
@@ -80,7 +80,7 @@ template <class T> std::shared_ptr<ast::Expression> Parser::parse_operator(const
             PARSER_REPORT_AND_RETURN();
         }
         PARSER_VERBOSE_ONLY(LOG_EXIT(PARSER_APPEND_LINE_NUM("parse_operators for next operator")));
-        if (precedence_level(type) < precedence_level(_next_token->get_type()))
+        if (precedence_level(type) < precedence_level(_next_token->type()))
         {
             return make_expr(std::move(ast::BinaryExpression{T(), lhs, parse_operators(rhs)}), line);
         }

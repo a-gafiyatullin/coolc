@@ -30,7 +30,7 @@ void Logger::log_exit(const std::string &msg)
     _ident -= IDENT_SIZE;
 }
 
-std::shared_ptr<Logger> Logger::get_logger()
+std::shared_ptr<Logger> Logger::logger()
 {
     if (!LOGGER)
     {

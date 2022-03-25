@@ -47,7 +47,7 @@ const Label &DataSection::declare_bool_const(const bool &value)
         __ word(bool_klass->tag());
         __ word(BOOL_CONST_SIZE_IN_WORDS);
         __ word(Label(_asm, bool_klass->disp_table()));
-        __ word(value ? get_true_value() : get_false_value());
+        __ word(value ? true_value() : false_value());
     }
 
     return _bool_constants.find(value)->second;
@@ -134,8 +134,6 @@ void DataSection::get_all_prototypes()
 
 void DataSection::get_all_dispatch_tab()
 {
-    // TODO: clang says that '_asm' in capture list does not name a variableclang(capture_does_not_name_variable), but
-    // it does.
     std::for_each(_builder.begin(), _builder.end(), [&](const auto &klass_iter) {
         const auto &klass = klass_iter.second;
 

@@ -122,7 +122,7 @@ class Register
      * @param reg Register name as Reg
      * @return Register name as string
      */
-    inline static std::string get_reg_name(const Register::Reg &reg)
+    inline static std::string reg_name(const Register::Reg &reg)
     {
         return REG_TO_STR[reg];
     }

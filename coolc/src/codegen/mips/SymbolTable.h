@@ -65,7 +65,7 @@ class SymbolTable
      * @param symbol Symbol name
      * @return Symbol object for this symbol
      */
-    Symbol &get_symbol(const std::string &symbol);
+    Symbol &symbol(const std::string &symbol);
 
     /**
      * @brief Create Symbol

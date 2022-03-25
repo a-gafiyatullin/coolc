@@ -76,7 +76,7 @@ class Lexer
      *
      * @return File name string
      */
-    inline std::string get_file_name() const
+    inline std::string file_name() const
     {
         return _file_name;
     }
@@ -86,7 +86,7 @@ class Lexer
      *
      * @return Current line number in file
      */
-    inline int get_line_number() const
+    inline int line_number() const
     {
         return _line_number;
     }

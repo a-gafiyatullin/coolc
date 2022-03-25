@@ -13,7 +13,6 @@ class Logger
     int _ident;
 
   public:
-    // TODO: it is public for now
     Logger() : _ident(0)
     {
     }
@@ -23,7 +22,7 @@ class Logger
      *
      * @return Logger instance
      */
-    static std::shared_ptr<Logger> get_logger();
+    static std::shared_ptr<Logger> logger();
 
     /**
      * @brief Write log message with current indentation
@@ -49,12 +48,12 @@ class Logger
     void log_exit(const std::string &msg);
 };
 
-#define LOG(msg) Logger::get_logger()->log(msg);
-#define LOG_NO_CR(msg) Logger::get_logger()->log(msg, false);
-#define LOG_NO_CR_NO_IDENT(msg) Logger::get_logger()->log(msg, false, false);
-#define LOG_NO_IDENT(msg) Logger::get_logger()->log(msg, true, false);
-#define LOG_ENTER(msg) Logger::get_logger()->log_enter(msg);
-#define LOG_EXIT(msg) Logger::get_logger()->log_exit(msg);
+#define LOG(msg) Logger::logger()->log(msg);
+#define LOG_NO_CR(msg) Logger::logger()->log(msg, false);
+#define LOG_NO_CR_NO_IDENT(msg) Logger::logger()->log(msg, false, false);
+#define LOG_NO_IDENT(msg) Logger::logger()->log(msg, true, false);
+#define LOG_ENTER(msg) Logger::logger()->log_enter(msg);
+#define LOG_EXIT(msg) Logger::logger()->log_exit(msg);
 #else
 #define LOG(msg)
 #define LOG_NO_CR(msg)

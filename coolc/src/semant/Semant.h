@@ -262,6 +262,6 @@ class Semant
      *
      * @return Error message
      */
-    std::string get_error_msg() const;
+    std::string error_msg() const;
 };
 } // namespace semant

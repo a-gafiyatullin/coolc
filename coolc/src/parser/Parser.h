@@ -10,13 +10,13 @@
 #include <cassert>
 
 #define PARSER_APPEND_LINE_NUM(msg)                                                                                    \
-    ((std::string)msg + ", line: " + (_next_token ? std::to_string(_next_token->get_line_number()) : "EOF"))
+    ((std::string)msg + ", line: " + (_next_token ? std::to_string(_next_token->line_number()) : "EOF"))
 #else
 #define PARSER_APPEND_LINE_NUM(msg)
 #endif // DEBUG
 
 #define PARSER_ACT_ELSE_RETURN(pred, action)                                                                           \
-    PARSER_VERBOSE_ONLY(LOG("Current token: \"" + _next_token->get_value() + "\""););                                  \
+    PARSER_VERBOSE_ONLY(LOG("Current token: \"" + _next_token->value() + "\""););                                      \
     if (pred)                                                                                                          \
     {                                                                                                                  \
         action;                                                                                                        \
@@ -37,7 +37,7 @@
     PARSER_RETURN_IF_EOF();
 
 #define PARSER_ADVANCE_ELSE_RETURN(pred)                                                                               \
-    PARSER_VERBOSE_ONLY(LOG("Current token: \"" + _next_token->get_value() + "\""););                                  \
+    PARSER_VERBOSE_ONLY(LOG("Current token: \"" + _next_token->value() + "\""););                                      \
     if (pred)                                                                                                          \
         advance_token();                                                                                               \
     else                                                                                                               \
@@ -153,7 +153,7 @@ class Parser
      *
      * @return Error message
      */
-    inline std::string get_error_msg()
+    inline std::string error_msg()
     {
         return _error;
     }

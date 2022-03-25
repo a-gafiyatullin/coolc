@@ -17,7 +17,7 @@ Register::Register(Assembler &assembler, const Reg &reg) : _asm(assembler), _reg
     // guarantee that we have not use this register yet
     if (_asm._used_registers.find(_reg) != _asm._used_registers.end())
     {
-        CODEGEN_VERBOSE_ONLY(LOG("Register " + get_reg_name(reg) + " is being used!"));
+        CODEGEN_VERBOSE_ONLY(LOG("Register " + reg_name(reg) + " is being used!"));
         assert(false && "Register::Register: register was already allocated!");
     }
     _asm._used_registers.insert(_reg);
@@ -314,7 +314,7 @@ void Assembler::dump()
 
     LOG("----------- Registers -----------");
     std::for_each(_used_registers.begin(), _used_registers.end(),
-                  [&](const auto &reg) { LOG(Register::get_reg_name(reg)); });
+                  [&](const auto &reg) { LOG(Register::reg_name(reg)); });
 }
 #endif // DEBUG
 

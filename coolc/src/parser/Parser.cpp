@@ -13,32 +13,32 @@ void Parser::report_error()
 
     if (!_next_token)
     {
-        _error = "\"" + _lexer->get_file_name() + "\", line " + std::to_string(_lexer->get_line_number()) +
+        _error = "\"" + _lexer->file_name() + "\", line " + std::to_string(_lexer->line_number()) +
                  ": syntax error at or near EOF";
     }
     else
     {
         auto token = _next_token.value();
-        auto type = token.get_type();
+        auto type = token.type();
 
-        _error = "\"" + _lexer->get_file_name() + "\", line " + std::to_string(token.get_line_number()) +
+        _error = "\"" + _lexer->file_name() + "\", line " + std::to_string(token.line_number()) +
                  ": syntax error at or near ";
         if (type >= lexer::Token::SEMICOLON && type <= lexer::Token::COMMA)
         {
-            _error += "\'" + token.get_value() + "\'";
+            _error += "\'" + token.value() + "\'";
         }
         else if (type >= lexer::Token::INT_CONST && type <= lexer::Token::STR_CONST)
         {
-            _error += token.get_type_as_str() + " = " + token.get_value();
+            _error += token.type_as_str() + " = " + token.value();
         }
         else
         {
-            _error += token.get_type_as_str();
+            _error += token.type_as_str();
         }
     }
 
-    PARSER_VERBOSE_ONLY(LOG("Actual token: " + _next_token->get_value() +
-                            ", actual type = " + std::to_string(_next_token->get_type())));
+    PARSER_VERBOSE_ONLY(
+        LOG("Actual token: " + _next_token->value() + ", actual type = " + std::to_string(_next_token->type())));
 }
 
 bool Parser::check_next_and_report_error(const lexer::Token::TokenType &expected_type)
@@ -61,7 +61,7 @@ std::shared_ptr<ast::Program> Parser::parse_program()
     PARSER_RETURN_IF_FALSE(_next_token);
 
     auto program = std::make_shared<ast::Program>();
-    program->_line_number = _next_token->get_line_number();
+    program->_line_number = _next_token->line_number();
 
     bool result = parse_list<std::shared_ptr<ast::Class>>(program->_classes, std::bind(&Parser::parse_class, this),
                                                           lexer::Token::CLASS);
@@ -80,7 +80,7 @@ std::shared_ptr<ast::Class> Parser::parse_class()
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_class")));
 
     auto klass = std::make_shared<ast::Class>();
-    klass->_line_number = _next_token->get_line_number();
+    klass->_line_number = _next_token->line_number();
 
     PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::CLASS));
     PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::TYPEID), klass->_type = parse_type());
@@ -107,7 +107,7 @@ std::shared_ptr<ast::Class> Parser::parse_class()
     PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::RIGHT_CURLY_BRACKET));
     PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::SEMICOLON));
 
-    klass->_file_name = _lexer->get_file_name();
+    klass->_file_name = _lexer->file_name();
 
     PARSER_VERBOSE_ONLY(LOG_EXIT(PARSER_APPEND_LINE_NUM("parse_class")));
     return klass;
@@ -118,7 +118,7 @@ std::shared_ptr<ast::Feature> Parser::parse_feature()
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_feature")));
 
     auto feature = std::make_shared<ast::Feature>();
-    feature->_line_number = _next_token->get_line_number();
+    feature->_line_number = _next_token->line_number();
 
     PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::OBJECTID), feature->_object = parse_object());
 
@@ -143,7 +143,7 @@ std::shared_ptr<ast::Feature> Parser::parse_feature()
     PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::TYPEID), feature->_type = parse_type());
 
     PARSER_RETURN_IF_EOF();
-    switch (_next_token->get_type())
+    switch (_next_token->type())
     {
     case lexer::Token::LEFT_CURLY_BRACKET: {
         // parse method body
@@ -169,7 +169,7 @@ std::shared_ptr<ast::Formal> Parser::parse_formal()
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_formal")));
 
     auto formal = std::make_shared<ast::Formal>();
-    formal->_line_number = _next_token->get_line_number();
+    formal->_line_number = _next_token->line_number();
 
     PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::OBJECTID), formal->_object = parse_object());
     PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::COLON));
@@ -192,7 +192,7 @@ std::shared_ptr<ast::Expression> Parser::parse_expr()
 
     save_precedence_level();
 
-    switch (_next_token->get_type())
+    switch (_next_token->type())
     {
     case lexer::Token::OBJECTID: {
         expr = parse_expr_object();
@@ -263,7 +263,7 @@ std::shared_ptr<ast::Expression> Parser::parse_expr()
 std::shared_ptr<ast::Expression> Parser::parse_if()
 {
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_if")));
-    int line = _next_token->get_line_number();
+    int line = _next_token->line_number();
 
     PARSER_ADVANCE_AND_RETURN_IF_EOF();
     auto predicate = parse_expr();
@@ -283,7 +283,7 @@ std::shared_ptr<ast::Expression> Parser::parse_if()
 std::shared_ptr<ast::Expression> Parser::parse_while()
 {
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_while")));
-    int line = _next_token->get_line_number();
+    int line = _next_token->line_number();
 
     PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
@@ -301,7 +301,7 @@ std::shared_ptr<ast::Expression> Parser::parse_while()
 std::shared_ptr<ast::Expression> Parser::parse_case()
 {
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_case")));
-    int line = _next_token->get_line_number();
+    int line = _next_token->line_number();
     ast::CaseExpression case_expr;
 
     PARSER_ADVANCE_AND_RETURN_IF_EOF();
@@ -320,7 +320,7 @@ std::shared_ptr<ast::Expression> Parser::parse_case()
 std::shared_ptr<ast::Expression> Parser::parse_new()
 {
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_new")));
-    int line = _next_token->get_line_number();
+    int line = _next_token->line_number();
 
     PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
@@ -331,7 +331,7 @@ std::shared_ptr<ast::Expression> Parser::parse_new()
 std::shared_ptr<ast::Expression> Parser::parse_isvoid()
 {
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_isvoid")));
-    int line = _next_token->get_line_number();
+    int line = _next_token->line_number();
     set_precedence_level(precedence_level(lexer::Token::ISVOID));
 
     PARSER_ADVANCE_AND_RETURN_IF_EOF();
@@ -344,7 +344,7 @@ std::shared_ptr<ast::Case> Parser::parse_one_case()
 {
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_one_case")));
     auto kase = std::make_shared<ast::Case>();
-    kase->_line_number = _next_token->get_line_number();
+    kase->_line_number = _next_token->line_number();
 
     PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::OBJECTID), kase->_object = parse_object());
     PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::COLON));
@@ -359,7 +359,7 @@ std::shared_ptr<ast::Case> Parser::parse_one_case()
 std::shared_ptr<ast::Expression> Parser::parse_not()
 {
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_not")));
-    int line = _next_token->get_line_number();
+    int line = _next_token->line_number();
     set_precedence_level(precedence_level(lexer::Token::NOT));
 
     PARSER_ADVANCE_AND_RETURN_IF_EOF();
@@ -388,7 +388,7 @@ std::shared_ptr<ast::Expression> Parser::parse_let_define()
     ast::LetExpression def;
 
     PARSER_ADVANCE_AND_RETURN_IF_EOF(); // skip "LET" or ","
-    int line = _next_token->get_line_number();
+    int line = _next_token->line_number();
 
     PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::OBJECTID), def._object = parse_object());
     PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::COLON));
@@ -419,7 +419,7 @@ std::shared_ptr<ast::Expression> Parser::parse_let_define()
 std::shared_ptr<ast::Expression> Parser::parse_neg()
 {
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_neg")));
-    int line = _next_token->get_line_number();
+    int line = _next_token->line_number();
     set_precedence_level(precedence_level(lexer::Token::NEG));
 
     PARSER_ADVANCE_AND_RETURN_IF_EOF();
@@ -433,7 +433,7 @@ std::shared_ptr<ast::Expression> Parser::parse_neg()
 std::shared_ptr<ast::Expression> Parser::parse_paren()
 {
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_paren")));
-    int line = _next_token->get_line_number();
+    int line = _next_token->line_number();
 
     PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
@@ -447,7 +447,7 @@ std::shared_ptr<ast::Expression> Parser::parse_paren()
 std::shared_ptr<ast::Expression> Parser::parse_curly_brackets()
 {
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_brackets")));
-    int line = _next_token->get_line_number();
+    int line = _next_token->line_number();
 
     // parse block
     ast::ListExpression expr_list;
@@ -486,7 +486,7 @@ bool Parser::parse_dispatch_list(std::vector<std::shared_ptr<ast::Expression>> &
             return false;
         }
     }
-    PARSER_VERBOSE_ONLY(LOG("Current token: \"" + _next_token->get_value() + "\""););
+    PARSER_VERBOSE_ONLY(LOG("Current token: \"" + _next_token->value() + "\""););
     if (check_next_and_report_error(lexer::Token::RIGHT_PAREN))
     {
         advance_token();
@@ -503,7 +503,7 @@ bool Parser::parse_dispatch_list(std::vector<std::shared_ptr<ast::Expression>> &
 // --------------------------------------- Parse arithmetic or logical operators ---------------------------------------
 bool Parser::token_is_left_assoc_operator() const
 {
-    auto type = _next_token->get_type();
+    auto type = _next_token->type();
     return _next_token->same_token_type(lexer::Token::LESS) || _next_token->same_token_type(lexer::Token::PLUS) ||
            _next_token->same_token_type(lexer::Token::MINUS) || _next_token->same_token_type(lexer::Token::ASTERISK) ||
            _next_token->same_token_type(lexer::Token::SLASH);
@@ -583,7 +583,7 @@ std::shared_ptr<ast::Type> Parser::parse_type()
 
     auto type = std::make_shared<ast::Type>();
 
-    PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::TYPEID), type->_string = _next_token->get_value());
+    PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::TYPEID), type->_string = _next_token->value());
     PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
     PARSER_VERBOSE_ONLY(LOG_EXIT(PARSER_APPEND_LINE_NUM("parse_type")));
@@ -596,8 +596,7 @@ std::shared_ptr<ast::ObjectExpression> Parser::parse_object()
 
     auto obj = std::make_shared<ast::ObjectExpression>();
 
-    PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::OBJECTID),
-                           obj->_object = _next_token->get_value());
+    PARSER_ACT_ELSE_RETURN(check_next_and_report_error(lexer::Token::OBJECTID), obj->_object = _next_token->value());
     PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
     PARSER_VERBOSE_ONLY(LOG_EXIT(PARSER_APPEND_LINE_NUM("parse_object")));
@@ -607,11 +606,11 @@ std::shared_ptr<ast::ObjectExpression> Parser::parse_object()
 std::shared_ptr<ast::Expression> Parser::parse_expr_object()
 {
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_expr_object")));
-    int line = _next_token->get_line_number();
+    int line = _next_token->line_number();
 
     auto lhs = parse_object();
 
-    switch (_next_token->get_type())
+    switch (_next_token->type())
     {
     case lexer::Token::ASSIGN: {
         PARSER_ADVANCE_AND_RETURN_IF_EOF();
@@ -638,9 +637,9 @@ std::shared_ptr<ast::Expression> Parser::parse_expr_object()
 std::shared_ptr<ast::Expression> Parser::parse_int()
 {
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_int")));
-    int line = _next_token->get_line_number();
+    int line = _next_token->line_number();
 
-    int value = std::stoi(_next_token->get_value());
+    int value = std::stoi(_next_token->value());
     PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
     PARSER_VERBOSE_ONLY(LOG_EXIT(PARSER_APPEND_LINE_NUM("parse_int")));
@@ -650,9 +649,9 @@ std::shared_ptr<ast::Expression> Parser::parse_int()
 std::shared_ptr<ast::Expression> Parser::parse_string()
 {
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_string")));
-    int line = _next_token->get_line_number();
+    int line = _next_token->line_number();
 
-    auto value = _next_token->get_value();
+    auto value = _next_token->value();
     PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
     PARSER_VERBOSE_ONLY(LOG_EXIT(PARSER_APPEND_LINE_NUM("parse_string")));
@@ -662,9 +661,9 @@ std::shared_ptr<ast::Expression> Parser::parse_string()
 std::shared_ptr<ast::Expression> Parser::parse_bool()
 {
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_bool")));
-    int line = _next_token->get_line_number();
+    int line = _next_token->line_number();
 
-    auto value = _next_token->get_value() == "true";
+    auto value = _next_token->value() == "true";
     PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
     PARSER_VERBOSE_ONLY(LOG_EXIT(PARSER_APPEND_LINE_NUM("parse_bool")));
@@ -674,13 +673,13 @@ std::shared_ptr<ast::Expression> Parser::parse_bool()
 std::shared_ptr<ast::Expression> Parser::parse_maybe_dispatch_or_oper(const std::shared_ptr<ast::Expression> &expr)
 {
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_maybe_dispatch_or_oper")));
-    int line = _next_token->get_line_number();
+    int line = _next_token->line_number();
 
     ast::DispatchExpression dispatch;
     dispatch._expr = expr;
     bool is_dispatch = false;
 
-    auto oper = _next_token->get_value();
+    auto oper = _next_token->value();
     if (_next_token->same_token_type(lexer::Token::AT))
     {
         is_dispatch = true;

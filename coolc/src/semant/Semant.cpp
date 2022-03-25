@@ -1004,7 +1004,7 @@ std::shared_ptr<ast::Feature> Semant::find_method(const std::string &name, const
     return method;
 }
 
-std::string Semant::get_error_msg() const
+std::string Semant::error_msg() const
 {
     std::string prefix;
     if (_error_line_number != -1)
