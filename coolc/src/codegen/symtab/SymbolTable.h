@@ -1,46 +1,11 @@
 #pragma once
 
 #include "utils/Utils.h"
-#include <cassert>
 #include <functional>
 #include <unordered_map>
-#include <vector>
 
 namespace codegen
 {
-#ifdef MIPS
-struct Symbol
-{
-    /**
-     * @brief Different base for FIELD and LOCAL
-     *
-     */
-    enum SymbolType
-    {
-        FIELD,
-        LOCAL
-    };
-
-    const SymbolType _type;
-
-    /**
-     * @brief Offset from base
-     *
-     */
-    const int _offset;
-
-    /**
-     * @brief Construct a new Symbol
-     *
-     * @param type Base type
-     * @param offset Offset from base
-     */
-    Symbol(const SymbolType &type, const int &offset) : _type(type), _offset(offset)
-    {
-    }
-};
-#endif // MIPS
-
 /**
  * @brief Manage symbols in scopes
  *
@@ -123,5 +88,4 @@ template <class T> T &SymbolTable<T>::symbol(const std::string &symbol)
     CODEGEN_VERBOSE_ONLY(LOG("Can't find symbol " + symbol));
     SHOULD_NOT_REACH_HERE();
 }
-
 }; // namespace codegen

@@ -1,16 +1,16 @@
-#include "codegen/mips/CodeGen.h"
+#include "codegen/mips/CodeGenMips.h"
 
 using namespace codegen;
 
 #define __ _asm.
 
-CodeGen::CodeGen(const std::shared_ptr<semant::ClassNode> &root)
-    : _table([](const std::string &name, const Symbol &s) {
+CodeGenMips::CodeGenMips(const std::shared_ptr<semant::ClassNode> &root)
+    : CodeGen(root), _table([](const std::string &name, const Symbol &s) {
           CODEGEN_VERBOSE_ONLY(LOG("Add symbol " + name + " with type " +
                                    ((s._type == Symbol::FIELD) ? "FIELD" : "LOCAL") + " and offset " +
                                    std::to_string(s._offset)));
       }),
-      _builder(root), _root(root), _data(_builder), _asm(_code), _a0(_asm, Register::$a0), _s0(_asm, Register::$s0),
+      _builder(root), _data(_builder), _asm(_code), _a0(_asm, Register::$a0), _s0(_asm, Register::$s0),
       _equality_test_label(_asm, "equality_test",
                            Label::ALLOW_NO_BIND), // don't check label binding during verification
       _object_copy_label(_asm, "Object.copy", Label::ALLOW_NO_BIND),
@@ -30,21 +30,21 @@ CodeGen::CodeGen(const std::shared_ptr<semant::ClassNode> &root)
     __ global(Label(_asm, "Main.main"));
 }
 
-CodeBuffer CodeGen::emit()
+void CodeGenMips::emit(const std::string &out_file_name)
 {
     emit_class_code(_root);
 
     CodeBuffer data = _data.emit();
 
     Assembler::cross_resolve_labels(_asm, _data.get_asm()); // verify that all labels were binded
-    return data += _code;
+
+    std::ofstream out_file(out_file_name);
+
+    out_file << static_cast<std::string>(data += _code);
 }
 
-void CodeGen::emit_class_code(const std::shared_ptr<semant::ClassNode> &node)
+void CodeGenMips::emit_class_code_inner(const std::shared_ptr<semant::ClassNode> &node)
 {
-    _current_class = node->_class;
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN CLASS " + _current_class->_type->_string));
-
     _table.push_scope();
     add_fields_to_table(_current_class);    // add fields to table, setup ClassCode for prototype emitting
     emit_class_init_method(_current_class); // emit init method
@@ -76,27 +76,23 @@ void CodeGen::emit_class_code(const std::shared_ptr<semant::ClassNode> &node)
     std::for_each(node->_children.begin(), node->_children.end(), [&](const auto &node) { emit_class_code(node); });
 
     _table.pop_scope();
-
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN CLASS " + _current_class->_type->_string));
 }
 
-void CodeGen::add_fields_to_table(const std::shared_ptr<ast::Class> &klass)
+void CodeGenMips::add_fields_to_table(const std::shared_ptr<ast::Class> &klass)
 {
     const auto &this_klass = _builder.klass(klass->_type->_string);
     for (auto field = this_klass->fields_begin(); field != this_klass->fields_end(); field++)
     {
         const std::string &name = (*field)->_object->_object;
         const auto offset = this_klass->field_offset(field - this_klass->fields_begin());
-        // save fields to local symbol table for further codegen
+        // save fields to local symbol table for further CodeGenMips
         Symbol s(Symbol::FIELD, offset);
         _table.add_symbol(name, s);
     }
 }
 
-void CodeGen::emit_binary_expr(const ast::BinaryExpression &expr)
+void CodeGenMips::emit_binary_expr_inner(const ast::BinaryExpression &expr)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN BINARY EXPR"));
-
     emit_expr(expr._lhs);
     // we hope to see the first argument in acc
     __ push(_a0);
@@ -191,14 +187,10 @@ void CodeGen::emit_binary_expr(const ast::BinaryExpression &expr)
     {
         emit_store_int(_a0, t5);
     }
-
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN BINARY EXPR"));
 }
 
-void CodeGen::emit_unary_expr(const ast::UnaryExpression &expr)
+void CodeGenMips::emit_unary_expr_inner(const ast::UnaryExpression &expr)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN UNAXRY EXPR"));
-
     emit_expr(expr._expr);
 
     bool logical_result = false;
@@ -243,30 +235,9 @@ void CodeGen::emit_unary_expr(const ast::UnaryExpression &expr)
     {
         emit_store_int(_a0, t5);
     }
-
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN UNAXRY EXPR"));
 }
 
-void CodeGen::emit_expr(const std::shared_ptr<ast::Expression> &expr)
-{
-    std::visit(ast::overloaded{[&](ast::BoolExpression &bool_expr) { emit_bool_expr(bool_expr); },
-                               [&](ast::StringExpression &str) { emit_string_expr(str); },
-                               [&](ast::IntExpression &number) { emit_int_expr(number); },
-                               [&](ast::ObjectExpression &object) { emit_object_expr(object); },
-                               [&](ast::BinaryExpression &binary_expr) { emit_binary_expr(binary_expr); },
-                               [&](ast::UnaryExpression &unary_expr) { emit_unary_expr(unary_expr); },
-                               [&](ast::NewExpression &alloc) { emit_new_expr(alloc); },
-                               [&](ast::CaseExpression &branch) { emit_cases_expr(branch); },
-                               [&](ast::LetExpression &let) { emit_let_expr(let); },
-                               [&](ast::ListExpression &list) { emit_list_expr(list); },
-                               [&](ast::WhileExpression &loop) { emit_loop_expr(loop); },
-                               [&](ast::IfExpression &branch) { emit_if_expr(branch); },
-                               [&](ast::DispatchExpression &dispatch) { emit_dispatch_expr(dispatch); },
-                               [&](ast::AssignExpression &assign) { emit_assign_expr(assign); }},
-               expr->_data);
-}
-
-void CodeGen::emit_method_prologue()
+void CodeGenMips::emit_method_prologue()
 {
     __ addiu(__ sp(), __ sp(), -(WORD_SIZE * 3));
     __ sw(__ fp(), __ sp(), (WORD_SIZE * 3));
@@ -278,7 +249,7 @@ void CodeGen::emit_method_prologue()
     _asm.set_sp_offset(-(WORD_SIZE * 3));
 }
 
-void CodeGen::emit_method_epilogue(const int &params_num)
+void CodeGenMips::emit_method_epilogue(const int &params_num)
 {
     __ lw(__ ra(), __ sp(), WORD_SIZE);
     __ lw(_s0, __ sp(), (2 * WORD_SIZE));
@@ -289,10 +260,8 @@ void CodeGen::emit_method_epilogue(const int &params_num)
     _asm.set_sp_offset(0);
 }
 
-void CodeGen::emit_class_init_method(const std::shared_ptr<ast::Class> &klass)
+void CodeGenMips::emit_class_init_method_inner(const std::shared_ptr<ast::Class> &klass)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN INIT METHOD FOR CLASS " + _current_class->_type->_string));
-
     const AssemblerMarkSection mark(_asm, Label(_asm, NameSpace::init_method(_builder.klass(klass->_type->_string))));
 
     emit_method_prologue();
@@ -321,14 +290,10 @@ void CodeGen::emit_class_init_method(const std::shared_ptr<ast::Class> &klass)
 
     __ move(_a0, _s0); // return "this"
     emit_method_epilogue(0);
-
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN INIT METHOD FOR CLASS " + _current_class->_type->_string));
 }
 
-void CodeGen::emit_class_method(const std::shared_ptr<ast::Feature> &method)
+void CodeGenMips::emit_class_method_inner(const std::shared_ptr<ast::Feature> &method)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN METHOD " + method->_object->_object));
-
     const AssemblerMarkSection mark(
         _asm, Label(_asm, _builder.klass(_current_class->_type->_string)->method_full_name(method->_object->_object)));
 
@@ -351,34 +316,28 @@ void CodeGen::emit_class_method(const std::shared_ptr<ast::Feature> &method)
     _table.pop_scope();
 
     emit_method_epilogue(params_num);
-
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN METHOD " + method->_object->_object));
 }
 
-void CodeGen::emit_bool_expr(const ast::BoolExpression &expr)
+void CodeGenMips::emit_bool_expr(const ast::BoolExpression &expr)
 {
     __ la(_a0, _data.declare_bool_const(expr._value));
 }
 
-void CodeGen::emit_int_expr(const ast::IntExpression &expr)
+void CodeGenMips::emit_int_expr(const ast::IntExpression &expr)
 {
     __ la(_a0, _data.declare_int_const(expr._value));
 }
 
-void CodeGen::emit_string_expr(const ast::StringExpression &expr)
+void CodeGenMips::emit_string_expr(const ast::StringExpression &expr)
 {
     __ la(_a0, _data.declare_string_const(expr._string));
 }
 
-void CodeGen::emit_object_expr(const ast::ObjectExpression &expr)
+void CodeGenMips::emit_object_expr_inner(const ast::ObjectExpression &expr)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN OBJECT EXPR FOR " + expr._object));
-
     if (!semant::Scope::can_assign(expr._object))
     {
         __ move(_a0, _s0); // self object: just copy to acc
-
-        CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN OBJECT EXPR FOR " + expr._object));
         return;
     }
 
@@ -391,14 +350,10 @@ void CodeGen::emit_object_expr(const ast::ObjectExpression &expr)
     {
         __ lw(_a0, __ fp(), object._offset); // local object defined in let, case, formal parameter
     }
-
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN OBJECT EXPR FOR " + expr._object));
 }
 
-void CodeGen::emit_new_expr(const ast::NewExpression &expr)
+void CodeGenMips::emit_new_expr_inner(const ast::NewExpression &expr)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN NEW EXPR"));
-
     // we know the type
     if (!semant::Semant::is_self_type(expr._type))
     {
@@ -425,13 +380,11 @@ void CodeGen::emit_new_expr(const ast::NewExpression &expr)
         __ lw(t5, t5, WORD_SIZE); // next slot is init method
         __ jalr(t5);
     }
-
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN NEW EXPR"));
 }
 
-void CodeGen::emit_in_scope(const std::shared_ptr<ast::ObjectExpression> &object,
-                            const std::shared_ptr<ast::Type> &object_type, const std::shared_ptr<ast::Expression> &expr,
-                            const bool &assign_acc)
+void CodeGenMips::emit_in_scope(const std::shared_ptr<ast::ObjectExpression> &object,
+                                const std::shared_ptr<ast::Type> &object_type,
+                                const std::shared_ptr<ast::Expression> &expr, const bool &assign_acc)
 {
     _table.push_scope();
 
@@ -461,10 +414,8 @@ void CodeGen::emit_in_scope(const std::shared_ptr<ast::ObjectExpression> &object
     __ pop(); // delete slot
 }
 
-void CodeGen::emit_cases_expr(const ast::CaseExpression &expr)
+void CodeGenMips::emit_cases_expr_inner(const ast::CaseExpression &expr)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN CASE EXPR"));
-
     emit_expr(expr._expr);
 
     std::string case_branch_name = NameSpace::true_branch();
@@ -526,45 +477,33 @@ void CodeGen::emit_cases_expr(const ast::CaseExpression &expr)
     }
 
     const AssemblerMarkSection mark(_asm, continue_label);
-
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN CASE EXPR"));
 }
 
-void CodeGen::emit_let_expr(const ast::LetExpression &expr)
+void CodeGenMips::emit_let_expr_inner(const ast::LetExpression &expr)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN LET EXPR"));
-
     if (expr._expr)
     {
         emit_expr(expr._expr); // result in acc
     }
 
     emit_in_scope(expr._object, expr._type, expr._body_expr, expr._expr != nullptr);
-
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN LET EXPR"));
 }
 
-void CodeGen::emit_list_expr(const ast::ListExpression &expr)
+void CodeGenMips::emit_list_expr_inner(const ast::ListExpression &expr)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN LIST EXPR"));
-
     std::for_each(expr._exprs.begin(), expr._exprs.end(), [&](const auto &e) {
         emit_expr(e); // last expression value will be in acc
     });
-
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN LIST EXPR"));
 }
 
-void CodeGen::emit_branch_to_label_if_false(const Label &label)
+void CodeGenMips::emit_branch_to_label_if_false(const Label &label)
 {
     emit_load_bool(_a0, _a0);
     __ beq(_a0, DataSection::false_value(), label);
 }
 
-void CodeGen::emit_loop_expr(const ast::WhileExpression &expr)
+void CodeGenMips::emit_loop_expr_inner(const ast::WhileExpression &expr)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN LOOP EXPR"));
-
     const Label loop_header_label(_asm, NameSpace::loop_header());
     const Label loop_tail_label(_asm, NameSpace::loop_tail());
 
@@ -579,14 +518,10 @@ void CodeGen::emit_loop_expr(const ast::WhileExpression &expr)
     }
 
     const AssemblerMarkSection mark(_asm, loop_tail_label); // continue
-
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN LOOP EXPR"));
 }
 
-void CodeGen::emit_if_expr(const ast::IfExpression &expr)
+void CodeGenMips::emit_if_expr_inner(const ast::IfExpression &expr)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN IF EXPR"));
-
     const Label false_branch_label(_asm, NameSpace::false_branch());
     const Label continue_label(_asm, NameSpace::merge_block());
 
@@ -604,14 +539,10 @@ void CodeGen::emit_if_expr(const ast::IfExpression &expr)
     }
 
     const AssemblerMarkSection mark(_asm, continue_label);
-
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN IF EXPR"));
 }
 
-void CodeGen::emit_dispatch_expr(const ast::DispatchExpression &expr)
+void CodeGenMips::emit_dispatch_expr_inner(const ast::DispatchExpression &expr)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN DISPATCH EXPR"));
-
     // put all args on stack. Callee have to get rid of them
     const int args_num = expr._args.size();
     // allocate space
@@ -655,14 +586,10 @@ void CodeGen::emit_dispatch_expr(const ast::DispatchExpression &expr)
     }
 
     const AssemblerMarkSection mark(_asm, continue_label);
-
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN DISPATCH EXPR"));
 }
 
-void CodeGen::emit_assign_expr(const ast::AssignExpression &expr)
+void CodeGenMips::emit_assign_expr_inner(const ast::AssignExpression &expr)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN ASSIGN EXPR"));
-
     emit_expr(expr._expr); // result in acc
     const auto &symbol = _table.symbol(expr._object->_object);
 
@@ -675,32 +602,30 @@ void CodeGen::emit_assign_expr(const ast::AssignExpression &expr)
     {
         __ sw(_a0, __ fp(), symbol._offset);
     }
-
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN ASSIGN EXPR"));
 }
 
-void CodeGen::emit_load_int(const Register &int_obj, const Register &int_val)
+void CodeGenMips::emit_load_int(const Register &int_obj, const Register &int_val)
 {
     __ lw(int_val, int_obj, OBJECT_HEADER_SIZE_IN_BYTES);
 }
 
-void CodeGen::emit_store_int(const Register &int_obj, const Register &int_val)
+void CodeGenMips::emit_store_int(const Register &int_obj, const Register &int_val)
 {
     __ sw(int_val, int_obj, OBJECT_HEADER_SIZE_IN_BYTES);
     emit_gc_update(int_obj, OBJECT_HEADER_SIZE_IN_BYTES);
 }
 
-void CodeGen::emit_load_bool(const Register &bool_obj, const Register &bool_val)
+void CodeGenMips::emit_load_bool(const Register &bool_obj, const Register &bool_val)
 {
     emit_load_int(bool_obj, bool_val);
 }
 
-void CodeGen::emit_store_bool(const Register &bool_obj, const Register &bool_val)
+void CodeGenMips::emit_store_bool(const Register &bool_obj, const Register &bool_val)
 {
     emit_store_int(bool_obj, bool_val);
 }
 
-void CodeGen::emit_gc_update(const Register &obj, const int &offset)
+void CodeGenMips::emit_gc_update(const Register &obj, const int &offset)
 {
     Register a1(_asm, Register::$a1);
     __ addiu(a1, obj, offset);

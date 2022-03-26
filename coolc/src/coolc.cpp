@@ -1,14 +1,6 @@
-#include "codegen/mips/Assembler.h"
-#include "codegen/mips/CodeGen.h"
+#include "codegen/mips/CodeGenMips.h"
 #include "lexer/Lexer.h"
 #include "parser/Parser.h"
-#include "semant/Semant.h"
-#include "utils/Utils.h"
-#include <algorithm>
-#include <cstdlib>
-#include <fstream>
-#include <numeric>
-#include <vector>
 
 /**
  * @brief Parse
@@ -31,9 +23,9 @@ std::shared_ptr<semant::ClassNode> do_semant(const std::vector<std::shared_ptr<a
  * @brief Generate code
  *
  * @param program One AST for all files
- * @return Buffer with instructions
+ * @param out_file Result file
  */
-codegen::CodeBuffer do_codegen(const std::shared_ptr<semant::ClassNode> &program);
+void do_codegen(const std::shared_ptr<semant::ClassNode> &program, const std::string &out_file);
 
 int main(int argc, char *argv[])
 {
@@ -48,12 +40,9 @@ int main(int argc, char *argv[])
 
     const auto parsed_program = do_parse(files, argv);
     const auto analysed_program = do_semant(parsed_program);
-    const auto buffer = do_codegen(analysed_program);
 
     std::string src_name(argv[files[0]]);
-    std::ofstream out_file(std::string(src_name.substr(0, src_name.find_last_of(".")) + ".s"));
-
-    out_file << static_cast<std::string>(buffer);
+    do_codegen(analysed_program, src_name.substr(0, src_name.find_last_of(".")) + ".s");
 
     return 0;
 }
@@ -110,8 +99,8 @@ std::shared_ptr<semant::ClassNode> do_semant(const std::vector<std::shared_ptr<a
     return result.first;
 }
 
-codegen::CodeBuffer do_codegen(const std::shared_ptr<semant::ClassNode> &program)
+void do_codegen(const std::shared_ptr<semant::ClassNode> &program, const std::string &out_file)
 {
-    codegen::CodeGen codegen(program);
-    return codegen.emit();
+    codegen::CodeGenMips codegen(program);
+    codegen.emit(out_file);
 }
