@@ -2,7 +2,7 @@
 
 #include "Assembler.h"
 #include "ast/AST.h"
-#include "codegen/classes/Klass.h"
+#include "codegen/namespace/NameSpace.h"
 #include "semant/Semant.h"
 #include "utils/Utils.h"
 #include <algorithm>

@@ -20,19 +20,13 @@ class Klass
   public:
     /*
      * Header:
-     * 0) Reference Counter (not MIPS)
      * 1) Tag
      * 2) Size
      * 3) Dispatch Table
      */
-
-    static constexpr int HEADER_FIELDS = 4 MIPS_ONLY(-1);
+    static constexpr int HEADER_FIELDS = 3;
 
   private:
-    static constexpr std::string_view DISP_TAB_SUFFIX = "_dispTab";
-    static constexpr std::string_view PROTOTYPE_SUFFIX = "_protObj";
-    static constexpr std::string_view INIT_SUFFIX = "_init";
-
     const std::shared_ptr<ast::Type> _klass;
 
     // tags necessary for runtime and expressions constructions
@@ -181,17 +175,6 @@ class Klass
      * @return Full name of the method
      */
     std::string method_full_name(const int &n) const;
-
-    /**
-     * @brief Get the init method name
-     *
-     * @return Init method name
-     */
-    inline std::string init_method() const
-    {
-        return _klass->_string + static_cast<std::string>(INIT_SUFFIX);
-    }
-
     // ------------------------------------ TAGS ------------------------------------
 
     /**
@@ -211,28 +194,6 @@ class Klass
     inline int child_max_tag() const
     {
         return _child_max_tag;
-    }
-
-    // ------------------------------------ TABLES AND SYMBOLS ------------------------------------
-
-    /**
-     * @brief Get the dispatch table name
-     *
-     * @return Dispatch table name
-     */
-    inline std::string disp_table() const
-    {
-        return _klass->_string + static_cast<std::string>(DISP_TAB_SUFFIX);
-    }
-
-    /**
-     * @brief Get the prototype name
-     *
-     * @return Prototype name
-     */
-    inline std::string prototype() const
-    {
-        return _klass->_string + static_cast<std::string>(PROTOTYPE_SUFFIX);
     }
 };
 

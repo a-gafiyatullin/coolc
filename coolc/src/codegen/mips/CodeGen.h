@@ -1,7 +1,8 @@
 #pragma once
 
 #include "DataSection.h"
-#include "SymbolTable.h"
+#include "codegen/namespace/NameSpace.h"
+#include "codegen/symtab/SymbolTable.h"
 
 namespace codegen
 {
@@ -39,20 +40,14 @@ class CodeGen
     // current generating class
     std::shared_ptr<ast::Class> _current_class;
 
-    // labels creation
-    static constexpr std::string_view LABEL_NAME = "label";
-    int _label_num; // last label number
-    inline std::string new_label_name()
-    {
-        return static_cast<std::string>(LABEL_NAME) + std::to_string(_label_num++);
-    } // create new label name "labelN"
-
     // program ast
     std::shared_ptr<semant::ClassNode> _root;
 
+    SymbolTable<Symbol> _table;
+
     // emit code for class, add fields to symbol table
-    void emit_class_code(const std::shared_ptr<semant::ClassNode> &node, SymbolTable &table);
-    void add_fields_to_table(const std::shared_ptr<ast::Class> &klass, SymbolTable &table);
+    void emit_class_code(const std::shared_ptr<semant::ClassNode> &node);
+    void add_fields_to_table(const std::shared_ptr<ast::Class> &klass);
 
     // methods of class
     /* Call convention:
@@ -68,31 +63,31 @@ class CodeGen
      */
     void emit_method_prologue();
     void emit_method_epilogue(const int &params_num);
-    void emit_class_method(const std::shared_ptr<ast::Feature> &method, SymbolTable &table);
-    void emit_class_init_method(const std::shared_ptr<ast::Class> &klass, SymbolTable &table);
+    void emit_class_method(const std::shared_ptr<ast::Feature> &method);
+    void emit_class_init_method(const std::shared_ptr<ast::Class> &klass);
 
     // emit expressions
-    void emit_expr(const std::shared_ptr<ast::Expression> &expr, SymbolTable &table);
-    void emit_binary_expr(const ast::BinaryExpression &expr, SymbolTable &table);
-    void emit_unary_expr(const ast::UnaryExpression &expr, SymbolTable &table);
+    void emit_expr(const std::shared_ptr<ast::Expression> &expr);
+    void emit_binary_expr(const ast::BinaryExpression &expr);
+    void emit_unary_expr(const ast::UnaryExpression &expr);
     void emit_bool_expr(const ast::BoolExpression &expr);
     void emit_int_expr(const ast::IntExpression &expr);
     void emit_string_expr(const ast::StringExpression &expr);
-    void emit_object_expr(const ast::ObjectExpression &expr, SymbolTable &table);
+    void emit_object_expr(const ast::ObjectExpression &expr);
     void emit_new_expr(const ast::NewExpression &expr);
     // allocate stack slot for object, assign acc value to it, evaluate expression, delete slot after that
     void emit_in_scope(const std::shared_ptr<ast::ObjectExpression> &object,
                        const std::shared_ptr<ast::Type> &object_type, const std::shared_ptr<ast::Expression> &expr,
-                       SymbolTable &table, const bool &assign_acc = true);
-    void emit_cases_expr(const ast::CaseExpression &expr, SymbolTable &table);
-    void emit_let_expr(const ast::LetExpression &expr, SymbolTable &table);
-    void emit_list_expr(const ast::ListExpression &expr, SymbolTable &table);
+                       const bool &assign_acc = true);
+    void emit_cases_expr(const ast::CaseExpression &expr);
+    void emit_let_expr(const ast::LetExpression &expr);
+    void emit_list_expr(const ast::ListExpression &expr);
     // if bool result in acc is false - branch to label
     void emit_branch_to_label_if_false(const Label &label);
-    void emit_loop_expr(const ast::WhileExpression &expr, SymbolTable &table);
-    void emit_if_expr(const ast::IfExpression &expr, SymbolTable &table);
-    void emit_dispatch_expr(const ast::DispatchExpression &expr, SymbolTable &table);
-    void emit_assign_expr(const ast::AssignExpression &expr, SymbolTable &table);
+    void emit_loop_expr(const ast::WhileExpression &expr);
+    void emit_if_expr(const ast::IfExpression &expr);
+    void emit_dispatch_expr(const ast::DispatchExpression &expr);
+    void emit_assign_expr(const ast::AssignExpression &expr);
 
     // load/store basic values
     // int

@@ -2,14 +2,13 @@
 
 #include "utils/Utils.h"
 #include <cassert>
-#include <memory>
-#include <numeric>
-#include <string>
+#include <functional>
 #include <unordered_map>
 #include <vector>
 
 namespace codegen
 {
+#ifdef MIPS
 struct Symbol
 {
     /**
@@ -40,24 +39,33 @@ struct Symbol
     {
     }
 };
+#endif // MIPS
 
 /**
  * @brief Manage symbols in scopes
  *
  */
-class SymbolTable
+template <class T> class SymbolTable
 {
   private:
-    std::vector<std::unordered_map<std::string, Symbol>> _symbols; // class fields and locals offsets
+    std::vector<std::unordered_map<std::string, T>> _symbols;   // class fields and locals offsets
+    std::function<void(const std::string &, const T &)> _debug; // logging
 
   public:
     /**
      * @brief Construct a new SymbolTable with initial scope
      *
      */
+#ifdef DEBUG
+    SymbolTable(const std::function<void(const std::string &, const T &)> &debug_print)
+        : _symbols(1), _debug(debug_print)
+    {
+    }
+#else
     SymbolTable() : _symbols(1)
     {
     }
+#endif // DEBUG
 
     /**
      * @brief Find symbol
@@ -65,16 +73,15 @@ class SymbolTable
      * @param symbol Symbol name
      * @return Symbol object for this symbol
      */
-    Symbol &symbol(const std::string &symbol);
+    T &symbol(const std::string &symbol);
 
     /**
      * @brief Create Symbol
      *
      * @param name Symbol name
-     * @param type Base type
-     * @param offset Offset from base
+     * @param symbol Symbol object
      */
-    void add_symbol(const std::string &name, const Symbol::SymbolType &type, const int &offset);
+    void add_symbol(const std::string &name, const T &symbol);
 
     /**
      * @brief Push new scope
@@ -95,5 +102,26 @@ class SymbolTable
         _symbols.pop_back();
     }
 };
+
+template <class T> void SymbolTable<T>::add_symbol(const std::string &name, const T &symbol)
+{
+    CODEGEN_VERBOSE_ONLY(_debug(name, symbol));
+    _symbols.back().emplace(name, symbol);
+}
+
+template <class T> T &SymbolTable<T>::symbol(const std::string &symbol)
+{
+    // search in reverse order
+    for (int i = _symbols.size() - 1; i >= 0; i--)
+    {
+        const auto symbol_ptr = _symbols[i].find(symbol);
+        if (symbol_ptr != _symbols[i].end())
+        {
+            return symbol_ptr->second;
+        }
+    }
+    CODEGEN_VERBOSE_ONLY(LOG("Can't find symbol " + symbol));
+    SHOULD_NOT_REACH_HERE();
+}
 
 }; // namespace codegen
