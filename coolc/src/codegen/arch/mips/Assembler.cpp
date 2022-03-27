@@ -1,4 +1,4 @@
-#include "codegen/mips/Assembler.h"
+#include "codegen/arch/mips/Assembler.h"
 
 using namespace codegen;
 

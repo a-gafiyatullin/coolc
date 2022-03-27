@@ -1,4 +1,4 @@
-#include "codegen/mips/DataSection.h"
+#include "codegen/arch/mips/DataSection.h"
 
 using namespace codegen;
 

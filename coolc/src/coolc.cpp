@@ -1,4 +1,4 @@
-#include "codegen/mips/CodeGenMips.h"
+#include "codegen/arch/mips/CodeGenMips.h"
 #include "lexer/Lexer.h"
 #include "parser/Parser.h"
 

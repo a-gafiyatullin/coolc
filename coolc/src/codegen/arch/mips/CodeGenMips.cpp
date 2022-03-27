@@ -1,4 +1,4 @@
-#include "codegen/mips/CodeGenMips.h"
+#include "codegen/arch/mips/CodeGenMips.h"
 
 using namespace codegen;
 
