@@ -1,8 +1,8 @@
 if(ARCH STREQUAL "MIPS")
     set(ARCH_SRC
-        mips/Assembler.cpp
-        mips/CodeGenMips.cpp
-        mips/DataSection.cpp
+        arch/mips/Assembler.cpp
+        arch/mips/CodeGenMips.cpp
+        arch/mips/DataSection.cpp
         )
 endif()
 
