@@ -113,4 +113,5 @@ std::vector<int> process_args(char *const args[], const int &args_num)
 
     return positions;
 }
+
 #endif // DEBUG

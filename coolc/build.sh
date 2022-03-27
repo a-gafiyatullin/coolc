@@ -47,6 +47,10 @@ do
         test=1
         shift
     ;;
+    -llvm)
+        result_args+=" -DARCH:STRING=LLVM"
+        shift
+    ;;
     -*|--*)
         echo "Unknown option $var"
         exit 1

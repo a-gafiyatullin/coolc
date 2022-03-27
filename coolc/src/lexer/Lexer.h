@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Token.h"
+#include "token/Token.h"
 #include "utils/Utils.h"
 #include <fstream>
 #include <optional>
@@ -8,8 +8,6 @@
 #include <regex>
 
 #ifdef DEBUG
-#include "utils/logger/Logger.h"
-
 #define LEXER_LOG_MATCH(type, str, pos)                                                                                \
     (std::string) "Matched " + (std::string)type + " " + (std::string)str + " in position " + std::to_string((int)pos)
 #else
@@ -55,7 +53,7 @@ class Lexer
      *
      * @param input_file_name Name of the source file
      */
-    Lexer(const std::string &input_file_name);
+    explicit Lexer(const std::string &input_file_name);
 
     /**
      * @brief Get maybe next token

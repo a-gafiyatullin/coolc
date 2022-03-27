@@ -1,6 +1,13 @@
-#include "codegen/arch/mips/CodeGenMips.h"
 #include "lexer/Lexer.h"
 #include "parser/Parser.h"
+#include <numeric>
+
+// TODO: maybe more convinient way?
+#ifdef MIPS
+#include "codegen/arch/mips/emitter/CodeGenMips.h"
+#else
+#include "codegen/arch/llvm/emitter/CodeGenLLVM.h"
+#endif // ARCH
 
 /**
  * @brief Parse
@@ -99,8 +106,15 @@ std::shared_ptr<semant::ClassNode> do_semant(const std::vector<std::shared_ptr<a
     return result.first;
 }
 
+// TODO: maybe more convinient way?
 void do_codegen(const std::shared_ptr<semant::ClassNode> &program, const std::string &out_file)
 {
-    codegen::CodeGenMips codegen(program);
+#ifdef MIPS
+    codegen::CodeGenMips
+#else
+    codegen::CodeGenLLVM
+#endif // ARCH
+        codegen(program);
+
     codegen.emit(out_file);
 }

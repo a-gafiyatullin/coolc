@@ -94,7 +94,7 @@ std::shared_ptr<ast::Class> Parser::parse_class()
     else
     {
         klass->_parent = std::make_shared<ast::Type>();
-        klass->_parent->_string = "Object";
+        klass->_parent->_string = BaseClassesNames[BaseClasses::OBJECT];
     }
 
     PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::LEFT_CURLY_BRACKET));
@@ -526,19 +526,19 @@ int Parser::precedence_level(const lexer::Token::TokenType &type) const
 
 void Parser::restore_precedence_level()
 {
-    DEBUG_ONLY(assert(!_precedence_level.empty()));
+    GUARANTEE_DEBUG(!_precedence_level.empty());
     _precedence_level.pop();
 }
 
 int Parser::current_precedence_level() const
 {
-    DEBUG_ONLY(assert(!_precedence_level.empty()));
+    GUARANTEE_DEBUG(!_precedence_level.empty());
     return _precedence_level.top();
 }
 
 void Parser::set_precedence_level(const int &lvl)
 {
-    DEBUG_ONLY(assert(!_precedence_level.empty()));
+    GUARANTEE_DEBUG(!_precedence_level.empty());
     _precedence_level.top() = lvl;
 }
 
@@ -548,27 +548,33 @@ std::shared_ptr<ast::Expression> Parser::parse_operators(const std::shared_ptr<a
     {
         return parse_operator<ast::PlusExpression>(lhs);
     }
-    else if (_next_token->same_token_type(lexer::Token::MINUS))
+
+    if (_next_token->same_token_type(lexer::Token::MINUS))
     {
         return parse_operator<ast::MinusExpression>(lhs);
     }
-    else if (_next_token->same_token_type(lexer::Token::ASTERISK))
+
+    if (_next_token->same_token_type(lexer::Token::ASTERISK))
     {
         return parse_operator<ast::MulExpression>(lhs);
     }
-    else if (_next_token->same_token_type(lexer::Token::SLASH))
+
+    if (_next_token->same_token_type(lexer::Token::SLASH))
     {
         return parse_operator<ast::DivExpression>(lhs);
     }
-    else if (_next_token->same_token_type(lexer::Token::LESS))
+
+    if (_next_token->same_token_type(lexer::Token::LESS))
     {
         return parse_operator<ast::LTExpression>(lhs);
     }
-    else if (_next_token->same_token_type(lexer::Token::EQUALS))
+
+    if (_next_token->same_token_type(lexer::Token::EQUALS))
     {
         return parse_operator<ast::EqExpression>(lhs);
     }
-    else if (_next_token->same_token_type(lexer::Token::LE))
+
+    if (_next_token->same_token_type(lexer::Token::LE))
     {
         return parse_operator<ast::LEExpression>(lhs);
     }
@@ -620,7 +626,7 @@ std::shared_ptr<ast::Expression> Parser::parse_expr_object()
     }
     case lexer::Token::LEFT_PAREN: {
         ast::DispatchExpression dispatch;
-        dispatch._expr = make_expr(std::move(ast::ObjectExpression{"self"}), line);
+        dispatch._expr = make_expr(std::move(ast::ObjectExpression{SelfObject}), line);
         dispatch._object = lhs;
 
         PARSER_RETURN_IF_FALSE(parse_dispatch_list(dispatch._args));
@@ -705,9 +711,7 @@ std::shared_ptr<ast::Expression> Parser::parse_maybe_dispatch_or_oper(const std:
         PARSER_VERBOSE_ONLY(LOG_EXIT(PARSER_APPEND_LINE_NUM("parse_maybe_dispatch_or_oper for dispatch")));
         return parse_maybe_dispatch_or_oper(make_expr(std::move(dispatch), line));
     }
-    else
-    {
-        PARSER_VERBOSE_ONLY(LOG_EXIT(PARSER_APPEND_LINE_NUM("parse_maybe_dispatch_or_oper")));
-        return parse_operators(expr);
-    }
+
+    PARSER_VERBOSE_ONLY(LOG_EXIT(PARSER_APPEND_LINE_NUM("parse_maybe_dispatch_or_oper")));
+    return parse_operators(expr);
 }

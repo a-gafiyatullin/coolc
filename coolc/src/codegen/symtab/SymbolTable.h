@@ -13,24 +13,19 @@ namespace codegen
 template <class T> class SymbolTable
 {
   private:
-    std::vector<std::unordered_map<std::string, T>> _symbols;   // class fields and locals offsets
-    std::function<void(const std::string &, const T &)> _debug; // logging
+    std::vector<std::unordered_map<std::string, T>> _symbols; // class fields and locals offsets
 
+#ifdef DEBUG
+    std::function<void(const std::string &, const T &)> _debug; // logging
+#endif                                                          // DEBUG
   public:
     /**
      * @brief Construct a new SymbolTable with initial scope
      *
      */
-#ifdef DEBUG
-    SymbolTable(const std::function<void(const std::string &, const T &)> &debug_print)
-        : _symbols(1), _debug(debug_print)
-    {
-    }
-#else
     SymbolTable() : _symbols(1)
     {
     }
-#endif // DEBUG
 
     /**
      * @brief Find symbol
@@ -66,6 +61,13 @@ template <class T> class SymbolTable
         GUARANTEE_DEBUG(!_symbols.empty());
         _symbols.pop_back();
     }
+
+#ifdef DEBUG
+    void set_printer(const std::function<void(const std::string &, const T &)> &debug_print)
+    {
+        _debug = debug_print;
+    }
+#endif // DEBUG
 };
 
 template <class T> void SymbolTable<T>::add_symbol(const std::string &name, const T &symbol)

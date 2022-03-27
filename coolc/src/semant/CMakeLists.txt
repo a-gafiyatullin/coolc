@@ -1,1 +1,1 @@
-add_library(semant STATIC Scope.cpp Semant.cpp)
+add_library(semant STATIC scope/Scope.cpp Semant.cpp)

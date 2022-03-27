@@ -100,11 +100,9 @@ Token Lexer::match_string(const std::string &start_string)
                 return Token(Token::ERROR, error_msg.empty() ? "Unterminated string constant" : error_msg,
                              error_msg.empty() ? _line_number : error_line_num);
             }
-            else
-            {
-                append_to_string_if_can(builded_string, "\n", error_msg, error_line_num);
-                escape = 0;
-            }
+
+            append_to_string_if_can(builded_string, "\n", error_msg, error_line_num);
+            escape = 0;
         }
 
         // escape next character
@@ -399,13 +397,11 @@ std::optional<Token> Lexer::next()
 
         return t;
     }
-    else
-    {
-        auto t = _saved_tokens.front();
-        _saved_tokens.pop();
 
-        DEBUG_ONLY(if (TokensOnly) { LOG(t.to_string()); });
+    auto t = _saved_tokens.front();
+    _saved_tokens.pop();
 
-        return t;
-    }
+    DEBUG_ONLY(if (TokensOnly) { LOG(t.to_string()); });
+
+    return t;
 }

@@ -1,14 +1,12 @@
 #pragma once
 
 #include "ast/AST.h"
+#include "decls/Decls.h"
 #include "lexer/Lexer.h"
 #include <functional>
 #include <stack>
 
 #ifdef DEBUG
-#include "utils/logger/Logger.h"
-#include <cassert>
-
 #define PARSER_APPEND_LINE_NUM(msg)                                                                                    \
     ((std::string)msg + ", line: " + (_next_token ? std::to_string(_next_token->line_number()) : "EOF"))
 #else
