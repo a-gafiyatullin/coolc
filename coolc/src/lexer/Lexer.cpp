@@ -19,7 +19,11 @@ const std::regex Lexer::LEXER_SPEC_REGEX(
     // whitespaces
     "[\f\r\t\v ]+|"
     // error
-    ".|\x00", // . does not accept \x00
+    "." // . does not accept \x00
+#ifndef __APPLE__
+    "|\x00"
+#endif // NOT __APPLE__
+    ,
     std::regex::extended);
 
 const std::regex Lexer::STR_SYMBOLS_REGEX("\\\"|\\\\|\\x00");
@@ -314,6 +318,7 @@ std::optional<Token> Lexer::next()
                 std::string str_in_lowercase = it->str();
                 std::transform(str_in_lowercase.begin(), str_in_lowercase.end(), str_in_lowercase.begin(), ::tolower);
 
+#ifndef __APPLE__
                 // we are not interested in characters (\x00) over the line length
                 if (it->position() >= _current_line.size())
                 {
@@ -321,7 +326,9 @@ std::optional<Token> Lexer::next()
                 }
                 // if we matched \x00 in the string so create a string containing \x00
                 Token t(Token::ERROR, (it->str()).length() != 0 ? it->str() : std::string("\0", 1), _line_number);
-
+#else
+                Token t(Token::ERROR, it->str(), _line_number);
+#endif // NOT __APPLE__
                 if (Token::is_keyword(str_in_lowercase))
                 {
                     LEXER_VERBOSE_ONLY(LOG(LEXER_LOG_MATCH("keyword or symbol", it->str(), it->position())));
