@@ -33,7 +33,7 @@ class DataMips : public Data<const Label &>
     void class_struct_inner(const std::shared_ptr<Klass> &klass) override;
     void class_disp_tab_inner(const std::shared_ptr<Klass> &klass) override;
 
-    void emit_inner(std::ofstream &out_file) override;
+    void emit_inner(const std::string &out_file) override;
 
   public:
     /**

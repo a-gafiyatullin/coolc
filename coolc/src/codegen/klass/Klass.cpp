@@ -76,9 +76,12 @@ void Klass::dump_methods() const
         LOG_NO_CR(m.second->_type->_string + " " + m.first->_string + "::" + m.second->_object->_object + "(");
 
         const auto &formals = std::get<ast::MethodFeature>(m.second->_base)._formals;
+        int n = 0;
+        const size_t formals_num = formals.size();
         for (const auto &f : formals)
         {
-            LOG_NO_CR_NO_IDENT(f->_object->_object + ": " + f->_type->_string + ",");
+            n++;
+            LOG_NO_CR_NO_IDENT(f->_object->_object + ": " + f->_type->_string + (n != formals_num ? ", " : ""));
         }
 
         LOG_NO_IDENT(")");

@@ -61,8 +61,14 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
 
 void CodeGenLLVM::emit_class_init_method_inner()
 {
-    const auto &klass = _builder->klass(_current_class->_type->_string);
-    auto *const func = _module.getFunction(NameConstructor::init_method(klass));
+    // Inits for basic classes are external symbols
+    if (semant::Semant::is_basic_type(_current_class->_type))
+    {
+        return;
+    }
+
+    const auto &current_class_name = _current_class->_type->_string;
+    auto *const func = _module.getFunction(NameConstructor::init_method(current_class_name));
 
     GUARANTEE_DEBUG(func);
 
@@ -73,12 +79,13 @@ void CodeGenLLVM::emit_class_init_method_inner()
     // call parent constructor
     if (!semant::Semant::is_empty_type(_current_class->_parent)) // Object moment
     {
-        const auto &parent_init = NameConstructor::init_method(_builder->klass(_current_class->_parent->_string));
+        const auto &parent_init = NameConstructor::init_method(_current_class->_parent->_string);
         // TODO: maybe better way to pass args?
         __ CreateCall(_module.getFunction(parent_init), {func->getArg(0), func->getArg(1), func->getArg(2)},
                       NameConstructor::call(parent_init));
     }
 
+    const auto &klass = _builder->klass(current_class_name);
     for (const auto &feature : _current_class->_features)
     {
         if (std::holds_alternative<ast::AttrFeature>(feature->_base))
@@ -267,7 +274,9 @@ void CodeGenLLVM::emit_runtime_main()
 
 void CodeGenLLVM::emit(const std::string &out_file)
 {
-    // emit_class_code(_builder->root()); // emit
+    _data.emit(out_file);
+
+    emit_class_code(_builder->root()); // emit
     emit_runtime_main();
 
     CODEGEN_VERBOSE_ONLY(_module.print(llvm::errs(), nullptr););

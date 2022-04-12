@@ -8,7 +8,7 @@ std::string KlassMips::method_full_name(const std::string &method_name) const
         return method.second->_object->_object == method_name;
     });
 
-    return entry->first->_string + "." + entry->second->_object->_object;
+    return NameConstructor::method_full_name(entry->first->_string, entry->second->_object->_object, FULL_METHOD_DELIM);
 }
 
 std::string KlassMips::method_full_name(const int &n) const
@@ -16,7 +16,7 @@ std::string KlassMips::method_full_name(const int &n) const
     GUARANTEE_DEBUG(n < _methods.size());
 
     const auto &method = _methods[n];
-    return method.first->_string + "." + method.second->_object->_object;
+    return NameConstructor::method_full_name(method.first->_string, method.second->_object->_object, FULL_METHOD_DELIM);
 }
 
 std::shared_ptr<Klass> KlassBuilderMips::create_klass(const std::shared_ptr<ast::Class> &klass)

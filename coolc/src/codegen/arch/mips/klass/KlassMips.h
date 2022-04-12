@@ -16,6 +16,8 @@ class KlassMips : public Klass
      */
     static constexpr int HEADER_FIELDS = 3;
 
+    static constexpr char FULL_METHOD_DELIM = '.';
+
     KlassMips(const std::shared_ptr<ast::Class> &klass, const KlassBuilder *builder) : Klass(klass, builder)
     {
     }

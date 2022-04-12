@@ -1,6 +1,6 @@
 #pragma once
 
-#include "codegen/klass/Klass.h"
+#include <string>
 
 namespace codegen
 {
@@ -57,36 +57,81 @@ class NameConstructor
     /**
      * @brief Get the dispatch table name
      *
-     * @param klass Class handle
+     * @param klass Class name
      * @return Dispatch table name
      */
-    inline static std::string disp_table(const std::shared_ptr<Klass> &klass)
+    inline static std::string disp_table(const std::string &klass)
     {
-        return klass->name() + static_cast<std::string>(DISP_TAB_SUFFIX);
+        return klass + static_cast<std::string>(DISP_TAB_SUFFIX);
     }
 
     /**
      * @brief Get the prototype name
      *
-     * @param klass Class handle
+     * @param klass Class name
      * @return Prototype name
      */
-    inline static std::string prototype(const std::shared_ptr<Klass> &klass)
+    inline static std::string prototype(const std::string &klass)
     {
-        return klass->name() + static_cast<std::string>(PROTOTYPE_SUFFIX);
+        return klass + static_cast<std::string>(PROTOTYPE_SUFFIX);
     }
 
     /**
      * @brief Get the init method name
      *
-     * @param klass Class handle
+     * @param klass Class name
      * @return Init method name
      */
-    inline static std::string init_method(const std::shared_ptr<Klass> &klass)
+    inline static std::string init_method(const std::string &klass)
     {
-        return klass->name() + static_cast<std::string>(INIT_SUFFIX);
+        return klass + static_cast<std::string>(INIT_SUFFIX);
     }
 
+    /**
+     * @brief Get free integer constant name
+     *
+     * @return Integer constant name
+     */
+    inline static std::string int_constant()
+    {
+        return static_cast<std::string>(CONST_INT_PREFIX) + std::to_string(IntegerNum++);
+    }
+
+    /**
+     * @brief Get free bool constant name
+     *
+     * @return Bool constant name
+     */
+    inline static std::string bool_constant()
+    {
+        BooleanNum = BooleanNum % 2;
+        return static_cast<std::string>(CONST_BOOL_PREFIX) + std::to_string(BooleanNum++);
+    }
+
+    /**
+     * @brief Get free string constant name
+     *
+     * @return String constant name
+     */
+    inline static std::string string_constant()
+    {
+        return static_cast<std::string>(CONST_STRING_PREFIX) + std::to_string(StringNum++);
+    }
+
+    /**
+     * @brief Construct full method name
+     *
+     * @param klass Class name
+     * @param method Method name
+     * @param delim Delimiter
+     * @return Full method name
+     */
+    inline static std::string method_full_name(const std::string &klass, const std::string &method, const char &delim)
+    {
+        return klass + delim + method;
+    }
+
+    // -------------------------------------- CODEGEN SUPPORT --------------------------------------
     /**
      * @brief Get free true branch label name
      *
@@ -138,38 +183,7 @@ class NameConstructor
     }
 
     /**
-     * @brief Get free integer constant name
-     *
-     * @return Integer constant name
-     */
-    inline static std::string int_constant()
-    {
-        return static_cast<std::string>(CONST_INT_PREFIX) + std::to_string(IntegerNum++);
-    }
-
-    /**
-     * @brief Get free bool constant name
-     *
-     * @return Bool constant name
-     */
-    inline static std::string bool_constant()
-    {
-        BooleanNum = BooleanNum % 2;
-        return static_cast<std::string>(CONST_BOOL_PREFIX) + std::to_string(BooleanNum++);
-    }
-
-    /**
-     * @brief Get free string constant name
-     *
-     * @return String constant name
-     */
-    inline static std::string string_constant()
-    {
-        return static_cast<std::string>(CONST_STRING_PREFIX) + std::to_string(StringNum++);
-    }
-
-    /**
-     * @brief Get comment for call
+     * @brief Get comment for call intsruction
      *
      * @param method Method to call
      * @return String comment
@@ -180,7 +194,7 @@ class NameConstructor
     }
 
     /**
-     * @brief Get comment for get element pointer
+     * @brief Get comment for get element pointer intsruction
      *
      * @param method Object to get element pointer
      * @return String comment

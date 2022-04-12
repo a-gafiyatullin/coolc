@@ -19,10 +19,10 @@ CodeGenMips::CodeGenMips(const std::shared_ptr<semant::ClassNode> &root)
     __ text_section();
 
     // we export some structures and method to global
-    __ global(Label(NameConstructor::init_method(_builder->klass(MainClassName))));
-    __ global(Label(NameConstructor::init_method(_builder->klass(semant::Semant::int_type()->_string))));
-    __ global(Label(NameConstructor::init_method(_builder->klass(semant::Semant::string_type()->_string))));
-    __ global(Label(NameConstructor::init_method(_builder->klass(semant::Semant::bool_type()->_string))));
+    __ global(Label(NameConstructor::init_method(MainClassName)));
+    __ global(Label(NameConstructor::init_method(BaseClassesNames[BaseClasses::INT])));
+    __ global(Label(NameConstructor::init_method(BaseClassesNames[BaseClasses::STRING])));
+    __ global(Label(NameConstructor::init_method(BaseClassesNames[BaseClasses::BOOL])));
     __ global(Label(_builder->klass(MainClassName)->method_full_name(MainMethodName)));
 }
 
@@ -30,9 +30,9 @@ void CodeGenMips::emit(const std::string &out_file_name)
 {
     emit_class_code(_builder->root()); // emit
 
-    std::ofstream out_file(out_file_name); // open file
+    _data.emit(out_file_name); // record data
 
-    _data.emit(out_file); // record data
+    std::ofstream out_file(out_file_name, std::ios::app); // open file
 
     Assembler::check_labels(); // verify that all labels were binded
 
@@ -223,15 +223,14 @@ void CodeGenMips::emit_method_epilogue(const int &params_num)
 
 void CodeGenMips::emit_class_init_method_inner()
 {
-    const AssemblerMarkSection mark(
-        _asm, Label(NameConstructor::init_method(_builder->klass(_current_class->_type->_string))));
+    const AssemblerMarkSection mark(_asm, Label(NameConstructor::init_method(_current_class->_type->_string)));
 
     emit_method_prologue();
 
     if (!semant::Semant::is_empty_type(_current_class->_parent)) // Object moment
     {
         __ jal(Label(NameConstructor::init_method(
-            _builder->klass(_current_class->_parent->_string)))); // receiver already is in acc, call parent constructor
+            _current_class->_parent->_string))); // receiver already is in acc, call parent constructor
     }
 
     for (const auto &feature : _current_class->_features)
@@ -327,11 +326,11 @@ void CodeGenMips::emit_new_expr_inner(const ast::NewExpression &expr)
     // we know the type
     if (!semant::Semant::is_self_type(expr._type))
     {
-        const auto &klass = _builder->klass(expr._type->_string);
+        const auto &class_name = _builder->klass(expr._type->_string)->name();
 
-        __ la(_a0, Label(NameConstructor::prototype(klass)));
-        __ jal(*_runtime.method(RuntimeMips::OBJECT_COPY)); // result in acc
-        __ jal(Label(NameConstructor::init_method(klass))); // result in acc
+        __ la(_a0, Label(NameConstructor::prototype(class_name)));
+        __ jal(*_runtime.method(RuntimeMips::OBJECT_COPY));      // result in acc
+        __ jal(Label(NameConstructor::init_method(class_name))); // result in acc
     }
     else
     {

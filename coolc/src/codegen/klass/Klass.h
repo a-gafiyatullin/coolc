@@ -1,5 +1,6 @@
 #pragma once
 
+#include "codegen/symnames/NameConstructor.h"
 #include "semant/Semant.h"
 
 namespace codegen

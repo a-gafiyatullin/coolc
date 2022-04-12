@@ -1,5 +1,6 @@
 #pragma once
 
+#include "codegen/arch/llvm/klass/KlassLLVM.h"
 #include "codegen/arch/llvm/runtime/RuntimeLLVM.h"
 #include "codegen/emitter/data/Data.h"
 #include "codegen/symnames/NameConstructor.h"
@@ -35,7 +36,7 @@ class DataLLVM : public Data<llvm::Constant *, llvm::StructType *, llvm::Constan
     void gen_class_obj_tab() override;
     void gen_class_name_tab() override;
 
-    void emit_inner(std::ofstream &out_file) override;
+    void emit_inner(const std::string &out_file) override;
 
     // helpers
     void construct_header(const std::shared_ptr<Klass> &klass, std::vector<llvm::Type *> &fields);

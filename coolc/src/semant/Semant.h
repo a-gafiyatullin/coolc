@@ -1,7 +1,7 @@
 #pragma once
 
 #include "decls/Decls.h"
-#include "scope/Scope.h"
+#include "semant/scope/Scope.h"
 #include <algorithm>
 
 #define SEMANT_RETURN_IF_FALSE_WITH_ERROR(cond, error, line_num, retval)                                               \

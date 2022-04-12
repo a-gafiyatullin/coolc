@@ -1,6 +1,8 @@
 #pragma once
 
+#include "codegen/arch/llvm/klass/KlassLLVM.h"
 #include "codegen/decls/Runtime.h"
+#include "codegen/symnames/NameConstructor.h"
 #include "decls/Decls.h"
 #include <llvm/IR/Module.h>
 
@@ -40,13 +42,37 @@ class RuntimeLLVM : public Runtime<RuntimeMethod, llvm::Value *>
      */
     llvm::Type *_void_ptr_type;
 
+    llvm::Type *_int32_type;
+
+    llvm::Type *_void_type;
+
   private:
     const RuntimeMethod _equals;
 
     // Object class methods
+    const RuntimeMethod _object_init;
     const RuntimeMethod _object_abort;
     const RuntimeMethod _object_type_name;
     const RuntimeMethod _object_copy;
+
+    // String methods
+    const RuntimeMethod _string_init;
+    const RuntimeMethod _string_length;
+    const RuntimeMethod _string_concat;
+    const RuntimeMethod _string_substr;
+
+    // IO methods
+    const RuntimeMethod _io_init;
+    const RuntimeMethod _io_out_string;
+    const RuntimeMethod _io_out_int;
+    const RuntimeMethod _io_in_string;
+    const RuntimeMethod _io_in_int;
+
+    // Int methods
+    const RuntimeMethod _int_init;
+
+    // Bool methods
+    const RuntimeMethod _bool_init;
 
     // GC
     const RuntimeMethod _gc_alloc;

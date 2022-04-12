@@ -17,6 +17,8 @@ class KlassLLVM : public Klass
      */
     static constexpr int HEADER_FIELDS = 4;
 
+    static constexpr char FULL_METHOD_DELIM = '_';
+
     KlassLLVM(const std::shared_ptr<ast::Class> &klass, const KlassBuilder *builder) : Klass(klass, builder)
     {
     }

@@ -84,7 +84,7 @@ DispTableDesc Data<Value, ClassDesc, DispTableDesc>::class_disp_tab(const std::s
 }
 
 template <class Value, class ClassDesc, class DispTableDesc>
-void Data<Value, ClassDesc, DispTableDesc>::emit(std::ofstream &out_file)
+void Data<Value, ClassDesc, DispTableDesc>::emit(const std::string &out_file)
 {
     int_const(0);
     string_const("");

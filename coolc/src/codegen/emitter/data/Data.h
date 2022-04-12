@@ -2,7 +2,6 @@
 
 #include "codegen/klass/Klass.h"
 #include <fstream>
-#include <unordered_map>
 
 namespace codegen
 {
@@ -32,7 +31,7 @@ template <class Value, class ClassDesc = Value, class DispTableDesc = Value> cla
     virtual void gen_class_obj_tab() = 0;
     virtual void gen_class_name_tab() = 0;
 
-    virtual void emit_inner(std::ofstream &out_file) = 0;
+    virtual void emit_inner(const std::string &out_file) = 0;
 
   public:
     /**
@@ -93,9 +92,9 @@ template <class Value, class ClassDesc = Value, class DispTableDesc = Value> cla
     /**
      * @brief Emit code to file
      *
-     * @param out_file Output stream
+     * @param out_file Output file name
      */
-    void emit(std::ofstream &out_file);
+    void emit(const std::string &out_file);
 };
 
 }; // namespace codegen
