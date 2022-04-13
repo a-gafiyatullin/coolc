@@ -15,7 +15,7 @@ struct Symbol
 
     union {
         uint64_t _offset;
-        const llvm::Value *_ptr;
+        llvm::Value *_ptr;
     } _value;
 
     /**
@@ -33,7 +33,7 @@ struct Symbol
      *
      * @param val Value
      */
-    Symbol(const llvm::Value *val) : _type(SymbolType::LOCAL)
+    Symbol(llvm::Value *val) : _type(SymbolType::LOCAL)
     {
         _value._ptr = val;
     }

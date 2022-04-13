@@ -68,16 +68,16 @@ class Semant
     bool infer_expression_type(const std::shared_ptr<ast::Expression> &expr, Scope &scope);
 
     std::shared_ptr<ast::Type> infer_new_type(const ast::NewExpression &alloc);
-    std::shared_ptr<ast::Type> infer_let_type(ast::LetExpression &let, Scope &scope);
-    std::shared_ptr<ast::Type> infer_loop_type(ast::WhileExpression &loop, Scope &scope);
-    std::shared_ptr<ast::Type> infer_unary_type(ast::UnaryExpression &unary, Scope &scope);
-    std::shared_ptr<ast::Type> infer_binary_type(ast::BinaryExpression &binary, Scope &scope);
-    std::shared_ptr<ast::Type> infer_assign_type(ast::AssignExpression &assign, Scope &scope);
-    std::shared_ptr<ast::Type> infer_if_type(ast::IfExpression &branch, Scope &scope);
-    std::shared_ptr<ast::Type> infer_sequence_type(ast::ListExpression &seq, Scope &scope);
-    std::shared_ptr<ast::Type> infer_cases_type(ast::CaseExpression &cases, Scope &scope);
-    std::shared_ptr<ast::Type> infer_dispatch_type(ast::DispatchExpression &disp, Scope &scope);
-    std::shared_ptr<ast::Type> infer_object_type(ast::ObjectExpression &obj, Scope &scope);
+    std::shared_ptr<ast::Type> infer_let_type(const ast::LetExpression &let, Scope &scope);
+    std::shared_ptr<ast::Type> infer_loop_type(const ast::WhileExpression &loop, Scope &scope);
+    std::shared_ptr<ast::Type> infer_unary_type(const ast::UnaryExpression &unary, Scope &scope);
+    std::shared_ptr<ast::Type> infer_binary_type(const ast::BinaryExpression &binary, Scope &scope);
+    std::shared_ptr<ast::Type> infer_assign_type(const ast::AssignExpression &assign, Scope &scope);
+    std::shared_ptr<ast::Type> infer_if_type(const ast::IfExpression &branch, Scope &scope);
+    std::shared_ptr<ast::Type> infer_sequence_type(const ast::ListExpression &seq, Scope &scope);
+    std::shared_ptr<ast::Type> infer_cases_type(const ast::CaseExpression &cases, Scope &scope);
+    std::shared_ptr<ast::Type> infer_dispatch_type(const ast::DispatchExpression &disp, Scope &scope);
+    std::shared_ptr<ast::Type> infer_object_type(const ast::ObjectExpression &obj, Scope &scope);
 
     // ----------------------------- Type checking support -----------------------------
     // basic types
@@ -198,46 +198,6 @@ class Semant
     }
 
     /**
-     * @brief Get Int type pointer
-     *
-     * @return Int type pointer
-     */
-    inline static std::shared_ptr<ast::Type> int_type()
-    {
-        return Int;
-    }
-
-    /**
-     * @brief Get Boolean type pointer
-     *
-     * @return Boolean type pointer
-     */
-    inline static std::shared_ptr<ast::Type> bool_type()
-    {
-        return Bool;
-    }
-
-    /**
-     * @brief Get String type pointer
-     *
-     * @return String type pointer
-     */
-    inline static std::shared_ptr<ast::Type> string_type()
-    {
-        return String;
-    }
-
-    /**
-     * @brief Get SELF_TYPE type pointer
-     *
-     * @return SELF_TYPE type pointer
-     */
-    inline static std::shared_ptr<ast::Type> self_type()
-    {
-        return SelfType;
-    }
-
-    /**
      * @brief Get EmptyType type pointer
      *
      * @return EmptyType type pointer
@@ -245,16 +205,6 @@ class Semant
     inline static std::shared_ptr<ast::Type> empty_type()
     {
         return EmptyType;
-    }
-
-    /**
-     * @brief Get Object type pointer
-     *
-     * @return Object type pointer
-     */
-    inline static std::shared_ptr<ast::Type> object_type()
-    {
-        return Object;
     }
 
     /**

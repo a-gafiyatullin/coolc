@@ -2,7 +2,7 @@
 
 void Object_init(void *receiver, void *dispatch_table, int tag)
 {
-    ObjectLayout *object = (ObjectLayout *)receiver;
+    auto *object = static_cast<ObjectLayout *>(receiver);
 
     object->_mark = 0;
     object->_tag = tag;
@@ -14,7 +14,7 @@ void Int_init(void *receiver, void *dispatch_table, int tag)
 {
     Object_init(receiver, dispatch_table, tag);
 
-    IntLayout *integer = (IntLayout *)receiver;
+    auto *integer = static_cast<IntLayout *>(receiver);
 
     integer->_header._size = sizeof(IntLayout);
     integer->_value = 0;

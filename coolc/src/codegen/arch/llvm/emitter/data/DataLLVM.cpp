@@ -34,7 +34,7 @@ DataLLVM::DataLLVM(const std::shared_ptr<KlassBuilder> &builder, llvm::Module &m
     // TODO: alignment?
     construct_base_class(
         _builder->klass(BaseClassesNames[BaseClasses::STRING]),
-        {_classes[semant::Semant::int_type()->_string], llvm::Type::getInt8PtrTy(_module.getContext())},
+        {_classes[BaseClassesNames[BaseClasses::INT]], llvm::Type::getInt8PtrTy(_module.getContext())},
         {runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::ABORT]))->_func,
          runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::TYPE_NAME]))->_func,
          runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::COPY]))->_func,
@@ -53,27 +53,43 @@ DataLLVM::DataLLVM(const std::shared_ptr<KlassBuilder> &builder, llvm::Module &m
          runtime.method(FULL_METHOD_NAME(BaseClasses::IO, IOMethodsNames[IOMethods::IN_INT]))->_func});
 }
 
+llvm::GlobalVariable *DataLLVM::make_disp_table(const std::string &name, llvm::StructType *type,
+                                                const std::vector<llvm::Constant *> &methods)
+{
+    _module.getOrInsertGlobal(name, type);
+
+    auto *const disp_table_global = _module.getNamedGlobal(name);
+    disp_table_global->setInitializer(llvm::ConstantStruct::get(type, methods));
+    // TODO: this linkage id ok?
+    disp_table_global->setLinkage(llvm::GlobalValue::CommonLinkage);
+    // TODO: need allignment?
+    // disp_table_global->setAlignment(llvm::MaybeAlign(WORD_SIZE));
+
+    return disp_table_global;
+}
+
 void DataLLVM::construct_base_class(const std::shared_ptr<Klass> &klass,
                                     const std::vector<llvm::Type *> &additional_fields,
                                     const std::vector<llvm::Constant *> &methods)
 {
-    const std::string &class_name = klass->name();
+    const auto &class_name = klass->name();
     // dispatch table type entries
     std::vector<llvm::Type *> method_types;
     for (const auto &method : methods)
     {
-        method_types.push_back(static_cast<const llvm::Function *>(method)->getFunctionType());
+        method_types.push_back(static_cast<const llvm::Function *>(method)->getType());
     }
 
     // header
     std::vector<llvm::Type *> fields;
     construct_header(klass, fields);
 
+    const auto &disp_tab_name = NameConstructor::disp_table(class_name);
+
     // set dispatch table
     auto *const dispatch_table_type =
-        llvm::StructType::create(_module.getContext(), method_types,
-                                 NameConstructor::disp_table(class_name) + static_cast<std::string>(TYPE_SUFFIX));
-    fields.push_back(dispatch_table_type);
+        llvm::StructType::create(_module.getContext(), method_types, NameConstructor::type(disp_tab_name));
+    fields.push_back(dispatch_table_type->getPointerTo());
 
     // add fields
     fields.insert(fields.end(), additional_fields.begin(), additional_fields.end());
@@ -81,7 +97,9 @@ void DataLLVM::construct_base_class(const std::shared_ptr<Klass> &klass,
     // record class structure and its dispatch table
     _classes.insert(
         {class_name, llvm::StructType::create(_module.getContext(), fields, NameConstructor::prototype(class_name))});
-    _dispatch_tables.insert({class_name, llvm::ConstantStruct::get(dispatch_table_type, methods)});
+
+    // create global variable for dispatch table
+    _dispatch_tables.insert({class_name, make_disp_table(disp_tab_name, dispatch_table_type, methods)});
 }
 
 void DataLLVM::construct_header(const std::shared_ptr<Klass> &klass, std::vector<llvm::Type *> &fields)
@@ -118,21 +136,20 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
 {
     const auto &class_name = klass->name();
 
-    const std::string init_method_name = NameConstructor::init_method(class_name);
+    const auto init_method_name = NameConstructor::init_method(class_name);
     CODEGEN_VERBOSE_ONLY(LOG("Declare init method \"" + init_method_name + "\""));
     // create init method
     // TODO: CommonLinkage is good for such methods?
-    llvm::Function::Create(llvm::FunctionType::get(llvm::Type::getVoidTy(_module.getContext()),
-                                                   {_runtime._void_ptr_type, _runtime._void_ptr_type,
-                                                    llvm::Type::getInt32Ty(_module.getContext())},
-                                                   false),
-                           llvm::Function::CommonLinkage, init_method_name, &_module);
+    llvm::Function::Create(
+        llvm::FunctionType::get(_runtime._void_type,
+                                {_runtime._void_ptr_type, _runtime._void_ptr_type, _runtime._int32_type}, false),
+        llvm::Function::CommonLinkage, init_method_name, &_module);
 
     std::vector<llvm::Type *> method_types;
     std::vector<llvm::Constant *> methods;
 
     for_each(klass->methods_begin(), klass->methods_end(), [this, &methods, &method_types, &klass](const auto &method) {
-        const std::string method_full_name = klass->method_full_name(method.second->_object->_object);
+        const auto method_full_name = klass->method_full_name(method.second->_object->_object);
 
         CODEGEN_VERBOSE_ONLY(LOG_ENTER("declare method \"" + method_full_name + "\""));
 
@@ -147,12 +164,12 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
             const auto &method_formals = std::get<ast::MethodFeature>(method.second->_base);
             for (const auto &formal : method_formals._formals)
             {
-                const std::string &formal_name = formal->_type->_string;
+                const auto &formal_name = formal->_type->_string;
                 CODEGEN_VERBOSE_ONLY(LOG("Formal with type: " + formal_name));
                 args.push_back(class_struct(_builder->klass(formal_name))->getPointerTo());
             }
 
-            const std::string &return_type_name = method.second->_type->_string;
+            const auto &return_type_name = method.second->_type->_string;
             CODEGEN_VERBOSE_ONLY(LOG("Return type: " + return_type_name));
             // TODO: CommonLinkage is good for such methods?
             func = llvm::Function::Create(
@@ -169,34 +186,45 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
 
         CODEGEN_VERBOSE_ONLY(LOG_EXIT("declare method \"" + method_full_name + "\""));
 
-        method_types.push_back(func->getFunctionType());
+        method_types.push_back(func->getType());
         methods.push_back(func);
     });
 
-    auto *const dispatch_table_type =
-        llvm::StructType::create(_module.getContext(), method_types,
-                                 NameConstructor::disp_table(class_name) + static_cast<std::string>(TYPE_SUFFIX));
-    _dispatch_tables.insert({class_name, llvm::ConstantStruct::get(dispatch_table_type, methods)});
+    const auto &disp_tab_name = NameConstructor::disp_table(class_name);
+
+    _dispatch_tables.insert({class_name, make_disp_table(disp_tab_name,
+                                                         llvm::StructType::create(_module.getContext(), method_types,
+                                                                                  NameConstructor::type(disp_tab_name)),
+                                                         methods)});
 }
 
 void DataLLVM::int_const_inner(const int64_t &value)
 {
-    // TODO: are constants unique?
     // TODO: should provide a name?
-    const std::string &class_name = semant::Semant::int_type()->_string;
-    const auto &klass = _builder->klass(class_name);
+    const auto &klass = _builder->klass(BaseClassesNames[BaseClasses::INT]);
+    auto *const int_struct = _classes.at(BaseClassesNames[BaseClasses::INT]);
 
-    // TODO: do we realy need this "true" in getElementType?
-    llvm::StructType *integer_struct = _classes.at(class_name);
-    _int_constants.insert(
-        {value, llvm::ConstantStruct::get(
-                    integer_struct,
-                    {llvm::ConstantInt::get(integer_struct->getElementType(HeaderLayout::Mark), 0, true),
-                     llvm::ConstantInt::get(integer_struct->getElementType(HeaderLayout::Tag), klass->tag(), true),
-                     llvm::ConstantInt::get(integer_struct->getElementType(HeaderLayout::Size), klass->size(), true),
-                     _dispatch_tables.at(class_name),
-                     llvm::ConstantInt::get(integer_struct->getElementType(HeaderLayout::DispatchTable + 1), value,
-                                            true)})}); // value field
+    const auto const_name = NameConstructor::int_constant();
+    // make global for constant
+    _module.getOrInsertGlobal(const_name, int_struct);
+
+    auto *const const_global = _module.getNamedGlobal(const_name);
+    const_global->setInitializer(llvm::ConstantStruct::get(
+        int_struct,
+        // TODO: do we realy need this "true" in getElementType?
+        llvm::ConstantStruct::get(
+            int_struct, {llvm::ConstantInt::get(int_struct->getElementType(HeaderLayout::Mark), 0, true),
+                         llvm::ConstantInt::get(int_struct->getElementType(HeaderLayout::Tag), klass->tag(), true),
+                         llvm::ConstantInt::get(int_struct->getElementType(HeaderLayout::Size), klass->size(), true),
+                         _dispatch_tables.at(BaseClassesNames[BaseClasses::INT]),
+                         llvm::ConstantInt::get(int_struct->getElementType(HeaderLayout::DispatchTable + 1), value,
+                                                true)}))); // value field
+    // TODO: this linkage id ok?
+    const_global->setLinkage(llvm::GlobalValue::CommonLinkage);
+    // TODO: need allignment?
+    // const_global->setAlignment(WORD_SIZE / 2);
+
+    _int_constants.insert({value, const_global});
 }
 
 void DataLLVM::string_const_inner(const std::string &str)

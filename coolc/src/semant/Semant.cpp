@@ -10,7 +10,7 @@ std::shared_ptr<ast::Program> Semant::merge_to_one_program(const std::vector<std
         return nullptr;
     }
 
-    auto program = std::make_shared<ast::Program>();
+    const auto program = std::make_shared<ast::Program>();
     program->_line_number = programs.at(0)->_line_number;
 
     for (const auto &p : programs)
@@ -32,7 +32,7 @@ std::shared_ptr<ClassNode> Semant::create_basic_class(
     const std::vector<std::pair<std::string, std::vector<std::string>>> &methods,
     const std::vector<std::shared_ptr<ast::Type>> &fields)
 {
-    auto klass = std::make_shared<ClassNode>();
+    const auto klass = std::make_shared<ClassNode>();
     klass->_class = std::make_shared<ast::Class>();
     klass->_class->_type = std::make_shared<ast::Type>();
     klass->_class->_parent = std::make_shared<ast::Type>();
@@ -41,7 +41,7 @@ std::shared_ptr<ClassNode> Semant::create_basic_class(
     klass->_class->_parent->_string = parent;
     for (const auto &m : methods)
     {
-        auto feature = std::make_shared<ast::Feature>();
+        const auto feature = std::make_shared<ast::Feature>();
         feature->_base = ast::MethodFeature();
 
         // method name
@@ -54,7 +54,7 @@ std::shared_ptr<ClassNode> Semant::create_basic_class(
         feature->_type->_string = m.second.front();
 
         // method args
-        for (int i = 1; i < m.second.size(); i++)
+        for (auto i = 1; i < m.second.size(); i++)
         {
             // formal name
             std::get<ast::MethodFeature>(feature->_base)._formals.push_back(std::make_shared<ast::Formal>());
@@ -74,7 +74,7 @@ std::shared_ptr<ClassNode> Semant::create_basic_class(
     // add fields
     for (const auto &f : fields)
     {
-        auto feature = std::make_shared<ast::Feature>();
+        const auto feature = std::make_shared<ast::Feature>();
         feature->_base = ast::AttrFeature();
 
         feature->_object = std::make_shared<ast::ObjectExpression>();
@@ -141,11 +141,11 @@ bool Semant::check_class_hierarchy()
                                           "Class " + class_name + " was previously defined.", klass->_line_number,
                                           false);
 
-        auto new_class = std::make_shared<ClassNode>();
+        const auto new_class = std::make_shared<ClassNode>();
         new_class->_class = klass;
         _classes.insert({class_name, new_class});
 
-        auto parent = _classes.find(klass->_parent->_string);
+        const auto parent = _classes.find(klass->_parent->_string);
         if (parent == _classes.end())
         {
             delayed_parent.push_back(new_class);
@@ -167,7 +167,7 @@ bool Semant::check_class_hierarchy()
         _error_file_name = klass->_class->_file_name; // for error
         const auto &parent_class_name = klass->_class->_parent->_string;
 
-        auto parent = _classes.find(parent_class_name);
+        const auto parent = _classes.find(parent_class_name);
         SEMANT_RETURN_IF_FALSE_WITH_ERROR(parent != _classes.end(),
                                           "Class " + klass->_class->_type->_string +
                                               " inherits from an undefined class " + parent_class_name + ".",
@@ -181,8 +181,8 @@ bool Semant::check_class_hierarchy()
         visited.insert({klass.first, -1});
     }
 
-    int loop_num = 0;
-    int cycle_num = 1;
+    auto loop_num = 0;
+    auto cycle_num = 1;
     for (const auto &klass : _classes)
     {
         if (visited[klass.first] != -1)
@@ -225,9 +225,9 @@ bool Semant::check_main()
 {
     SEMANT_VERBOSE_ONLY(LOG_ENTER("check main"));
 
-    bool found_main = false;
+    auto found_main = false;
 
-    auto main_class = _classes.find(MainClassName);
+    const auto main_class = _classes.find(MainClassName);
     SEMANT_RETURN_IF_FALSE_WITH_ERROR(main_class != _classes.end(), "Class Main is not defined.", -1, false);
 
     for (const auto &feature : main_class->second->_class->_features)
@@ -341,7 +341,7 @@ bool Semant::check_expression_in_method(const std::shared_ptr<ast::Feature> &fea
 
     scope.push_scope();
 
-    const ast::MethodFeature &this_method = std::get<ast::MethodFeature>(feature->_base);
+    const auto &this_method = std::get<ast::MethodFeature>(feature->_base);
     const auto &klass = _classes[_current_class->_string]->_class;
 
     // return type is defined
@@ -369,7 +369,7 @@ bool Semant::check_expression_in_method(const std::shared_ptr<ast::Feature> &fea
                                           feature->_line_number, false);
     }
 
-    int formal_num = 0;
+    auto formal_num = 0;
     // add formal parameters to scope and check method overriding
     for (const auto &formal : this_method._formals)
     {
@@ -546,28 +546,35 @@ bool Semant::infer_expression_type(const std::shared_ptr<ast::Expression> &expr,
 {
     expr->_type = std::visit(
         ast::overloaded{
-            [&](ast::BoolExpression &bool_expr) -> std::shared_ptr<ast::Type> { return Bool; },
-            [&](ast::StringExpression &str) -> std::shared_ptr<ast::Type> { return String; },
-            [&](ast::IntExpression &number) -> std::shared_ptr<ast::Type> { return Int; },
-            [&](ast::ObjectExpression &object) -> std::shared_ptr<ast::Type> {
+            // TODO: do we really need to specify return type?
+            [&](const ast::BoolExpression &bool_expr) -> std::shared_ptr<ast::Type> { return Bool; },
+            [&](const ast::StringExpression &str) -> std::shared_ptr<ast::Type> { return String; },
+            [&](const ast::IntExpression &number) -> std::shared_ptr<ast::Type> { return Int; },
+            [&](const ast::ObjectExpression &object) -> std::shared_ptr<ast::Type> {
                 return infer_object_type(object, scope);
             },
-            [&](ast::BinaryExpression &binary_expr) -> std::shared_ptr<ast::Type> {
+            [&](const ast::BinaryExpression &binary_expr) -> std::shared_ptr<ast::Type> {
                 return infer_binary_type(binary_expr, scope);
             },
-            [&](ast::UnaryExpression &unary_expr) -> std::shared_ptr<ast::Type> {
+            [&](const ast::UnaryExpression &unary_expr) -> std::shared_ptr<ast::Type> {
                 return infer_unary_type(unary_expr, scope);
             },
-            [&](ast::NewExpression &alloc) -> std::shared_ptr<ast::Type> { return infer_new_type(alloc); },
-            [&](ast::CaseExpression &branch) -> std::shared_ptr<ast::Type> { return infer_cases_type(branch, scope); },
-            [&](ast::LetExpression &let) -> std::shared_ptr<ast::Type> { return infer_let_type(let, scope); },
-            [&](ast::ListExpression &list) -> std::shared_ptr<ast::Type> { return infer_sequence_type(list, scope); },
-            [&](ast::WhileExpression &loop) -> std::shared_ptr<ast::Type> { return infer_loop_type(loop, scope); },
-            [&](ast::IfExpression &branch) -> std::shared_ptr<ast::Type> { return infer_if_type(branch, scope); },
-            [&](ast::DispatchExpression &dispatch) -> std::shared_ptr<ast::Type> {
+            [&](const ast::NewExpression &alloc) -> std::shared_ptr<ast::Type> { return infer_new_type(alloc); },
+            [&](const ast::CaseExpression &branch) -> std::shared_ptr<ast::Type> {
+                return infer_cases_type(branch, scope);
+            },
+            [&](const ast::LetExpression &let) -> std::shared_ptr<ast::Type> { return infer_let_type(let, scope); },
+            [&](const ast::ListExpression &list) -> std::shared_ptr<ast::Type> {
+                return infer_sequence_type(list, scope);
+            },
+            [&](const ast::WhileExpression &loop) -> std::shared_ptr<ast::Type> {
+                return infer_loop_type(loop, scope);
+            },
+            [&](const ast::IfExpression &branch) -> std::shared_ptr<ast::Type> { return infer_if_type(branch, scope); },
+            [&](const ast::DispatchExpression &dispatch) -> std::shared_ptr<ast::Type> {
                 return infer_dispatch_type(dispatch, scope);
             },
-            [&](ast::AssignExpression &assign) -> std::shared_ptr<ast::Type> {
+            [&](const ast::AssignExpression &assign) -> std::shared_ptr<ast::Type> {
                 return infer_assign_type(assign, scope);
             }},
         expr->_data);
@@ -581,7 +588,7 @@ bool Semant::infer_expression_type(const std::shared_ptr<ast::Expression> &expr,
 }
 
 // -------------------------------------- Infer Expression Type Helpers --------------------------------------
-std::shared_ptr<ast::Type> Semant::infer_object_type(ast::ObjectExpression &obj, Scope &scope)
+std::shared_ptr<ast::Type> Semant::infer_object_type(const ast::ObjectExpression &obj, Scope &scope)
 {
     const auto expr = scope.find(obj._object);
     SEMANT_RETURN_IF_FALSE_WITH_ERROR(expr, "Undeclared identifier " + obj._object + ".", -1, nullptr);
@@ -591,7 +598,7 @@ std::shared_ptr<ast::Type> Semant::infer_object_type(ast::ObjectExpression &obj,
 
 std::shared_ptr<ast::Type> Semant::infer_new_type(const ast::NewExpression &alloc)
 {
-    const auto type = alloc._type;
+    const auto &type = alloc._type;
 
     SEMANT_VERBOSE_ONLY(LOG_ENTER("NEW"));
 
@@ -603,7 +610,7 @@ std::shared_ptr<ast::Type> Semant::infer_new_type(const ast::NewExpression &allo
     return type;
 }
 
-std::shared_ptr<ast::Type> Semant::infer_let_type(ast::LetExpression &let, Scope &scope)
+std::shared_ptr<ast::Type> Semant::infer_let_type(const ast::LetExpression &let, Scope &scope)
 {
     const auto &var_type = let._type;
     const auto &var_name = let._object->_object;
@@ -638,7 +645,7 @@ std::shared_ptr<ast::Type> Semant::infer_let_type(ast::LetExpression &let, Scope
     return let._body_expr->_type;
 }
 
-std::shared_ptr<ast::Type> Semant::infer_loop_type(ast::WhileExpression &loop, Scope &scope)
+std::shared_ptr<ast::Type> Semant::infer_loop_type(const ast::WhileExpression &loop, Scope &scope)
 {
     SEMANT_VERBOSE_ONLY(LOG_ENTER("LOOP"));
 
@@ -652,7 +659,7 @@ std::shared_ptr<ast::Type> Semant::infer_loop_type(ast::WhileExpression &loop, S
     return Object;
 }
 
-std::shared_ptr<ast::Type> Semant::infer_unary_type(ast::UnaryExpression &unary, Scope &scope)
+std::shared_ptr<ast::Type> Semant::infer_unary_type(const ast::UnaryExpression &unary, Scope &scope)
 {
     SEMANT_VERBOSE_ONLY(LOG_ENTER("UNARY"));
 
@@ -681,7 +688,7 @@ std::shared_ptr<ast::Type> Semant::infer_unary_type(ast::UnaryExpression &unary,
     return result;
 }
 
-std::shared_ptr<ast::Type> Semant::infer_binary_type(ast::BinaryExpression &binary, Scope &scope)
+std::shared_ptr<ast::Type> Semant::infer_binary_type(const ast::BinaryExpression &binary, Scope &scope)
 {
     SEMANT_VERBOSE_ONLY(LOG_ENTER("BINARY"));
 
@@ -749,14 +756,14 @@ std::shared_ptr<ast::Type> Semant::infer_binary_type(ast::BinaryExpression &bina
     return result;
 }
 
-std::shared_ptr<ast::Type> Semant::infer_assign_type(ast::AssignExpression &assign, Scope &scope)
+std::shared_ptr<ast::Type> Semant::infer_assign_type(const ast::AssignExpression &assign, Scope &scope)
 {
     SEMANT_VERBOSE_ONLY(LOG_ENTER("ASSIGN"));
 
     SEMANT_RETURN_IF_FALSE(infer_expression_type(assign._expr, scope), nullptr);
 
     const auto &var_name = assign._object->_object;
-    const auto expr_type = assign._expr->_type;
+    const auto &expr_type = assign._expr->_type;
 
     std::shared_ptr<ast::Type> var_type = nullptr;
     SEMANT_RETURN_IF_FALSE_WITH_ERROR(var_type = scope.find(var_name),
@@ -773,7 +780,7 @@ std::shared_ptr<ast::Type> Semant::infer_assign_type(ast::AssignExpression &assi
     return expr_type;
 }
 
-std::shared_ptr<ast::Type> Semant::infer_if_type(ast::IfExpression &branch, Scope &scope)
+std::shared_ptr<ast::Type> Semant::infer_if_type(const ast::IfExpression &branch, Scope &scope)
 {
     SEMANT_VERBOSE_ONLY(LOG_ENTER("IF"));
 
@@ -791,7 +798,7 @@ std::shared_ptr<ast::Type> Semant::infer_if_type(ast::IfExpression &branch, Scop
     return find_common_ancestor({true_branch->_type, false_branch->_type});
 }
 
-std::shared_ptr<ast::Type> Semant::infer_sequence_type(ast::ListExpression &seq, Scope &scope)
+std::shared_ptr<ast::Type> Semant::infer_sequence_type(const ast::ListExpression &seq, Scope &scope)
 {
     SEMANT_VERBOSE_ONLY(LOG_ENTER("SEQUENCE"));
 
@@ -804,7 +811,7 @@ std::shared_ptr<ast::Type> Semant::infer_sequence_type(ast::ListExpression &seq,
     return seq._exprs.back()->_type;
 }
 
-std::shared_ptr<ast::Type> Semant::infer_cases_type(ast::CaseExpression &cases, Scope &scope)
+std::shared_ptr<ast::Type> Semant::infer_cases_type(const ast::CaseExpression &cases, Scope &scope)
 {
     SEMANT_VERBOSE_ONLY(LOG_ENTER("CASE"));
 
@@ -847,11 +854,11 @@ std::shared_ptr<ast::Type> Semant::infer_cases_type(ast::CaseExpression &cases, 
     return find_common_ancestor(classes);
 }
 
-std::shared_ptr<ast::Type> Semant::infer_dispatch_type(ast::DispatchExpression &disp, Scope &scope)
+std::shared_ptr<ast::Type> Semant::infer_dispatch_type(const ast::DispatchExpression &disp, Scope &scope)
 {
     SEMANT_VERBOSE_ONLY(LOG_ENTER("DISPATCH"));
 
-    bool is_static = std::holds_alternative<ast::StaticDispatchExpression>(disp._base);
+    const auto is_static = std::holds_alternative<ast::StaticDispatchExpression>(disp._base);
 
     SEMANT_RETURN_IF_FALSE(infer_expression_type(disp._expr, scope), nullptr);
 
@@ -878,10 +885,10 @@ std::shared_ptr<ast::Type> Semant::infer_dispatch_type(ast::DispatchExpression &
 
     const auto feature = find_method(method_name, exact_type(dispatch_expr_type), false);
     SEMANT_RETURN_IF_FALSE_WITH_ERROR(feature, "Dispatch to undefined method " + method_name + ".", -1, nullptr);
-    const auto method = std::get<ast::MethodFeature>(feature->_base);
+    const auto &method = std::get<ast::MethodFeature>(feature->_base);
 
     SEMANT_RETURN_IF_FALSE_WITH_ERROR(method._formals.size() == disp._args.size(), "", 0, nullptr);
-    for (int i = 0; i < disp._args.size(); i++)
+    for (auto i = 0; i < disp._args.size(); i++)
     {
         const auto &arg = disp._args[i];
         const auto &formal = method._formals[i];
@@ -931,7 +938,7 @@ std::shared_ptr<ast::Type> Semant::find_common_ancestor(const std::vector<std::s
 {
     auto lca = exact_type(classes[0]);
     // if all classes are SELF_TYPE, so LCA is SELF_TYPE
-    bool all_self_type = is_self_type(classes[0]);
+    auto all_self_type = is_self_type(classes[0]);
 
     for (int i = 1; i < classes.size(); i++)
     {
@@ -952,7 +959,7 @@ std::shared_ptr<ast::Type> Semant::find_common_ancestor(const std::vector<std::s
 std::shared_ptr<ast::Type> Semant::find_common_ancestor_of_two(const std::shared_ptr<ast::Type> &t1,
                                                                const std::shared_ptr<ast::Type> &t2) const
 {
-    int h1 = 0, h2 = 0;
+    auto h1 = 0, h2 = 0;
 
     auto t1_par = t1;
     auto t2_par = t2;

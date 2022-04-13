@@ -6,7 +6,7 @@ std::string get_printable_string(const std::string &str)
 {
     // transform escape sequencies
     std::string str_for_out;
-    for (int i = 0; i < str.size(); i++)
+    for (auto i = 0; i < str.size(); i++)
     {
         std::string ch = str.substr(i, 1);
         switch (str[i])

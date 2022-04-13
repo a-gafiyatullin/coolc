@@ -12,7 +12,7 @@ const std::vector<std::string> Token::TOKEN_TYPE_TO_STR = {
 #ifdef DEBUG
 std::string Token::to_string() const
 {
-    std::string out = "#" + std::to_string(_line_number) + " ";
+    auto out = "#" + std::to_string(_line_number) + " ";
     if (_type >= SEMICOLON && _type <= COMMA)
     {
         out += "\'" + _lexeme + "\'";
@@ -74,7 +74,7 @@ const std::unordered_map<std::string, Token::TokenType> Token::STR_TO_TOKEN_TYPE
 
 bool Token::is_boolean(const std::string &str)
 {
-    std::string str_in_lowercase = str;
+    auto str_in_lowercase = str;
     if (str[0] != 'f' && str[0] != 't')
     {
         return false;

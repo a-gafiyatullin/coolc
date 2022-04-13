@@ -76,8 +76,8 @@ void Klass::dump_methods() const
         LOG_NO_CR(m.second->_type->_string + " " + m.first->_string + "::" + m.second->_object->_object + "(");
 
         const auto &formals = std::get<ast::MethodFeature>(m.second->_base)._formals;
-        int n = 0;
-        const size_t formals_num = formals.size();
+        auto n = 0;
+        const auto formals_num = formals.size();
         for (const auto &f : formals)
         {
             n++;
@@ -99,17 +99,15 @@ int KlassBuilder::build_klass(const std::shared_ptr<semant::ClassNode> &node, co
 
     _klasses.insert({klass->_type->_string, create_klass(klass)});
 
-    int this_class_tag = tag;
-    int child_max_tag = tag;
+    auto child_max_tag = tag;
     for (const auto &node : node->_children)
     {
         child_max_tag = build_klass(node, child_max_tag + 1);
     }
 
-    _klasses[klass->_type->_string]->set_tags(this_class_tag, child_max_tag);
+    _klasses[klass->_type->_string]->set_tags(tag, child_max_tag);
 
-    CODEGEN_VERBOSE_ONLY(
-        LOG("Set tags: (" + std::to_string(this_class_tag) + ", " + std::to_string(child_max_tag) + ")"););
+    CODEGEN_VERBOSE_ONLY(LOG("Set tags: (" + std::to_string(tag) + ", " + std::to_string(child_max_tag) + ")"););
 
     CODEGEN_VERBOSE_ONLY(LOG_EXIT("BUILD KLASS FOR " + klass->_type->_string + "."));
     return child_max_tag;

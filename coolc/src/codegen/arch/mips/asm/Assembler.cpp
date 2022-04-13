@@ -202,8 +202,8 @@ void Assembler::encode_string(const std::string &str)
         return;
     }
 
-    auto match_begin = std::sregex_iterator(str.begin(), str.end(), SPECIAL_SYMBOLS_REGEX);
-    auto match_end = std::sregex_iterator();
+    const auto match_begin = std::sregex_iterator(str.begin(), str.end(), SPECIAL_SYMBOLS_REGEX);
+    const auto match_end = std::sregex_iterator();
 
     // it is normal string
     if (match_begin == match_end)
@@ -220,7 +220,7 @@ void Assembler::encode_string(const std::string &str)
 
         byte(SPECIAL_SYMBOLS.at(this_match->str())); // encode special symbols in bytes
 
-        const int start_pos = this_match->position() + this_match->str().length();
+        const auto start_pos = this_match->position() + this_match->str().length();
         // the rest of the string up to the next special symbol encode in ascii
         if (next_match != match_end && next_match->position() != this_match->position() + this_match->str().length())
         {
@@ -310,13 +310,13 @@ void Assembler::dump()
 // ----------------------------------------------- AssemblerMarkSection -----------------------------------------------
 AssemblerMarkSection::AssemblerMarkSection(Assembler &assembler, const Label &label)
 {
-    const std::string label_name = static_cast<std::string>(label);
+    const auto label_name = static_cast<std::string>(label);
     assembler._code.save(label_name + ":");
 
     GUARANTEE_DEBUG(Assembler::UsedLabels.find(label_name) != Assembler::UsedLabels.end());
 
     // label was binded
-    auto label_ptr = Assembler::UsedLabels.find(label_name);
+    const auto label_ptr = Assembler::UsedLabels.find(label_name);
     if (label_ptr->second)
     {
         CODEGEN_VERBOSE_ONLY(LOG("Label " + label_name + " has been already binded!"));

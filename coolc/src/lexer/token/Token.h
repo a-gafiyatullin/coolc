@@ -92,7 +92,7 @@ class Token
      * @param str Lexeme
      * @return Token type for lexeme
      */
-    inline static TokenType str_to_token(const std::string &str)
+    inline static const TokenType &str_to_token(const std::string &str)
     {
         return STR_TO_TOKEN_TYPE.find(str)->second;
     }
@@ -176,7 +176,7 @@ class Token
      *
      * @return String for type
      */
-    inline std::string type_as_str() const
+    inline const std::string &type_as_str() const
     {
         return TOKEN_TYPE_TO_STR[_type];
     }
@@ -186,7 +186,7 @@ class Token
      *
      * @return Line number
      */
-    inline int line_number() const
+    inline const int &line_number() const
     {
         return _line_number;
     }
@@ -207,7 +207,7 @@ class Token
      *
      * @return Lexeme
      */
-    inline std::string value() const
+    inline const std::string &value() const
     {
         return _lexeme;
     }
@@ -217,7 +217,7 @@ class Token
      *
      * @return Type
      */
-    inline TokenType type() const
+    inline const TokenType &type() const
     {
         return _type;
     }

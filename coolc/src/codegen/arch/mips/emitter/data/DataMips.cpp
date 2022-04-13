@@ -7,12 +7,12 @@ using namespace codegen;
 
 void DataMips::string_const_inner(const std::string &str)
 {
-    const Label &size_label = int_const(str.length());
+    const auto &size_label = int_const(str.length());
     _string_constants.insert({str, Label(NameConstructor::string_constant())});
 
     __ word(-1);
 
-    const auto &string_klass = _builder->klass(semant::Semant::string_type()->_string);
+    const auto &string_klass = _builder->klass(BaseClassesNames[BaseClasses::STRING]);
 
     const AssemblerMarkSection mark(_asm, _string_constants.find(str)->second);
     __ word(string_klass->tag());
@@ -31,7 +31,7 @@ void DataMips::bool_const_inner(const bool &value)
 
     __ word(-1);
 
-    const auto &bool_klass = _builder->klass(semant::Semant::bool_type()->_string);
+    const auto &bool_klass = _builder->klass(BaseClassesNames[BaseClasses::BOOL]);
 
     const AssemblerMarkSection mark(_asm, _bool_constants.find(value)->second);
     __ word(bool_klass->tag());
@@ -46,7 +46,7 @@ void DataMips::int_const_inner(const int64_t &value)
 
     __ word(-1);
 
-    const auto &int_klass = _builder->klass(semant::Semant::int_type()->_string);
+    const auto &int_klass = _builder->klass(BaseClassesNames[BaseClasses::INT]);
 
     const AssemblerMarkSection mark(_asm, _int_constants.find(value)->second);
     __ word(int_klass->tag());
@@ -83,7 +83,7 @@ void DataMips::gen_class_obj_tab()
 
     for (const auto &klass : _builder->klasses())
     {
-        const std::string &class_name = klass->name();
+        const auto &class_name = klass->name();
         __ word(Label(NameConstructor::prototype(class_name)));
         __ word(Label(NameConstructor::init_method(class_name)));
     }
@@ -131,17 +131,17 @@ DataMips::DataMips(const std::shared_ptr<KlassBuilder> &builder, const RuntimeMi
     // now create tags for basic types
     {
         const AssemblerMarkSection mark(_asm, int_tag);
-        __ word(_builder->tag(semant::Semant::int_type()->_string));
+        __ word(_builder->tag(BaseClassesNames[BaseClasses::INT]));
     }
 
     {
         const AssemblerMarkSection mark(_asm, bool_tag);
-        __ word(_builder->tag(semant::Semant::bool_type()->_string));
+        __ word(_builder->tag(BaseClassesNames[BaseClasses::BOOL]));
     }
 
     {
         const AssemblerMarkSection mark(_asm, string_tag);
-        __ word(_builder->tag(semant::Semant::string_type()->_string));
+        __ word(_builder->tag(BaseClassesNames[BaseClasses::STRING]));
     }
 
     // Generational GC Interface
@@ -191,7 +191,7 @@ void DataMips::emit_inner(const std::string &out_file_name)
 
 void DataMips::class_struct_inner(const std::shared_ptr<Klass> &klass)
 {
-    const std::string &class_name = klass->name();
+    const auto &class_name = klass->name();
 
     _classes.insert({class_name, Label(NameConstructor::prototype(class_name))});
 
@@ -218,14 +218,14 @@ void DataMips::class_struct_inner(const std::shared_ptr<Klass> &klass)
 
 void DataMips::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
 {
-    const std::string &class_name = klass->name();
+    const auto &class_name = klass->name();
 
     _dispatch_tables.insert({class_name, Label(NameConstructor::disp_table(class_name))});
 
     const AssemblerMarkSection mark(_asm, _dispatch_tables.find(class_name)->second);
     const auto &mips_klass = std::static_pointer_cast<KlassMips>(klass);
 
-    for (int i = 0; i < mips_klass->methods_num(); i++)
+    for (auto i = 0; i < mips_klass->methods_num(); i++)
     {
         __ word(Label(mips_klass->method_full_name(i)));
     }

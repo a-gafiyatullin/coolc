@@ -79,7 +79,7 @@ template <class T> void SymbolTable<T>::add_symbol(const std::string &name, cons
 template <class T> T &SymbolTable<T>::symbol(const std::string &symbol)
 {
     // search in reverse order
-    for (int i = _symbols.size() - 1; i >= 0; i--)
+    for (auto i = _symbols.size() - 1; i >= 0; i--)
     {
         const auto symbol_ptr = _symbols[i].find(symbol);
         if (symbol_ptr != _symbols[i].end())

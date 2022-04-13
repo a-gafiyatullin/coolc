@@ -9,7 +9,7 @@ namespace codegen
  * @brief Maintain constants
  *
  */
-template <class Value, class ClassDesc = Value, class DispTableDesc = Value> class Data
+template <class Value, class ClassDesc = Value> class Data
 {
   protected:
     const std::shared_ptr<KlassBuilder> _builder;
@@ -20,7 +20,7 @@ template <class Value, class ClassDesc = Value, class DispTableDesc = Value> cla
     std::unordered_map<int64_t, std::remove_cvref_t<Value>> _int_constants;
 
     std::unordered_map<std::string, std::remove_cvref_t<ClassDesc>> _classes;
-    std::unordered_map<std::string, std::remove_cvref_t<DispTableDesc>> _dispatch_tables;
+    std::unordered_map<std::string, std::remove_cvref_t<Value>> _dispatch_tables;
 
     virtual void string_const_inner(const std::string &str) = 0;
     virtual void bool_const_inner(const bool &value) = 0;
@@ -79,7 +79,7 @@ template <class Value, class ClassDesc = Value, class DispTableDesc = Value> cla
      * @param klass High-level class handle
      * @return Dispatch table handle
      */
-    DispTableDesc class_disp_tab(const std::shared_ptr<Klass> &klass);
+    Value class_disp_tab(const std::shared_ptr<Klass> &klass);
 
     /**
      * @brief Create initial value for a given type

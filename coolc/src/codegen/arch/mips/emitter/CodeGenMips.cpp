@@ -44,7 +44,7 @@ void CodeGenMips::add_fields()
     const auto &this_klass = _builder->klass(_current_class->_type->_string);
     for (auto field = this_klass->fields_begin(); field != this_klass->fields_end(); field++)
     {
-        const std::string &name = (*field)->_object->_object;
+        const auto &name = (*field)->_object->_object;
         const auto offset = this_klass->field_offset(field - this_klass->fields_begin());
         // save fields to local symbol table for further CodeGenMips
         Symbol s(Symbol::FIELD, offset);
@@ -59,7 +59,7 @@ void CodeGenMips::emit_binary_expr_inner(const ast::BinaryExpression &expr)
     __ push(_a0);
     emit_expr(expr._rhs);
 
-    bool logical_result = false;
+    auto logical_result = false;
     const Register t1(Register::$t1); // allocate new temp reg
     const Register t2(Register::$t2);
     const Register t5(Register::$t5);
@@ -154,7 +154,7 @@ void CodeGenMips::emit_unary_expr_inner(const ast::UnaryExpression &expr)
 {
     emit_expr(expr._expr);
 
-    bool logical_result = false;
+    auto logical_result = false;
     // result in acc
     const Register t5(Register::$t5);
     std::visit(ast::overloaded{[&](const ast::IsVoidExpression &isvoid) {
@@ -255,8 +255,8 @@ void CodeGenMips::emit_class_init_method_inner()
 
 void CodeGenMips::emit_class_method_inner(const std::shared_ptr<ast::Feature> &method)
 {
-    const std::string &class_name = _current_class->_type->_string;
-    const std::string &method_name = method->_object->_object;
+    const auto &class_name = _current_class->_type->_string;
+    const auto &method_name = method->_object->_object;
 
     // it is dummies for basic classes. There are external symbols
     if (semant::Semant::is_basic_type(_current_class->_type))
@@ -272,10 +272,10 @@ void CodeGenMips::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
     // add formals to symbol table
     _table.push_scope();
     const auto &params = std::get<ast::MethodFeature>(method->_base)._formals;
-    const int params_num = params.size();
-    for (int i = 0; i < params_num; i++)
+    const auto params_num = params.size();
+    for (auto i = 0; i < params_num; i++)
     {
-        const uint32_t offset = (params_num - i) * WORD_SIZE;
+        const auto offset = (params_num - i) * WORD_SIZE;
 
         Symbol s(Symbol::LOCAL, offset);
         _table.add_symbol(params[i]->_object->_object, s); // map formal parameters to arguments
@@ -387,8 +387,8 @@ void CodeGenMips::emit_cases_expr_inner(const ast::CaseExpression &expr)
 {
     emit_expr(expr._expr);
 
-    std::string case_branch_name = NameConstructor::true_branch();
-    const std::string no_branch_name = NameConstructor::false_branch();
+    auto case_branch_name = NameConstructor::true_branch();
+    const auto no_branch_name = NameConstructor::false_branch();
     const Label continue_label(NameConstructor::merge_block());
 
     // in brackets because we want to deallocate t1 before next expressions emitting
@@ -404,14 +404,13 @@ void CodeGenMips::emit_cases_expr_inner(const ast::CaseExpression &expr)
 
     // we want to generate code for the the most precise cases first, so sort cases by tag
     auto cases = expr._cases;
-    std::sort(cases.begin(), cases.end(),
-              [&](const std::shared_ptr<ast::Case> &case_a, const std::shared_ptr<ast::Case> &case_b) {
-                  return _builder->tag(case_b->_type->_string) < _builder->tag(case_a->_type->_string);
-              });
+    std::sort(cases.begin(), cases.end(), [&](const auto &case_a, const auto &case_b) {
+        return _builder->tag(case_b->_type->_string) < _builder->tag(case_a->_type->_string);
+    });
 
     // no, it is not void
     // Last case is a special case: branch to abort
-    for (int i = 0; i < cases.size(); i++)
+    for (auto i = 0; i < cases.size(); i++)
     {
         const AssemblerMarkSection mark(_asm, Label(case_branch_name));
         {
@@ -504,10 +503,10 @@ void CodeGenMips::emit_if_expr_inner(const ast::IfExpression &expr)
 void CodeGenMips::emit_dispatch_expr_inner(const ast::DispatchExpression &expr)
 {
     // put all args on stack. Callee have to get rid of them
-    const int args_num = expr._args.size();
+    const auto args_num = expr._args.size();
     // allocate space
     __ addiu(__ sp(), __ sp(), -(args_num * WORD_SIZE));
-    for (int i = 0; i < args_num; i++)
+    for (auto i = 0; i < args_num; i++)
     {
         emit_expr(expr._args[i]);
         __ sw(_a0, __ sp(), (args_num - i) * WORD_SIZE);
@@ -519,7 +518,7 @@ void CodeGenMips::emit_dispatch_expr_inner(const ast::DispatchExpression &expr)
     const Register t1(Register::$t1);
     __ beq(_a0, __ zero(), dispatch_to_void_label);
 
-    const std::string &method_name = expr._object->_object;
+    const auto &method_name = expr._object->_object;
     // not void
     std::visit(
         ast::overloaded{

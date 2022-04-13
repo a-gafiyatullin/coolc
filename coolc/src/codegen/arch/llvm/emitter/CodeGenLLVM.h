@@ -3,6 +3,7 @@
 #include "codegen/arch/llvm/runtime/RuntimeLLVM.h"
 #include "codegen/arch/llvm/symtab/SymbolTableLLVM.h"
 #include "codegen/emitter/CodeGen.h"
+#include <iostream>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Support/TargetRegistry.h>

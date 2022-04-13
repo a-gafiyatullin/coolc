@@ -63,11 +63,11 @@ void Lexer::append_to_string_if_can(std::string &prefix, const std::string &suff
 Token Lexer::match_string(const std::string &start_string)
 {
 
-    bool escape = false;
+    auto escape = false;
     std::string error_msg;
     int error_line_num;
 
-    std::string processed_string = start_string;
+    auto processed_string = start_string;
     std::string builded_string;
 
     while (true)
@@ -120,7 +120,7 @@ Token Lexer::match_string(const std::string &start_string)
             }
             else
             {
-                std::string ch = processed_string.substr(0, 1);
+                auto ch = processed_string.substr(0, 1);
                 switch (processed_string[0])
                 {
                 case 'n':
@@ -149,7 +149,7 @@ Token Lexer::match_string(const std::string &start_string)
         std::smatch matches;
         if (std::regex_search(processed_string, matches, STR_SYMBOLS_REGEX))
         {
-            int ch = processed_string[matches.position(0)];
+            const auto ch = processed_string[matches.position(0)];
 
             append_to_string_if_can(builded_string, processed_string.substr(0, matches.position(0)), error_msg,
                                     error_line_num);
@@ -197,8 +197,8 @@ Token Lexer::match_string(const std::string &start_string)
 
 std::optional<Token> Lexer::skip_comment(const std::string &start_string)
 {
-    std::string processed_string = start_string;
-    int comm_level = 1;
+    auto processed_string = start_string;
+    auto comm_level = 1;
 
     while (true)
     {
@@ -218,11 +218,11 @@ std::optional<Token> Lexer::skip_comment(const std::string &start_string)
         std::smatch matches;
         if (std::regex_search(processed_string, matches, COMM_SYMBOLS_REGEX))
         {
-            for (int i = 0; i < matches.size(); i++)
+            for (auto i = 0; i < matches.size(); i++)
             {
                 LEXER_VERBOSE_ONLY(LOG(LEXER_LOG_MATCH("controls", matches[i], matches.position(i))));
 
-                char ch = processed_string[matches.position(i)];
+                const auto ch = processed_string[matches.position(i)];
                 if (ch == '(')
                 {
                     comm_level++; // open a nested comment
@@ -269,13 +269,13 @@ std::optional<Token> Lexer::next()
             }
 
             // try to match Cool string
-            auto string_start = _current_line.find("\"");
+            const auto string_start = _current_line.find("\"");
             // try to match Cool comments
-            auto par_comm_start = _current_line.find("(*");
-            auto dash_comm_start = _current_line.find("--");
+            const auto par_comm_start = _current_line.find("(*");
+            const auto dash_comm_start = _current_line.find("--");
 
-            int suffix_start = -1;
-            int shift = -1;
+            auto suffix_start = -1;
+            auto shift = -1;
             // save string suffix for further lexing
             if (string_start < par_comm_start && string_start < dash_comm_start)
             {
@@ -313,7 +313,7 @@ std::optional<Token> Lexer::next()
 
             for (auto it = match_begin; it != match_end; ++it)
             {
-                std::string str_in_lowercase = it->str();
+                auto str_in_lowercase = it->str();
                 std::transform(str_in_lowercase.begin(), str_in_lowercase.end(), str_in_lowercase.begin(), ::tolower);
 
 #ifndef __APPLE__
@@ -390,7 +390,7 @@ std::optional<Token> Lexer::next()
             LEXER_VERBOSE_ONLY(LOG("End analyzing the rest of the string."));
         }
 
-        auto t = _saved_tokens.front();
+        const auto t = _saved_tokens.front();
         _saved_tokens.pop();
 
         DEBUG_ONLY(if (TokensOnly) { LOG(t.to_string()); });
@@ -398,7 +398,7 @@ std::optional<Token> Lexer::next()
         return t;
     }
 
-    auto t = _saved_tokens.front();
+    const auto t = _saved_tokens.front();
     _saved_tokens.pop();
 
     DEBUG_ONLY(if (TokensOnly) { LOG(t.to_string()); });

@@ -6,7 +6,7 @@ using namespace parser;
 
 template <class T> std::shared_ptr<ast::Expression> Parser::make_expr(T &&variant, const int &line)
 {
-    auto expr = std::make_shared<ast::Expression>();
+    const auto expr = std::make_shared<ast::Expression>();
     expr->_data = std::forward<T>(variant);
     expr->_line_number = line;
 
@@ -20,7 +20,7 @@ bool Parser::parse_list(std::vector<T> &container, std::function<T()> func,
 {
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_list")));
 
-    auto elem = func();
+    const auto elem = func();
     if (elem == nullptr)
         return false;
     container.push_back(elem);
@@ -42,7 +42,7 @@ bool Parser::parse_list(std::vector<T> &container, std::function<T()> func,
             return true;
         }
 
-        auto elem = func();
+        const auto elem = func();
         if (elem == nullptr)
             return false;
         container.push_back(elem);
@@ -54,7 +54,7 @@ bool Parser::parse_list(std::vector<T> &container, std::function<T()> func,
 
 template <class T> std::shared_ptr<ast::Expression> Parser::parse_operator(const std::shared_ptr<ast::Expression> &lhs)
 {
-    auto type = _next_token->type();
+    const auto type = _next_token->type();
 
     if (precedence_level(type) <= current_precedence_level())
         return lhs;
@@ -65,10 +65,10 @@ template <class T> std::shared_ptr<ast::Expression> Parser::parse_operator(const
     PARSER_VERBOSE_ONLY(LOG_ENTER(PARSER_APPEND_LINE_NUM("parse_operators")));
     std::shared_ptr<ast::Expression> res_expr = nullptr;
 
-    int line = _next_token->line_number();
+    const auto line = _next_token->line_number();
 
     PARSER_ADVANCE_AND_RETURN_IF_EOF();
-    auto rhs = parse_expr();
+    const auto rhs = parse_expr();
     PARSER_RETURN_IF_FALSE(!(rhs == nullptr));
 
     PARSER_RETURN_IF_EOF();
@@ -84,10 +84,8 @@ template <class T> std::shared_ptr<ast::Expression> Parser::parse_operator(const
         {
             return make_expr(std::move(ast::BinaryExpression{T(), lhs, parse_operators(rhs)}), line);
         }
-        else
-        {
-            return parse_operators(make_expr(std::move(ast::BinaryExpression{T(), lhs, rhs}), line));
-        }
+
+        return parse_operators(make_expr(std::move(ast::BinaryExpression{T(), lhs, rhs}), line));
     }
 
     PARSER_VERBOSE_ONLY(LOG_EXIT(PARSER_APPEND_LINE_NUM("parse_operators")));

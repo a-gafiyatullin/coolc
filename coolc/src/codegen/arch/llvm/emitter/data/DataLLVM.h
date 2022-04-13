@@ -11,11 +11,9 @@
 namespace codegen
 {
 
-class DataLLVM : public Data<llvm::Constant *, llvm::StructType *, llvm::Constant *>
+class DataLLVM : public Data<llvm::GlobalVariable *, llvm::StructType *>
 {
   private:
-    static constexpr std::string_view TYPE_SUFFIX = "_type";
-
     enum HeaderLayout
     {
         Mark,
@@ -42,6 +40,8 @@ class DataLLVM : public Data<llvm::Constant *, llvm::StructType *, llvm::Constan
     void construct_header(const std::shared_ptr<Klass> &klass, std::vector<llvm::Type *> &fields);
     void construct_base_class(const std::shared_ptr<Klass> &klass, const std::vector<llvm::Type *> &fields,
                               const std::vector<llvm::Constant *> &methods);
+    llvm::GlobalVariable *make_disp_table(const std::string &name, llvm::StructType *type,
+                                          const std::vector<llvm::Constant *> &methods);
 
   public:
     /**

@@ -22,7 +22,7 @@ void CodeGenLLVM::add_fields()
     const auto &this_klass = _builder->klass(_current_class->_type->_string);
     for (auto field = this_klass->fields_begin(); field != this_klass->fields_end(); field++)
     {
-        const std::string &name = (*field)->_object->_object;
+        const auto &name = (*field)->_object->_object;
         _table.add_symbol(name, Symbol(this_klass->field_offset(field - this_klass->fields_begin())));
     }
 }
@@ -92,12 +92,12 @@ void CodeGenLLVM::emit_class_init_method_inner()
         {
             if (feature->_expr)
             {
-                const std::string &name = feature->_object->_object;
+                const auto &name = feature->_object->_object;
 
                 const auto &this_field = _table.symbol(name);
                 GUARANTEE_DEBUG(this_field._type == Symbol::FIELD); // impossible
 
-                const int &offset = this_field._value._offset;
+                const auto &offset = this_field._value._offset;
                 // TODO: check this inst twice
                 __ CreateStore(emit_expr(feature->_expr), __ CreateStructGEP(_data.class_struct(klass), func->getArg(0),
                                                                              offset, NameConstructor::gep(name)));
@@ -118,7 +118,7 @@ llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &ex
     auto *const lhs = emit_expr(expr._lhs);
     auto *const rhs = emit_expr(expr._rhs);
 
-    bool logical_result = false;
+    auto logical_result = false;
     llvm::Value *op_result = nullptr;
 
     if (!std::holds_alternative<ast::EqExpression>(expr._base))
@@ -206,6 +206,15 @@ llvm::Value *CodeGenLLVM::emit_string_expr(const ast::StringExpression &expr)
 
 llvm::Value *CodeGenLLVM::emit_object_expr_inner(const ast::ObjectExpression &expr)
 {
+    const auto &object = _table.symbol(expr._object);
+    if (object._type == Symbol::FIELD)
+    {
+        // object field
+    }
+    else
+    {
+        return object._value._ptr; // local object defined in let, case, formal parameter
+    }
 }
 
 llvm::Value *CodeGenLLVM::emit_new_expr_inner(const ast::NewExpression &expr)
@@ -282,7 +291,7 @@ void CodeGenLLVM::emit(const std::string &out_file)
     CODEGEN_VERBOSE_ONLY(_module.print(llvm::errs(), nullptr););
 
     const auto target_triple = llvm::sys::getDefaultTargetTriple();
-    CODEGEN_VERBOSE_ONLY(LOG("Target architecture: " + target_triple));
+    CODEGEN_VERBOSE_ONLY(LOG("TARGET ARCH: " + target_triple));
 
     // TODO: what we really need?
     llvm::InitializeAllTargetInfos();
@@ -290,6 +299,8 @@ void CodeGenLLVM::emit(const std::string &out_file)
     llvm::InitializeAllTargetMCs();
     llvm::InitializeAllAsmParsers();
     llvm::InitializeAllAsmPrinters();
+
+    CODEGEN_VERBOSE_ONLY(LOG("INITIALIZED LLVM EMITTER."));
 
     std::string error;
     const auto *const target = llvm::TargetRegistry::lookupTarget(target_triple, error);
@@ -300,6 +311,8 @@ void CodeGenLLVM::emit(const std::string &out_file)
         exit(-1);
     }
 
+    CODEGEN_VERBOSE_ONLY(LOG("FOUND TARGET: " + std::string(target->getName())));
+
     // TODO: opportunity to select options
     auto *const target_machine = target->createTargetMachine(target_triple, "generic", "", llvm::TargetOptions(),
                                                              llvm::Optional<llvm::Reloc::Model>());
@@ -307,6 +320,8 @@ void CodeGenLLVM::emit(const std::string &out_file)
     // TODO: any settings?
     _module.setDataLayout(target_machine->createDataLayout());
     _module.setTargetTriple(target_triple);
+
+    CODEGEN_VERBOSE_ONLY(LOG("INITIALIZED TARGET MACHINE."));
 
     std::error_code ec;
     llvm::raw_fd_ostream dest(out_file, ec);
@@ -326,6 +341,8 @@ void CodeGenLLVM::emit(const std::string &out_file)
         std::cerr << "TargetMachine can't emit a file of this type!" << std::endl;
         exit(-1);
     }
+
+    CODEGEN_VERBOSE_ONLY(LOG("RUN LLVM EMITTER."));
 
     pass.run(_module);
     dest.flush();

@@ -27,6 +27,7 @@ class NameConstructor
     static constexpr std::string_view DISP_TAB_SUFFIX = "_dispTab";
     static constexpr std::string_view PROTOTYPE_SUFFIX = "_protObj";
     static constexpr std::string_view INIT_SUFFIX = "_init";
+    static constexpr std::string_view TYPE_SUFFIX = "_type";
 
     /**
      * @brief Prefixes for code generation names construction
@@ -129,6 +130,17 @@ class NameConstructor
     inline static std::string method_full_name(const std::string &klass, const std::string &method, const char &delim)
     {
         return klass + delim + method;
+    }
+
+    /**
+     * @brief Get type name of the var
+     *
+     * @param var Some variable
+     * @return Type name
+     */
+    inline static std::string type(const std::string &var)
+    {
+        return var + static_cast<std::string>(TYPE_SUFFIX);
     }
 
     // -------------------------------------- CODEGEN SUPPORT --------------------------------------
