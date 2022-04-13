@@ -27,7 +27,7 @@ template <class Value, class Symbol>
 void CodeGen<Value, Symbol>::emit_class_code(const std::shared_ptr<semant::ClassNode> &node)
 {
     _current_class = node->_class;
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN CLASS " + _current_class->_type->_string));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN CLASS \"" + _current_class->_type->_string + "\""));
 
     // create new scope and add all fields
     _table.push_scope();
@@ -52,7 +52,7 @@ void CodeGen<Value, Symbol>::emit_class_code(const std::shared_ptr<semant::Class
     // delete scope
     _table.pop_scope();
 
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN CLASS " + _current_class->_type->_string));
+    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN CLASS \"" + _current_class->_type->_string + "\""));
 }
 
 template <class Value, class Symbol> Value CodeGen<Value, Symbol>::emit_binary_expr(const ast::BinaryExpression &expr)
@@ -74,6 +74,7 @@ Value CodeGen<Value, Symbol>::emit_expr(const std::shared_ptr<ast::Expression> &
 {
     return std::visit(
         ast::overloaded{
+            // TODO: do we really need specify ret type?
             [&](const ast::BoolExpression &bool_expr) -> Value { return emit_bool_expr(bool_expr); },
             [&](const ast::StringExpression &str) -> Value { return emit_string_expr(str); },
             [&](const ast::IntExpression &number) -> Value { return emit_int_expr(number); },
@@ -93,26 +94,26 @@ Value CodeGen<Value, Symbol>::emit_expr(const std::shared_ptr<ast::Expression> &
 
 template <class Value, class Symbol> void CodeGen<Value, Symbol>::emit_class_init_method()
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN INIT METHOD FOR CLASS " + _current_class->_type->_string));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN INIT METHOD FOR CLASS \"" + _current_class->_type->_string + "\""));
 
     emit_class_init_method_inner();
 
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN INIT METHOD FOR CLASS " + _current_class->_type->_string));
+    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN INIT METHOD FOR CLASS \"" + _current_class->_type->_string + "\""));
 }
 
 template <class Value, class Symbol>
 void CodeGen<Value, Symbol>::emit_class_method(const std::shared_ptr<ast::Feature> &method)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN METHOD " + method->_object->_object));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN METHOD \"" + method->_object->_object + "\""));
 
     emit_class_method_inner(method);
 
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN METHOD " + method->_object->_object));
+    CODEGEN_VERBOSE_ONLY(LOG_EXIT("GEN METHOD \"" + method->_object->_object + "\""));
 }
 
 template <class Value, class Symbol> Value CodeGen<Value, Symbol>::emit_object_expr(const ast::ObjectExpression &expr)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN OBJECT EXPR FOR " + expr._object));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN OBJECT EXPR FOR \"" + expr._object + "\""));
 
     CODEGEN_RETURN_VALUE_IF_CAN(emit_object_expr_inner(expr), "GEN OBJECT EXPR FOR");
 }

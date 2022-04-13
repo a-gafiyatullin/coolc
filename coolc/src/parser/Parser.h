@@ -8,7 +8,7 @@
 
 #ifdef DEBUG
 #define PARSER_APPEND_LINE_NUM(msg)                                                                                    \
-    ((std::string)msg + ", line: " + (_next_token ? std::to_string(_next_token->line_number()) : "EOF"))
+    ((std::string)msg + ", LINE: " + (_next_token ? std::to_string(_next_token->line_number()) : "EOF"))
 #else
 #define PARSER_APPEND_LINE_NUM(msg)
 #endif // DEBUG

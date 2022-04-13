@@ -87,7 +87,7 @@ template <class T> T &SymbolTable<T>::symbol(const std::string &symbol)
             return symbol_ptr->second;
         }
     }
-    CODEGEN_VERBOSE_ONLY(LOG("Can't find symbol " + symbol));
+    CODEGEN_VERBOSE_ONLY(LOG("Can't find symbol \"" + symbol + "\""));
     SHOULD_NOT_REACH_HERE();
 }
 }; // namespace codegen

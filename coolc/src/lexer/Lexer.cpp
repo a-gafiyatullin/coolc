@@ -89,7 +89,7 @@ Token Lexer::match_string(const std::string &start_string)
             std::getline(_input_file, processed_string);
             _line_number++;
 
-            LEXER_VERBOSE_ONLY(LOG("New line: " + processed_string));
+            LEXER_VERBOSE_ONLY(LOG("New line: \"" + processed_string + "\""));
             LEXER_VERBOSE_ONLY(LOG(LEXER_LOG_MATCH("new line symbol", "", 0)));
 
             // we read a new line, so check if '\n' is escaped
@@ -212,7 +212,7 @@ std::optional<Token> Lexer::skip_comment(const std::string &start_string)
             std::getline(_input_file, processed_string);
             _line_number++;
 
-            LEXER_VERBOSE_ONLY(LOG("New line: " + processed_string));
+            LEXER_VERBOSE_ONLY(LOG("New line: \"" + processed_string + "\""));
         }
 
         std::smatch matches;
@@ -260,7 +260,7 @@ std::optional<Token> Lexer::next()
                 std::getline(_input_file, _current_line);
                 _line_number++;
 
-                LEXER_VERBOSE_ONLY(LOG("New line: " + _current_line));
+                LEXER_VERBOSE_ONLY(LOG("New line: \"" + _current_line + "\""));
             }
             if (_input_file.eof() && _current_line.empty())
             {

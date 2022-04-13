@@ -291,7 +291,7 @@ void CodeGenLLVM::emit(const std::string &out_file)
     CODEGEN_VERBOSE_ONLY(_module.print(llvm::errs(), nullptr););
 
     const auto target_triple = llvm::sys::getDefaultTargetTriple();
-    CODEGEN_VERBOSE_ONLY(LOG("TARGET ARCH: " + target_triple));
+    CODEGEN_VERBOSE_ONLY(LOG("Target arch: " + target_triple));
 
     // TODO: what we really need?
     llvm::InitializeAllTargetInfos();
@@ -300,7 +300,7 @@ void CodeGenLLVM::emit(const std::string &out_file)
     llvm::InitializeAllAsmParsers();
     llvm::InitializeAllAsmPrinters();
 
-    CODEGEN_VERBOSE_ONLY(LOG("INITIALIZED LLVM EMITTER."));
+    CODEGEN_VERBOSE_ONLY(LOG("Initialized llvm emitter."));
 
     std::string error;
     const auto *const target = llvm::TargetRegistry::lookupTarget(target_triple, error);
@@ -311,9 +311,10 @@ void CodeGenLLVM::emit(const std::string &out_file)
         exit(-1);
     }
 
-    CODEGEN_VERBOSE_ONLY(LOG("FOUND TARGET: " + std::string(target->getName())));
+    CODEGEN_VERBOSE_ONLY(LOG("Found target: " + std::string(target->getName())));
 
     // TODO: opportunity to select options
+    // TODO: can be null?
     auto *const target_machine = target->createTargetMachine(target_triple, "generic", "", llvm::TargetOptions(),
                                                              llvm::Optional<llvm::Reloc::Model>());
 
@@ -321,7 +322,7 @@ void CodeGenLLVM::emit(const std::string &out_file)
     _module.setDataLayout(target_machine->createDataLayout());
     _module.setTargetTriple(target_triple);
 
-    CODEGEN_VERBOSE_ONLY(LOG("INITIALIZED TARGET MACHINE."));
+    CODEGEN_VERBOSE_ONLY(LOG("Initialized target machine."));
 
     std::error_code ec;
     llvm::raw_fd_ostream dest(out_file, ec);
@@ -342,8 +343,10 @@ void CodeGenLLVM::emit(const std::string &out_file)
         exit(-1);
     }
 
-    CODEGEN_VERBOSE_ONLY(LOG("RUN LLVM EMITTER."));
+    CODEGEN_VERBOSE_ONLY(LOG("Run llvm emitter."));
 
     pass.run(_module);
     dest.flush();
+
+    CODEGEN_VERBOSE_ONLY(LOG("Finished llvm emitter."));
 }

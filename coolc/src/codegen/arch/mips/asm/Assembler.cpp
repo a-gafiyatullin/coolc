@@ -25,7 +25,7 @@ Register::Register(const Reg &reg) : _reg(reg)
     // guarantee that we have not use this register yet
     if (Assembler::UsedRegisters.find(_reg) != Assembler::UsedRegisters.end())
     {
-        CODEGEN_VERBOSE_ONLY(LOG("Register " + reg_name(reg) + " is being used!"));
+        CODEGEN_VERBOSE_ONLY(LOG("Register \"" + reg_name(reg) + "\" is being used!"));
         GUARANTEE_DEBUG(false && "Register::Register: register was already allocated!");
     }
     Assembler::UsedRegisters.insert(_reg);
@@ -41,7 +41,7 @@ Register::~Register()
 // ----------------------------------------------- Labels -----------------------------------------------
 Label::Label(const std::string &name, const LabelPolicy &policy) : _name(name)
 {
-    CODEGEN_VERBOSE_ONLY(LOG("Create Label: " + name));
+    CODEGEN_VERBOSE_ONLY(LOG("Create Label: \"" + name + "\""));
     Assembler::UsedLabels.insert({name, policy});
 }
 // ----------------------------------------------- Assembler -----------------------------------------------
@@ -253,7 +253,7 @@ void Assembler::check_labels()
     {
         if (!label.second)
         {
-            CODEGEN_VERBOSE_ONLY(LOG("Label " + label.first + " was not binded!"));
+            CODEGEN_VERBOSE_ONLY(LOG("Label \"" + label.first + "\" was not binded!"));
             CODEGEN_VERBOSE_ONLY(dump());
             GUARANTEE_DEBUG(false && "Assembler::check_labels: non-binded label found!");
         }
@@ -319,7 +319,7 @@ AssemblerMarkSection::AssemblerMarkSection(Assembler &assembler, const Label &la
     const auto label_ptr = Assembler::UsedLabels.find(label_name);
     if (label_ptr->second)
     {
-        CODEGEN_VERBOSE_ONLY(LOG("Label " + label_name + " has been already binded!"));
+        CODEGEN_VERBOSE_ONLY(LOG("Label \"" + label_name + "\" has been already binded!"));
         GUARANTEE_DEBUG(false && "AssemblerMarkSection::AssemblerMarkSection: label has been already binded!");
     }
     label_ptr->second = true;

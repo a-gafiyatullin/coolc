@@ -1,6 +1,4 @@
 #include "RuntimeLLVM.h"
-#include "codegen/symnames/NameConstructor.h"
-#include "decls/Decls.h"
 
 using namespace codegen;
 

@@ -11,8 +11,8 @@ CodeGenMips::CodeGenMips(const std::shared_ptr<semant::ClassNode> &root)
       _s0(Register::$s0)
 {
     DEBUG_ONLY(_table.set_printer([](const std::string &name, const Symbol &s) {
-        LOG("Add symbol " + name + " with type " + ((s._type == Symbol::FIELD) ? "FIELD" : "LOCAL") + " and offset " +
-            std::to_string(s._offset));
+        LOG("Add symbol \"" + name + "\" with type " + ((s._type == Symbol::FIELD) ? "FIELD" : "LOCAL") +
+            " and offset " + std::to_string(s._offset));
     }));
 
     // here we start generate methods code

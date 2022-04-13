@@ -2,7 +2,6 @@
 
 #include "codegen/arch/llvm/klass/KlassLLVM.h"
 #include "codegen/decls/Runtime.h"
-#include "codegen/symnames/NameConstructor.h"
 #include "decls/Decls.h"
 #include <llvm/IR/Module.h>
 

@@ -20,17 +20,15 @@ Klass::Klass() : _klass(nullptr), _parent_klass(nullptr)
 
 void Klass::divide_features(const std::vector<std::shared_ptr<ast::Feature>> &features)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("DIVIDE FEATURES:"));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("DIVIDE FEATURES."));
 
     for (const auto &feature : features)
     {
         if (std::holds_alternative<ast::MethodFeature>(feature->_base))
         {
-            auto table_entry = std::find_if(
-                _methods.begin(), _methods.end(),
-                [&feature](const std::pair<std::shared_ptr<ast::Type>, std::shared_ptr<ast::Feature>> &entry) {
-                    return entry.second->_object->_object == feature->_object->_object;
-                });
+            auto table_entry = std::find_if(_methods.begin(), _methods.end(), [&feature](const auto &entry) {
+                return entry.second->_object->_object == feature->_object->_object;
+            });
 
             if (table_entry == _methods.end())
             {
@@ -57,7 +55,7 @@ void Klass::divide_features(const std::vector<std::shared_ptr<ast::Feature>> &fe
 #ifdef CODEGEN_VERBOSE_ONLY
 void Klass::dump_fields() const
 {
-    LOG_ENTER("ACTUAL FIELDS:");
+    LOG_ENTER("ACTUAL FIELDS.");
 
     for (const auto &f : _fields)
     {
@@ -69,7 +67,7 @@ void Klass::dump_fields() const
 
 void Klass::dump_methods() const
 {
-    LOG_ENTER("ACTUAL METHODS:");
+    LOG_ENTER("ACTUAL METHODS.");
 
     for (const auto &m : _methods)
     {
@@ -95,7 +93,7 @@ int KlassBuilder::build_klass(const std::shared_ptr<semant::ClassNode> &node, co
 {
     const auto &klass = node->_class;
 
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("BUILD KLASS FOR " + klass->_type->_string + ":"));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("BUILD KLASS FOR \"" + klass->_type->_string + "\""));
 
     _klasses.insert({klass->_type->_string, create_klass(klass)});
 
@@ -109,7 +107,7 @@ int KlassBuilder::build_klass(const std::shared_ptr<semant::ClassNode> &node, co
 
     CODEGEN_VERBOSE_ONLY(LOG("Set tags: (" + std::to_string(tag) + ", " + std::to_string(child_max_tag) + ")"););
 
-    CODEGEN_VERBOSE_ONLY(LOG_EXIT("BUILD KLASS FOR " + klass->_type->_string + "."));
+    CODEGEN_VERBOSE_ONLY(LOG_EXIT("BUILD KLASS FOR \"" + klass->_type->_string + "\""));
     return child_max_tag;
 }
 
@@ -126,7 +124,7 @@ KlassBuilder::KlassBuilder(const std::shared_ptr<semant::ClassNode> &root) : _ro
 
 void KlassBuilder::init()
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("KlassBuilder:"));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("KlassBuilder."));
 
     _klasses.clear();
 

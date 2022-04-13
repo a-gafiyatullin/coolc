@@ -151,7 +151,7 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
     for_each(klass->methods_begin(), klass->methods_end(), [this, &methods, &method_types, &klass](const auto &method) {
         const auto method_full_name = klass->method_full_name(method.second->_object->_object);
 
-        CODEGEN_VERBOSE_ONLY(LOG_ENTER("declare method \"" + method_full_name + "\""));
+        CODEGEN_VERBOSE_ONLY(LOG_ENTER("DECLARE METHOD \"" + method_full_name + "\""));
 
         // maybe already have such a method (from parent)? If so, just get a pointer to it, otherwise create new one
         auto *func = _module.getFunction(method_full_name);
@@ -164,9 +164,9 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
             const auto &method_formals = std::get<ast::MethodFeature>(method.second->_base);
             for (const auto &formal : method_formals._formals)
             {
-                const auto &formal_name = formal->_type->_string;
-                CODEGEN_VERBOSE_ONLY(LOG("Formal with type: " + formal_name));
-                args.push_back(class_struct(_builder->klass(formal_name))->getPointerTo());
+                const auto &formal_type = formal->_type->_string;
+                CODEGEN_VERBOSE_ONLY(LOG("Formal of type \"" + formal_type + "\""));
+                args.push_back(class_struct(_builder->klass(formal_type))->getPointerTo());
             }
 
             const auto &return_type_name = method.second->_type->_string;
@@ -184,7 +184,7 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
             }
         }
 
-        CODEGEN_VERBOSE_ONLY(LOG_EXIT("declare method \"" + method_full_name + "\""));
+        CODEGEN_VERBOSE_ONLY(LOG_EXIT("DECLARE METHOD \"" + method_full_name + "\""));
 
         method_types.push_back(func->getType());
         methods.push_back(func);
