@@ -95,7 +95,7 @@ int KlassBuilder::build_klass(const std::shared_ptr<semant::ClassNode> &node, co
 
     CODEGEN_VERBOSE_ONLY(LOG_ENTER("BUILD KLASS FOR \"" + klass->_type->_string + "\""));
 
-    _klasses.insert({klass->_type->_string, create_klass(klass)});
+    _klasses.insert({klass->_type->_string, make_klass(klass)});
 
     auto child_max_tag = tag;
     for (const auto &node : node->_children)
@@ -129,7 +129,7 @@ void KlassBuilder::init()
     _klasses.clear();
 
     // parent of the Object class. Need for algorithms
-    _klasses.insert({semant::Semant::empty_type()->_string, create_klass(nullptr)});
+    _klasses.insert({semant::Semant::empty_type()->_string, make_klass(nullptr)});
 
     build_klass(_root, 0);
 

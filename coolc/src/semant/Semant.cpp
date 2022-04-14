@@ -27,7 +27,7 @@ Semant::Semant(std::vector<std::shared_ptr<ast::Program>> programs) : _program(m
 
 // ---------------------------------------- CLASS CHECK ----------------------------------------
 
-std::shared_ptr<ClassNode> Semant::create_basic_class(
+std::shared_ptr<ClassNode> Semant::make_basic_class(
     const std::string &name, const std::string &parent,
     const std::vector<std::pair<std::string, std::vector<std::string>>> &methods,
     const std::vector<std::shared_ptr<ast::Type>> &fields)
@@ -61,7 +61,7 @@ std::shared_ptr<ClassNode> Semant::create_basic_class(
             std::get<ast::MethodFeature>(feature->_base)._formals.back()->_object =
                 std::make_shared<ast::ObjectExpression>();
             std::get<ast::MethodFeature>(feature->_base)._formals.back()->_object->_object =
-                m.second[i] + std::to_string(i);
+                static_cast<std::string>(DUMMY_ARG_SUFFIX) + std::to_string(i);
 
             // formal type
             std::get<ast::MethodFeature>(feature->_base)._formals.back()->_type = std::make_shared<ast::Type>();
@@ -72,6 +72,7 @@ std::shared_ptr<ClassNode> Semant::create_basic_class(
     }
 
     // add fields
+    static auto N = 0;
     for (const auto &f : fields)
     {
         const auto feature = std::make_shared<ast::Feature>();
@@ -79,8 +80,11 @@ std::shared_ptr<ClassNode> Semant::create_basic_class(
 
         feature->_object = std::make_shared<ast::ObjectExpression>();
         feature->_type = f;
+        feature->_object->_object = static_cast<std::string>(DUMMY_FIELD_SUFFIX) + std::to_string(N);
 
         klass->_class->_features.push_back(feature);
+
+        N++;
     }
 
     _classes.insert({name, klass});
@@ -111,7 +115,7 @@ bool Semant::check_class_hierarchy_for_cycle(const std::shared_ptr<ClassNode> &k
 bool Semant::is_basic_type(const std::shared_ptr<ast::Type> &type)
 {
     return is_int(type) || is_bool(type) || is_string(type) || same_type(type, Object) || same_type(type, Io) ||
-           is_self_type(type) || is_empty_type(type) || same_type(type, EmptyType);
+           is_self_type(type) || is_empty_type(type) || same_type(type, Empty);
 }
 
 bool Semant::is_trivial_type(const std::shared_ptr<ast::Type> &type)
@@ -122,6 +126,11 @@ bool Semant::is_trivial_type(const std::shared_ptr<ast::Type> &type)
 bool Semant::is_inherit_allowed(const std::shared_ptr<ast::Type> &type)
 {
     return !(is_int(type) || is_bool(type) || is_string(type) || is_self_type(type) || is_empty_type(type));
+}
+
+bool Semant::is_native_type(const std::shared_ptr<ast::Type> &type)
+{
+    return is_native_int(type) || is_native_bool(type) || is_native_string(type);
 }
 
 bool Semant::check_class_hierarchy()
@@ -258,53 +267,62 @@ bool Semant::check_classes()
     // add Object to hierarchy
     SEMANT_VERBOSE_ONLY(LOG_ENTER("CREATE BASIC CLASSES"));
 
-    EmptyType = std::make_shared<ast::Type>();
-    EmptyType->_string = EMPTY_TYPE_NAME;
+    Empty = std::make_shared<ast::Type>();
+    Empty->_string = EMPTY_TYPE_NAME;
 
-    _root = create_basic_class(BaseClassesNames[BaseClasses::OBJECT], EmptyType->_string,
-                               {{ObjectMethodsNames[ObjectMethods::ABORT], {BaseClassesNames[BaseClasses::OBJECT]}},
-                                {ObjectMethodsNames[ObjectMethods::TYPE_NAME], {BaseClassesNames[BaseClasses::STRING]}},
-                                {ObjectMethodsNames[ObjectMethods::COPY], {BaseClassesNames[BaseClasses::SELF_TYPE]}}},
-                               {});
+    NativeInt = std::make_shared<ast::Type>();
+    NativeInt->_string = NATIVE_INT_TYPE_NAME;
+
+    NativeBool = std::make_shared<ast::Type>();
+    NativeBool->_string = NATIVE_BOOL_TYPE_NAME;
+
+    NativeString = std::make_shared<ast::Type>();
+    NativeString->_string = NATIVE_STRING_TYPE_NAME;
+
+    _root = make_basic_class(BaseClassesNames[BaseClasses::OBJECT], Empty->_string,
+                             {{ObjectMethodsNames[ObjectMethods::ABORT], {BaseClassesNames[BaseClasses::OBJECT]}},
+                              {ObjectMethodsNames[ObjectMethods::TYPE_NAME], {BaseClassesNames[BaseClasses::STRING]}},
+                              {ObjectMethodsNames[ObjectMethods::COPY], {BaseClassesNames[BaseClasses::SELF_TYPE]}}},
+                             {});
     Object = _root->_class->_type;
 
     // add IO to hierarchy
     _root->_children.push_back(
-        create_basic_class(BaseClassesNames[BaseClasses::IO], BaseClassesNames[BaseClasses::OBJECT],
-                           {{IOMethodsNames[IOMethods::OUT_STRING],
-                             {BaseClassesNames[BaseClasses::SELF_TYPE], BaseClassesNames[BaseClasses::STRING]}},
-                            {IOMethodsNames[IOMethods::OUT_INT],
-                             {BaseClassesNames[BaseClasses::SELF_TYPE], BaseClassesNames[BaseClasses::INT]}},
-                            {IOMethodsNames[IOMethods::IN_STRING], {BaseClassesNames[BaseClasses::STRING]}},
-                            {IOMethodsNames[IOMethods::IN_INT], {BaseClassesNames[BaseClasses::INT]}}},
-                           {}));
+        make_basic_class(BaseClassesNames[BaseClasses::IO], BaseClassesNames[BaseClasses::OBJECT],
+                         {{IOMethodsNames[IOMethods::OUT_STRING],
+                           {BaseClassesNames[BaseClasses::SELF_TYPE], BaseClassesNames[BaseClasses::STRING]}},
+                          {IOMethodsNames[IOMethods::OUT_INT],
+                           {BaseClassesNames[BaseClasses::SELF_TYPE], BaseClassesNames[BaseClasses::INT]}},
+                          {IOMethodsNames[IOMethods::IN_STRING], {BaseClassesNames[BaseClasses::STRING]}},
+                          {IOMethodsNames[IOMethods::IN_INT], {BaseClassesNames[BaseClasses::INT]}}},
+                         {}));
     Io = _root->_children.back()->_class->_type;
 
     // add Int to hierarchy
     _root->_children.push_back(
-        create_basic_class(BaseClassesNames[BaseClasses::INT], BaseClassesNames[BaseClasses::OBJECT], {}, {EmptyType}));
+        make_basic_class(BaseClassesNames[BaseClasses::INT], BaseClassesNames[BaseClasses::OBJECT], {}, {NativeInt}));
     Int = _root->_children.back()->_class->_type;
 
     // add Bool to hierarchy
-    _root->_children.push_back(create_basic_class(BaseClassesNames[BaseClasses::BOOL],
-                                                  BaseClassesNames[BaseClasses::OBJECT], {}, {EmptyType}));
+    _root->_children.push_back(
+        make_basic_class(BaseClassesNames[BaseClasses::BOOL], BaseClassesNames[BaseClasses::OBJECT], {}, {NativeBool}));
     Bool = _root->_children.back()->_class->_type;
 
     // add SELF_TYPE to hierarchy
     _root->_children.push_back(
-        create_basic_class(BaseClassesNames[BaseClasses::SELF_TYPE], BaseClassesNames[BaseClasses::OBJECT], {}, {}));
+        make_basic_class(BaseClassesNames[BaseClasses::SELF_TYPE], BaseClassesNames[BaseClasses::OBJECT], {}, {}));
     SelfType = _root->_children.back()->_class->_type;
 
     // add String to hierarchy
     _root->_children.push_back(
-        create_basic_class(BaseClassesNames[BaseClasses::STRING], BaseClassesNames[BaseClasses::OBJECT],
-                           {{StringMethodsNames[StringMethods::LENGTH], {BaseClassesNames[BaseClasses::INT]}},
-                            {StringMethodsNames[StringMethods::CONCAT],
-                             {BaseClassesNames[BaseClasses::STRING], BaseClassesNames[BaseClasses::STRING]}},
-                            {StringMethodsNames[StringMethods::SUBSTR],
-                             {BaseClassesNames[BaseClasses::STRING], BaseClassesNames[BaseClasses::INT],
-                              BaseClassesNames[BaseClasses::INT]}}},
-                           {Int, EmptyType}));
+        make_basic_class(BaseClassesNames[BaseClasses::STRING], BaseClassesNames[BaseClasses::OBJECT],
+                         {{StringMethodsNames[StringMethods::LENGTH], {BaseClassesNames[BaseClasses::INT]}},
+                          {StringMethodsNames[StringMethods::CONCAT],
+                           {BaseClassesNames[BaseClasses::STRING], BaseClassesNames[BaseClasses::STRING]}},
+                          {StringMethodsNames[StringMethods::SUBSTR],
+                           {BaseClassesNames[BaseClasses::STRING], BaseClassesNames[BaseClasses::INT],
+                            BaseClassesNames[BaseClasses::INT]}}},
+                         {Int, NativeString}));
     String = _root->_children.back()->_class->_type;
 
     SEMANT_VERBOSE_ONLY(LOG_EXIT("CREATE BASIC CLASSES"));
@@ -1008,7 +1026,7 @@ std::shared_ptr<ast::Type> Semant::find_common_ancestor_of_two(const std::shared
 std::shared_ptr<ast::Feature> Semant::find_method(const std::string &name, const std::shared_ptr<ast::Type> &klass,
                                                   const bool &exact) const
 {
-    if (same_type(klass, EmptyType))
+    if (same_type(klass, Empty))
     {
         return nullptr;
     }
@@ -1031,7 +1049,7 @@ std::shared_ptr<ast::Feature> Semant::find_method(const std::string &name, const
 
     // find method in ancestors
     auto current_class = _classes.at(klass->_string)->_class->_parent;
-    while (!same_type(current_class, EmptyType))
+    while (!same_type(current_class, Empty))
     {
         for (const auto &m : _classes.at(current_class->_string)->_class->_features)
         {
@@ -1074,4 +1092,7 @@ std::shared_ptr<ast::Type> Semant::Int = nullptr;
 std::shared_ptr<ast::Type> Semant::String = nullptr;
 std::shared_ptr<ast::Type> Semant::Io = nullptr;
 std::shared_ptr<ast::Type> Semant::SelfType = nullptr;
-std::shared_ptr<ast::Type> Semant::EmptyType = nullptr;
+std::shared_ptr<ast::Type> Semant::Empty = nullptr;
+std::shared_ptr<ast::Type> Semant::NativeInt = nullptr;
+std::shared_ptr<ast::Type> Semant::NativeBool = nullptr;
+std::shared_ptr<ast::Type> Semant::NativeString = nullptr;

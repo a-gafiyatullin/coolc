@@ -24,6 +24,12 @@ class Semant
 {
   private:
     static constexpr std::string_view EMPTY_TYPE_NAME = "_EMPTY_TYPE";
+    static constexpr std::string_view NATIVE_INT_TYPE_NAME = "_NATIVE_INT_TYPE";
+    static constexpr std::string_view NATIVE_BOOL_TYPE_NAME = "_NATIVE_BOOL_TYPE";
+    static constexpr std::string_view NATIVE_STRING_TYPE_NAME = "_NATIVE_STRING_TYPE";
+
+    static constexpr std::string_view DUMMY_FIELD_SUFFIX = "field_";
+    static constexpr std::string_view DUMMY_ARG_SUFFIX = "arg_";
 
     // create error report from message, file name and line number
     std::string _error_message;
@@ -45,7 +51,7 @@ class Semant
     // creates dummy class with methods:
     // methods array: [ ("method1", ["ret_type1", "type1", "type2"]),
     //                  ("method2", ["ret_type2", "type3", "type4"]) ]
-    std::shared_ptr<ClassNode> create_basic_class(
+    std::shared_ptr<ClassNode> make_basic_class(
         const std::string &name, const std::string &parent,
         const std::vector<std::pair<std::string, std::vector<std::string>>> &methods,
         const std::vector<std::shared_ptr<ast::Type>> &fields);
@@ -87,7 +93,10 @@ class Semant
     static std::shared_ptr<ast::Type> String;
     static std::shared_ptr<ast::Type> Io;
     static std::shared_ptr<ast::Type> SelfType;
-    static std::shared_ptr<ast::Type> EmptyType; // special type for no type
+    static std::shared_ptr<ast::Type> Empty; // special type for no type
+    static std::shared_ptr<ast::Type> NativeInt;
+    static std::shared_ptr<ast::Type> NativeBool;
+    static std::shared_ptr<ast::Type> NativeString;
 
     // expressions type check helpers
 
@@ -176,6 +185,39 @@ class Semant
     }
 
     /**
+     * @brief Check if type is native boolean
+     *
+     * @param t Type for check
+     * @return True if type is native boolean
+     */
+    inline static bool is_native_bool(const std::shared_ptr<ast::Type> &t)
+    {
+        return same_type(t, NativeBool);
+    }
+
+    /**
+     * @brief Check if type is native int
+     *
+     * @param t Type for check
+     * @return True if type is native int
+     */
+    inline static bool is_native_int(const std::shared_ptr<ast::Type> &t)
+    {
+        return same_type(t, NativeInt);
+    }
+
+    /**
+     * @brief Check if type is native string
+     *
+     * @param t Type for check
+     * @return True if type is native string
+     */
+    inline static bool is_native_string(const std::shared_ptr<ast::Type> &t)
+    {
+        return same_type(t, NativeString);
+    }
+
+    /**
      * @brief Check if type is SELF_TYPE
      *
      * @param t Type for check
@@ -194,18 +236,26 @@ class Semant
      */
     inline static bool is_empty_type(const std::shared_ptr<ast::Type> &t)
     {
-        return same_type(t, EmptyType);
+        return same_type(t, Empty);
     }
 
     /**
-     * @brief Get EmptyType type pointer
+     * @brief Get Empty type pointer
      *
-     * @return EmptyType type pointer
+     * @return Empty type pointer
      */
     inline static std::shared_ptr<ast::Type> empty_type()
     {
-        return EmptyType;
+        return Empty;
     }
+
+    /**
+     * @brief Check if type is Native
+     *
+     * @param t Type for check
+     * @return True if type is Native
+     */
+    static bool is_native_type(const std::shared_ptr<ast::Type> &t);
 
     /**
      * @brief Calculate exact type for a given type

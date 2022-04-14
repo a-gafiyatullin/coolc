@@ -26,7 +26,7 @@ std::string Token::to_string() const
         }
         else if (_type == STR_CONST || _type == ERROR)
         {
-            out += " " + get_printable_string(_lexeme);
+            out += " " + printable_string(_lexeme);
         }
     }
 

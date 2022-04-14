@@ -6,24 +6,26 @@ using namespace codegen;
 #define FULL_METHOD_NAME(klass_id, method)                                                                             \
     NameConstructor::method_full_name(BaseClassesNames[klass_id], method, KlassLLVM::FULL_METHOD_DELIM)
 
+const char *const DataLLVM::HEADER_LAYOUT_NAME[DataLLVM::HeaderLayoutSize] = {"Mark", "Tag", "Size", "DispatchTable"};
+
 DataLLVM::DataLLVM(const std::shared_ptr<KlassBuilder> &builder, llvm::Module &module, const RuntimeLLVM &runtime)
     : Data(builder), _module(module), _runtime(runtime)
 {
-    construct_base_class(
+    make_base_class(
         _builder->klass(BaseClassesNames[BaseClasses::OBJECT]), {},
         {runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::ABORT]))->_func,
          runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::TYPE_NAME]))->_func,
          runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::COPY]))->_func});
 
     // TODO: check this twice for field with value
-    construct_base_class(
+    make_base_class(
         _builder->klass(BaseClassesNames[BaseClasses::INT]), {llvm::Type::getInt64Ty(_module.getContext())},
         {runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::ABORT]))->_func,
          runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::TYPE_NAME]))->_func,
          runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::COPY]))->_func});
 
     // TODO: check this twice for field with value. Too big?
-    construct_base_class(
+    make_base_class(
         _builder->klass(BaseClassesNames[BaseClasses::BOOL]), {llvm::Type::getInt64Ty(_module.getContext())},
         {runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::ABORT]))->_func,
          runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::TYPE_NAME]))->_func,
@@ -32,7 +34,7 @@ DataLLVM::DataLLVM(const std::shared_ptr<KlassBuilder> &builder, llvm::Module &m
     // TODO: check this twice
     // TODO: int8 ptr for char*?
     // TODO: alignment?
-    construct_base_class(
+    make_base_class(
         _builder->klass(BaseClassesNames[BaseClasses::STRING]),
         {_classes[BaseClassesNames[BaseClasses::INT]], llvm::Type::getInt8PtrTy(_module.getContext())},
         {runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::ABORT]))->_func,
@@ -42,7 +44,7 @@ DataLLVM::DataLLVM(const std::shared_ptr<KlassBuilder> &builder, llvm::Module &m
          runtime.method(FULL_METHOD_NAME(BaseClasses::STRING, StringMethodsNames[StringMethods::CONCAT]))->_func,
          runtime.method(FULL_METHOD_NAME(BaseClasses::STRING, StringMethodsNames[StringMethods::SUBSTR]))->_func});
 
-    construct_base_class(
+    make_base_class(
         _builder->klass(BaseClassesNames[BaseClasses::IO]), {},
         {runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::ABORT]))->_func,
          runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::TYPE_NAME]))->_func,
@@ -68,11 +70,21 @@ llvm::GlobalVariable *DataLLVM::make_disp_table(const std::string &name, llvm::S
     return disp_table_global;
 }
 
-void DataLLVM::construct_base_class(const std::shared_ptr<Klass> &klass,
-                                    const std::vector<llvm::Type *> &additional_fields,
-                                    const std::vector<llvm::Constant *> &methods)
+void DataLLVM::make_init_method(const std::shared_ptr<Klass> &klass)
+{
+    const auto init_method_name = NameConstructor::init_method(klass->name());
+    CODEGEN_VERBOSE_ONLY(LOG("Declare init method \"" + init_method_name + "\""));
+
+    // TODO: CommonLinkage is good for such methods?
+    llvm::Function::Create(llvm::FunctionType::get(_runtime._void_type, {class_struct(klass)->getPointerTo()}, false),
+                           llvm::Function::CommonLinkage, init_method_name, &_module);
+}
+
+void DataLLVM::make_base_class(const std::shared_ptr<Klass> &klass, const std::vector<llvm::Type *> &additional_fields,
+                               const std::vector<llvm::Constant *> &methods)
 {
     const auto &class_name = klass->name();
+
     // dispatch table type entries
     std::vector<llvm::Type *> method_types;
     for (const auto &method : methods)
@@ -82,7 +94,7 @@ void DataLLVM::construct_base_class(const std::shared_ptr<Klass> &klass,
 
     // header
     std::vector<llvm::Type *> fields;
-    construct_header(klass, fields);
+    make_header(klass, fields);
 
     const auto &disp_tab_name = NameConstructor::disp_table(class_name);
 
@@ -100,9 +112,11 @@ void DataLLVM::construct_base_class(const std::shared_ptr<Klass> &klass,
 
     // create global variable for dispatch table
     _dispatch_tables.insert({class_name, make_disp_table(disp_tab_name, dispatch_table_type, methods)});
+
+    make_init_method(klass);
 }
 
-void DataLLVM::construct_header(const std::shared_ptr<Klass> &klass, std::vector<llvm::Type *> &fields)
+void DataLLVM::make_header(const std::shared_ptr<Klass> &klass, std::vector<llvm::Type *> &fields)
 {
     // TODO: maybe too big types for header?
     fields.push_back(llvm::Type::getInt64Ty(_module.getContext())); // mark
@@ -121,7 +135,7 @@ void DataLLVM::class_struct_inner(const std::shared_ptr<Klass> &klass)
 
     std::vector<llvm::Type *> fields;
     // add header
-    construct_header(klass, fields);
+    make_header(klass, fields);
     fields.push_back(class_disp_tab(klass)->getType()); // dispatch table
 
     // add fields
@@ -130,21 +144,12 @@ void DataLLVM::class_struct_inner(const std::shared_ptr<Klass> &klass)
     });
 
     class_structure->setBody(fields);
+
+    make_init_method(klass);
 }
 
 void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
 {
-    const auto &class_name = klass->name();
-
-    const auto init_method_name = NameConstructor::init_method(class_name);
-    CODEGEN_VERBOSE_ONLY(LOG("Declare init method \"" + init_method_name + "\""));
-    // create init method
-    // TODO: CommonLinkage is good for such methods?
-    llvm::Function::Create(
-        llvm::FunctionType::get(_runtime._void_type,
-                                {_runtime._void_ptr_type, _runtime._void_ptr_type, _runtime._int32_type}, false),
-        llvm::Function::CommonLinkage, init_method_name, &_module);
-
     std::vector<llvm::Type *> method_types;
     std::vector<llvm::Constant *> methods;
 
@@ -190,8 +195,8 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
         methods.push_back(func);
     });
 
+    const auto &class_name = klass->name();
     const auto &disp_tab_name = NameConstructor::disp_table(class_name);
-
     _dispatch_tables.insert({class_name, make_disp_table(disp_tab_name,
                                                          llvm::StructType::create(_module.getContext(), method_types,
                                                                                   NameConstructor::type(disp_tab_name)),

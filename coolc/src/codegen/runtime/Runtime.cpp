@@ -1,25 +1,5 @@
 #include "Runtime.h"
 
-void Object_init(void *receiver, void *dispatch_table, int tag)
-{
-    auto *object = static_cast<ObjectLayout *>(receiver);
-
-    object->_mark = 0;
-    object->_tag = tag;
-    object->_dispatch_table = dispatch_table;
-    object->_size = sizeof(ObjectLayout);
-}
-
-void Int_init(void *receiver, void *dispatch_table, int tag)
-{
-    Object_init(receiver, dispatch_table, tag);
-
-    auto *integer = static_cast<IntLayout *>(receiver);
-
-    integer->_header._size = sizeof(IntLayout);
-    integer->_value = 0;
-}
-
 void *Object_abort(void *receiver)
 {
     /*int tag = ((ObjectLayout *)receiver)->_tag;
@@ -36,8 +16,16 @@ void *gc_alloc_by_tag(int tag)
     // TODO: dummy
 }
 
-void *gc_alloc(size_t size)
+void *gc_alloc(int tag, size_t size, void *disp_tab)
 {
     // TODO: dummy
-    return calloc(1, size);
+    void *object = calloc(1, size);
+
+    ObjectLayout *layout = (ObjectLayout *)object;
+    layout->_mark = 0;
+    layout->_tag = tag;
+    layout->_size = size;
+    layout->_dispatch_table = disp_tab;
+
+    return object;
 }

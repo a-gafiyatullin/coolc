@@ -32,7 +32,7 @@ std::vector<int> process_args(char *const args[], const int &args_num);
  * @param str Original string
  * @return String after transformation
  */
-std::string get_printable_string(const std::string &str);
+std::string printable_string(const std::string &str);
 
 #define DEBUG_ONLY(code) code
 #define LEXER_VERBOSE_ONLY(text)                                                                                       \

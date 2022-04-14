@@ -26,7 +26,7 @@ concept BinaryExpr = std::is_same_v<T, EqExpression> || std::is_same_v<T, LEExpr
     std::is_same_v<T, LTExpression> || std::is_same_v<T, MinusExpression> || std::is_same_v<T, PlusExpression> ||
     std::is_same_v<T, DivExpression> || std::is_same_v<T, MulExpression>;
 
-template <BinaryExpr T> std::string get_binary_op_name(const T &expr)
+template <BinaryExpr T> std::string binary_op_name(const T &expr)
 {
     if constexpr (std::is_same_v<T, EqExpression>)
     {
@@ -64,7 +64,7 @@ void dump_binary_expr(const BinaryExpression &expr, const int &line, const int &
     std::cout << field << "#" << line << std::endl;
 
     std::visit(overloaded{[&](const BinaryExpr auto &binary_expr) {
-                   std::cout << std::string(offset, ' ') << get_binary_op_name(binary_expr) << std::endl;
+                   std::cout << std::string(offset, ' ') << binary_op_name(binary_expr) << std::endl;
                }},
                expr._base);
 
@@ -76,7 +76,7 @@ template <class T>
 concept UnaryExpr =
     std::is_same_v<T, NegExpression> || std::is_same_v<T, IsVoidExpression> || std::is_same_v<T, NotExpression>;
 
-template <UnaryExpr T> std::string get_unary_op_name(const T &expr)
+template <UnaryExpr T> std::string unary_op_name(const T &expr)
 {
     if constexpr (std::is_same_v<T, NegExpression>)
     {
@@ -98,7 +98,7 @@ void dump_unary_expr(const UnaryExpression &expr, const int &line, const int &of
     std::cout << field << "#" << line << std::endl;
 
     std::visit(overloaded{[&](const UnaryExpr auto &unary_expr) {
-                   std::cout << std::string(offset, ' ') << get_unary_op_name(unary_expr) << std::endl;
+                   std::cout << std::string(offset, ' ') << unary_op_name(unary_expr) << std::endl;
                }},
                expr._base);
 
@@ -147,7 +147,7 @@ void dump_bool_expression(const BoolExpression &bool_expr, const int &line, cons
 void dump_string_expression(const StringExpression &str, const int &line, const int &offset)
 {
     dump_line_and_name(offset, line, "_string");
-    std::cout << std::string(offset + 2, ' ') << get_printable_string(str._string) << std::endl;
+    std::cout << std::string(offset + 2, ' ') << printable_string(str._string) << std::endl;
 }
 
 void dump_int_expression(const IntExpression &number, const int &line, const int &offset)

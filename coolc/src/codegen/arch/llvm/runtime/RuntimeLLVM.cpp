@@ -16,7 +16,8 @@ RuntimeMethod::RuntimeMethod(llvm::Module &module, const std::string &name, llvm
 // TODO: initialize runtime structures
 RuntimeLLVM::RuntimeLLVM(llvm::Module &module)
     : Runtime(nullptr, nullptr), _void_ptr_type(llvm::Type::getVoidTy(module.getContext())->getPointerTo()),
-      _int32_type(llvm::Type::getInt32Ty(module.getContext())), _void_type(llvm::Type::getVoidTy(module.getContext())),
+      _int32_type(llvm::Type::getInt32Ty(module.getContext())),
+      _int64_type(llvm::Type::getInt64Ty(module.getContext())), _void_type(llvm::Type::getVoidTy(module.getContext())),
       _equals(module, RuntimeMethodsNames[RuntimeMethods::EQUALS], _int32_type, {_void_ptr_type, _void_ptr_type},
               *this),
       _object_abort(module, FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::ABORT]),
@@ -25,7 +26,8 @@ RuntimeLLVM::RuntimeLLVM(llvm::Module &module)
                         _void_ptr_type, {_void_ptr_type}, *this),
       _object_copy(module, FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::COPY]),
                    _void_ptr_type, {_void_ptr_type}, *this),
-      _gc_alloc(module, RuntimeMethodsNames[RuntimeMethods::GC_ALLOC], _void_ptr_type, {_int32_type}, *this),
+      _gc_alloc(module, RuntimeMethodsNames[RuntimeMethods::GC_ALLOC], _void_ptr_type,
+                {_int32_type, _int64_type, _void_ptr_type}, *this),
       _gc_alloc_by_tag(module, RuntimeMethodsNames[RuntimeMethods::GC_ALLOC_BY_TAG], _void_ptr_type,
                        {llvm::Type::getInt64Ty(module.getContext())}, *this),
       _string_length(module, FULL_METHOD_NAME(BaseClasses::STRING, StringMethodsNames[StringMethods::LENGTH]),
@@ -41,17 +43,6 @@ RuntimeLLVM::RuntimeLLVM(llvm::Module &module)
       _io_in_string(module, FULL_METHOD_NAME(BaseClasses::IO, IOMethodsNames[IOMethods::IN_STRING]), _void_ptr_type,
                     {_void_ptr_type}, *this),
       _io_in_int(module, FULL_METHOD_NAME(BaseClasses::IO, IOMethodsNames[IOMethods::IN_INT]), _void_ptr_type,
-                 {_void_ptr_type}, *this),
-      _int_init(module, NameConstructor::init_method(BaseClassesNames[BaseClasses::INT]), _void_type,
-                {_void_ptr_type, _void_ptr_type, _int32_type}, *this),
-      _bool_init(module, NameConstructor::init_method(BaseClassesNames[BaseClasses::BOOL]), _void_type,
-                 {_void_ptr_type, _void_ptr_type, _int32_type}, *this),
-      _string_init(module, NameConstructor::init_method(BaseClassesNames[BaseClasses::STRING]), _void_type,
-                   {_void_ptr_type, _void_ptr_type, _int32_type}, *this),
-      _object_init(module, NameConstructor::init_method(BaseClassesNames[BaseClasses::OBJECT]), _void_type,
-                   {_void_ptr_type, _void_ptr_type, _int32_type}, *this),
-      _io_init(module, NameConstructor::init_method(BaseClassesNames[BaseClasses::IO]), _void_type,
-               {_void_ptr_type, _void_ptr_type, _int32_type}, *this)
-
+                 {_void_ptr_type}, *this)
 {
 }

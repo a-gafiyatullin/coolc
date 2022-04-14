@@ -2,7 +2,7 @@
 
 #ifdef DEBUG
 
-std::string get_printable_string(const std::string &str)
+std::string printable_string(const std::string &str)
 {
     // transform escape sequencies
     std::string str_for_out;

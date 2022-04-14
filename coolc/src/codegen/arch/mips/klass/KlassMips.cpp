@@ -19,7 +19,7 @@ std::string KlassMips::method_full_name(const int &n) const
     return NameConstructor::method_full_name(method.first->_string, method.second->_object->_object, FULL_METHOD_DELIM);
 }
 
-std::shared_ptr<Klass> KlassBuilderMips::create_klass(const std::shared_ptr<ast::Class> &klass)
+std::shared_ptr<Klass> KlassBuilderMips::make_klass(const std::shared_ptr<ast::Class> &klass)
 {
     return klass ? std::make_shared<KlassMips>(klass, this) : std::make_shared<KlassMips>();
 }

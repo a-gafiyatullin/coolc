@@ -13,7 +13,7 @@ CodeGenLLVM::CodeGenLLVM(const std::shared_ptr<semant::ClassNode> &root)
       _runtime(_module), _data(_builder, _module, _runtime)
 {
     DEBUG_ONLY(_table.set_printer([](const std::string &name, const Symbol &s) {
-        LOG("Add symbol " + name + " is " + static_cast<std::string>(s))
+        LOG("Added symbol " + name + ": " + static_cast<std::string>(s))
     }));
 }
 
@@ -61,11 +61,12 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
 
 void CodeGenLLVM::emit_class_init_method_inner()
 {
-    // Inits for basic classes are external symbols
-    if (semant::Semant::is_basic_type(_current_class->_type))
+    // TODO: do we need constructor for Strings?
+    if (semant::Semant::is_string(_current_class->_type))
     {
         return;
     }
+    // Note, that init method don't init header
 
     const auto &current_class_name = _current_class->_type->_string;
     auto *const func = _module.getFunction(NameConstructor::init_method(current_class_name));
@@ -81,8 +82,7 @@ void CodeGenLLVM::emit_class_init_method_inner()
     {
         const auto &parent_init = NameConstructor::init_method(_current_class->_parent->_string);
         // TODO: maybe better way to pass args?
-        __ CreateCall(_module.getFunction(parent_init), {func->getArg(0), func->getArg(1), func->getArg(2)},
-                      NameConstructor::call(parent_init));
+        __ CreateCall(_module.getFunction(parent_init), {func->getArg(0)}, NameConstructor::call(parent_init));
     }
 
     const auto &klass = _builder->klass(current_class_name);
@@ -90,18 +90,59 @@ void CodeGenLLVM::emit_class_init_method_inner()
     {
         if (std::holds_alternative<ast::AttrFeature>(feature->_base))
         {
+            llvm::Value *initial_val = nullptr;
+
+            const auto &name = feature->_object->_object;
+
+            const auto &this_field = _table.symbol(name);
+            GUARANTEE_DEBUG(this_field._type == Symbol::FIELD); // impossible
+
+            const auto &offset = this_field._value._offset;
+            auto *const field_ptr =
+                __ CreateStructGEP(_data.class_struct(klass), func->getArg(0), offset, NameConstructor::gep(name));
+
             if (feature->_expr)
             {
-                const auto &name = feature->_object->_object;
-
-                const auto &this_field = _table.symbol(name);
-                GUARANTEE_DEBUG(this_field._type == Symbol::FIELD); // impossible
-
-                const auto &offset = this_field._value._offset;
-                // TODO: check this inst twice
-                __ CreateStore(emit_expr(feature->_expr), __ CreateStructGEP(_data.class_struct(klass), func->getArg(0),
-                                                                             offset, NameConstructor::gep(name)));
+                initial_val = emit_expr(feature->_expr);
             }
+            else if (semant::Semant::is_trivial_type(feature->_type))
+            {
+                initial_val = _data.init_value(feature->_type);
+            }
+            else if (!semant::Semant::is_native_type(feature->_type))
+            {
+                GUARANTEE_DEBUG(field_ptr->getType()->isPointerTy());
+                initial_val = llvm::ConstantPointerNull::get(static_cast<llvm::PointerType *>(field_ptr->getType()));
+            }
+            else
+            {
+                GUARANTEE_DEBUG(semant::Semant::is_basic_type(_current_class->_type));
+                if (semant::Semant::is_native_int(feature->_type))
+                {
+                    // TODO: maybe carry out type to class field?
+                    // TODO: maybe carry out initial value to class field?
+                    initial_val = llvm::ConstantInt::get(llvm::Type::getInt64Ty(_context), 0);
+                }
+                else if (semant::Semant::is_native_bool(feature->_type))
+                {
+                    // TODO: maybe carry out type to class field?
+                    // TODO: maybe carry out initial value to class field?
+                    // TODO: bool is 64 bit int now
+                    initial_val = llvm::ConstantInt::get(llvm::Type::getInt64Ty(_context), 0);
+                }
+                else if (semant::Semant::is_native_string(feature->_type))
+                {
+                    // TODO: maybe carry out type to class field?
+                    // TODO: do we really need init method for Strings?
+                }
+                else
+                {
+                    SHOULD_NOT_REACH_HERE();
+                }
+            }
+
+            // TODO: check this inst twice
+            __ CreateStore(initial_val, field_ptr);
         }
     }
 
@@ -217,6 +258,30 @@ llvm::Value *CodeGenLLVM::emit_object_expr_inner(const ast::ObjectExpression &ex
     }
 }
 
+llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass_type)
+{
+    if (!semant::Semant::is_self_type(klass_type))
+    {
+        const auto &klass = _builder->klass(klass_type->_string);
+        auto *const klass_struct = _data.class_struct(klass);
+
+        auto *const func = _runtime.method(RuntimeMethodsNames[RuntimeMethods::GC_ALLOC])->_func;
+        // TODO: create const by type?
+        auto *const tag =
+            llvm::ConstantInt::get(klass_struct->getElementType(DataLLVM::HeaderLayout::Tag), klass->tag());
+        auto *const size =
+            llvm::ConstantInt::get(klass_struct->getElementType(DataLLVM::HeaderLayout::Size), klass->size());
+        auto *const disp_table = _data.class_disp_tab(klass);
+        auto *const raw_table =
+            __ CreateBitCast(disp_table, _runtime._void_ptr_type, NameConstructor::cast(disp_table->getName()));
+        auto *const raw_object = __ CreateCall(func, {tag, size, raw_table},
+                                               NameConstructor::call(RuntimeMethodsNames[RuntimeMethods::GC_ALLOC]));
+
+        return __ CreateBitCast(raw_object, klass_struct->getPointerTo(),
+                                NameConstructor::cast(klass_struct->getName()));
+    }
+}
+
 llvm::Value *CodeGenLLVM::emit_new_expr_inner(const ast::NewExpression &expr)
 {
 }
@@ -271,9 +336,11 @@ void CodeGenLLVM::emit_runtime_main()
         llvm::BasicBlock::Create(_context, static_cast<std::string>(NameConstructor::ENTRY_BLOCK_NAME), runtime_main);
     __ SetInsertPoint(entry);
 
-    // TODO: dummy
-    __ CreateCall(_runtime.method(RuntimeMethodsNames[RuntimeMethods::GC_ALLOC])->_func,
-                  {llvm::ConstantInt::get(llvm::Type::getInt64Ty(_context), 0)});
+    const auto main_klass = _builder->klass(MainClassName);
+    auto *const main_object = emit_new_inner(main_klass->klass());
+
+    const auto main_method = main_klass->method_full_name(MainMethodName);
+    __ CreateCall(_module.getFunction(main_method), {main_object}, NameConstructor::call(main_method));
 
     __ CreateRet(llvm::ConstantInt::get(llvm::Type::getInt32Ty(_context), 0));
 

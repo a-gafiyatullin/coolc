@@ -64,10 +64,13 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     llvm::Value *emit_load_bool(const llvm::Value *bool_obj);
     llvm::Value *emit_allocate_bool(const llvm::Value *val);
 
+    // void emit_gc_update(const Register &obj, const int &offset);
+
     // Main func that allocate Main object and call Main_main
     void emit_runtime_main();
 
-    // void emit_gc_update(const Register &obj, const int &offset);
+    // helpers
+    llvm::Value *emit_new_inner(const std::shared_ptr<ast::Type> &klass);
 
   public:
     explicit CodeGenLLVM(const std::shared_ptr<semant::ClassNode> &root);

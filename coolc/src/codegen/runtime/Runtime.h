@@ -6,8 +6,8 @@
 
 extern "C"
 {
-    //extern void **ClassNameTab; // must be defined by coolc
-    //extern void **ClassObjTab;  // must be defined by coolc
+    // extern void **ClassNameTab; // must be defined by coolc
+    // extern void **ClassObjTab;  // must be defined by coolc
 
     /**
      * @brief Structure of the Object header
@@ -56,29 +56,12 @@ extern "C"
      */
     void *Object_copy(void *receiver);
 
-    /**
-     * @brief Initialize Object object
-     *
-     * @param receiver Receiver
-     * @param dispatch_table Pointer to dispatch table
-     * @param tag Object tag
-     */
-    void Object_init(void *receiver, void *dispatch_table, int tag);
     // ------------------------------ Int ------------------------------
     struct IntLayout
     {
         ObjectLayout _header;
         long int _value;
     };
-
-    /**
-     * @brief Initialize Int object
-     *
-     * @param receiver Receiver
-     * @param dispatch_table Pointer to dispatch table
-     * @param tag Int tag
-     */
-    void Int_init(void *receiver, void *dispatch_table, int tag);
     // ------------------------------ String ------------------------------
     struct StringLayout
     {
@@ -161,8 +144,10 @@ extern "C"
     /**
      * @brief Allocate object with known size
      *
+     * @param tag Object tag
      * @param size Object size
+     * @param disp_tab Dispatch table ptr
      * @return Pointer to the newly allocated object
      */
-    void *gc_alloc(size_t size);
+    void *gc_alloc(int tag, size_t size, void *disp_tab);
 }

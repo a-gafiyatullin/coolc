@@ -54,6 +54,7 @@ class NameConstructor
     static constexpr std::string_view ENTRY_BLOCK_NAME = "entry_block";
     static constexpr std::string_view CALL_PREFIX = "call_";
     static constexpr std::string_view GEP_PREFIX = "gep_";
+    static constexpr std::string_view CAST_TO_PREFIX = "cast_to_";
 
     /**
      * @brief Get the dispatch table name
@@ -214,6 +215,17 @@ class NameConstructor
     inline static std::string gep(const std::string &object)
     {
         return static_cast<std::string>(GEP_PREFIX) + object;
+    }
+
+    /**
+     * @brief Get comment for bitcast intsruction
+     *
+     * @param method Destination type
+     * @return String comment
+     */
+    inline static std::string cast(const std::string &type)
+    {
+        return static_cast<std::string>(CAST_TO_PREFIX) + type;
     }
 };
 }; // namespace codegen

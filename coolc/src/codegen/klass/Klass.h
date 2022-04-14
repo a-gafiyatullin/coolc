@@ -75,6 +75,16 @@ class Klass
     }
 
     /**
+     * @brief Class type
+     *
+     * @return Class type
+     */
+    inline const std::shared_ptr<ast::Type> &klass() const
+    {
+        return _klass;
+    }
+
+    /**
      * @brief Size of the object of this class
      *
      * @return Size in bytes
@@ -200,7 +210,7 @@ class KlassBuilder
      * @param klass ast::Class representation of Cool Class
      * @return New Klass object
      */
-    virtual std::shared_ptr<Klass> create_klass(const std::shared_ptr<ast::Class> &klass) = 0;
+    virtual std::shared_ptr<Klass> make_klass(const std::shared_ptr<ast::Class> &klass) = 0;
 
   public:
     /**

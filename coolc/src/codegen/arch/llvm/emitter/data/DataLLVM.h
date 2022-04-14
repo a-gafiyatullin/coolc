@@ -13,15 +13,20 @@ namespace codegen
 
 class DataLLVM : public Data<llvm::GlobalVariable *, llvm::StructType *>
 {
-  private:
+  public:
     enum HeaderLayout
     {
         Mark,
         Tag,
         Size,
-        DispatchTable
+        DispatchTable,
+
+        HeaderLayoutSize
     };
 
+    static const char *const HEADER_LAYOUT_NAME[HeaderLayoutSize];
+
+  private:
     llvm::Module &_module;
     const RuntimeLLVM &_runtime;
 
@@ -37,11 +42,12 @@ class DataLLVM : public Data<llvm::GlobalVariable *, llvm::StructType *>
     void emit_inner(const std::string &out_file) override;
 
     // helpers
-    void construct_header(const std::shared_ptr<Klass> &klass, std::vector<llvm::Type *> &fields);
-    void construct_base_class(const std::shared_ptr<Klass> &klass, const std::vector<llvm::Type *> &fields,
-                              const std::vector<llvm::Constant *> &methods);
+    void make_header(const std::shared_ptr<Klass> &klass, std::vector<llvm::Type *> &fields);
+    void make_base_class(const std::shared_ptr<Klass> &klass, const std::vector<llvm::Type *> &fields,
+                         const std::vector<llvm::Constant *> &methods);
     llvm::GlobalVariable *make_disp_table(const std::string &name, llvm::StructType *type,
                                           const std::vector<llvm::Constant *> &methods);
+    void make_init_method(const std::shared_ptr<Klass> &klass);
 
   public:
     /**

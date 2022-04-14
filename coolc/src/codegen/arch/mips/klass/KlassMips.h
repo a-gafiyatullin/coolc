@@ -61,7 +61,7 @@ class KlassMips : public Klass
 class KlassBuilderMips : public KlassBuilder
 {
   private:
-    std::shared_ptr<Klass> create_klass(const std::shared_ptr<ast::Class> &klass) override;
+    std::shared_ptr<Klass> make_klass(const std::shared_ptr<ast::Class> &klass) override;
 
   public:
     explicit KlassBuilderMips(const std::shared_ptr<semant::ClassNode> &root) : KlassBuilder(root)
