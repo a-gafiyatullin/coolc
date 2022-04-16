@@ -1,31 +1,15 @@
 #pragma once
 
-#include "codegen/arch/llvm/klass/KlassLLVM.h"
 #include "codegen/arch/llvm/runtime/RuntimeLLVM.h"
 #include "codegen/emitter/data/Data.h"
-#include "codegen/symnames/NameConstructor.h"
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DerivedTypes.h>
-#include <llvm/IR/Module.h>
 
 namespace codegen
 {
 
 class DataLLVM : public Data<llvm::GlobalVariable *, llvm::StructType *>
 {
-  public:
-    enum HeaderLayout
-    {
-        Mark,
-        Tag,
-        Size,
-        DispatchTable,
-
-        HeaderLayoutSize
-    };
-
-    static const char *const HEADER_LAYOUT_NAME[HeaderLayoutSize];
-
   private:
     llvm::Module &_module;
     const RuntimeLLVM &_runtime;
@@ -48,6 +32,7 @@ class DataLLVM : public Data<llvm::GlobalVariable *, llvm::StructType *>
     llvm::GlobalVariable *make_disp_table(const std::string &name, llvm::StructType *type,
                                           const std::vector<llvm::Constant *> &methods);
     void make_init_method(const std::shared_ptr<Klass> &klass);
+    llvm::Constant *make_char_string(const std::string &str);
 
   public:
     /**

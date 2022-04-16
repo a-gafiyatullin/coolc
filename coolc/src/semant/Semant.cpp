@@ -106,7 +106,7 @@ bool Semant::check_class_hierarchy_for_cycle(const std::shared_ptr<ClassNode> &k
     for (const auto &child : klass->_children)
     {
         SEMANT_RETURN_IF_FALSE(check_class_hierarchy_for_cycle(child, visited, loop), false);
-        visited[class_name] = false; // TODO: is it correct?
+        visited[class_name] = false;
     }
 
     return true;
@@ -563,38 +563,20 @@ bool Semant::check_expressions()
 bool Semant::infer_expression_type(const std::shared_ptr<ast::Expression> &expr, Scope &scope)
 {
     expr->_type = std::visit(
-        ast::overloaded{
-            // TODO: do we really need to specify return type?
-            [&](const ast::BoolExpression &bool_expr) -> std::shared_ptr<ast::Type> { return Bool; },
-            [&](const ast::StringExpression &str) -> std::shared_ptr<ast::Type> { return String; },
-            [&](const ast::IntExpression &number) -> std::shared_ptr<ast::Type> { return Int; },
-            [&](const ast::ObjectExpression &object) -> std::shared_ptr<ast::Type> {
-                return infer_object_type(object, scope);
-            },
-            [&](const ast::BinaryExpression &binary_expr) -> std::shared_ptr<ast::Type> {
-                return infer_binary_type(binary_expr, scope);
-            },
-            [&](const ast::UnaryExpression &unary_expr) -> std::shared_ptr<ast::Type> {
-                return infer_unary_type(unary_expr, scope);
-            },
-            [&](const ast::NewExpression &alloc) -> std::shared_ptr<ast::Type> { return infer_new_type(alloc); },
-            [&](const ast::CaseExpression &branch) -> std::shared_ptr<ast::Type> {
-                return infer_cases_type(branch, scope);
-            },
-            [&](const ast::LetExpression &let) -> std::shared_ptr<ast::Type> { return infer_let_type(let, scope); },
-            [&](const ast::ListExpression &list) -> std::shared_ptr<ast::Type> {
-                return infer_sequence_type(list, scope);
-            },
-            [&](const ast::WhileExpression &loop) -> std::shared_ptr<ast::Type> {
-                return infer_loop_type(loop, scope);
-            },
-            [&](const ast::IfExpression &branch) -> std::shared_ptr<ast::Type> { return infer_if_type(branch, scope); },
-            [&](const ast::DispatchExpression &dispatch) -> std::shared_ptr<ast::Type> {
-                return infer_dispatch_type(dispatch, scope);
-            },
-            [&](const ast::AssignExpression &assign) -> std::shared_ptr<ast::Type> {
-                return infer_assign_type(assign, scope);
-            }},
+        ast::overloaded{[&](const ast::BoolExpression &bool_expr) { return Bool; },
+                        [&](const ast::StringExpression &str) { return String; },
+                        [&](const ast::IntExpression &number) { return Int; },
+                        [&](const ast::ObjectExpression &object) { return infer_object_type(object, scope); },
+                        [&](const ast::BinaryExpression &binary_expr) { return infer_binary_type(binary_expr, scope); },
+                        [&](const ast::UnaryExpression &unary_expr) { return infer_unary_type(unary_expr, scope); },
+                        [&](const ast::NewExpression &alloc) { return infer_new_type(alloc); },
+                        [&](const ast::CaseExpression &branch) { return infer_cases_type(branch, scope); },
+                        [&](const ast::LetExpression &let) { return infer_let_type(let, scope); },
+                        [&](const ast::ListExpression &list) { return infer_sequence_type(list, scope); },
+                        [&](const ast::WhileExpression &loop) { return infer_loop_type(loop, scope); },
+                        [&](const ast::IfExpression &branch) { return infer_if_type(branch, scope); },
+                        [&](const ast::DispatchExpression &dispatch) { return infer_dispatch_type(dispatch, scope); },
+                        [&](const ast::AssignExpression &assign) { return infer_assign_type(assign, scope); }},
         expr->_data);
 
     if (_error_line_number == -1)

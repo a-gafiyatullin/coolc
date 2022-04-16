@@ -1,3 +1,5 @@
+#pragma once
+
 #include "codegen/symtab/SymbolTable.h"
 #include <llvm/IR/Value.h>
 

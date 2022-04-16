@@ -96,13 +96,11 @@ Value Data<Value, ClassDesc>::class_disp_tab(const std::shared_ptr<Klass> &klass
 
 template <class Value, class ClassDesc> void Data<Value, ClassDesc>::emit(const std::string &out_file)
 {
-    // TODO: do we realy need this here?
-    int_const(0);
-    string_const("");
-
     CODEGEN_VERBOSE_ONLY(LOG_ENTER("GENERATE RUNTIME TABLES."));
+
     gen_class_obj_tab();
     gen_class_name_tab();
+
     CODEGEN_VERBOSE_ONLY(LOG_EXIT("GENERATE RUNTIME TABLES."));
 
     emit_inner(out_file);

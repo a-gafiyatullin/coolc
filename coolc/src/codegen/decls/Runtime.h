@@ -1,9 +1,30 @@
 #pragma once
 
+#include "codegen/constants/Constants.h"
 #include <unordered_map>
 
 namespace codegen
 {
+
+enum HeaderLayout
+{
+    Mark,
+    Tag,
+    Size,
+    DispatchTable,
+
+    HeaderLayoutElemets
+};
+
+enum HeaderLayoutSizes
+{
+    MarkSize = sizeof(MARK_TYPE) * WORD_SIZE,
+    TagSize = sizeof(TAG_TYPE) * WORD_SIZE,
+    SizeSize = sizeof(SIZE_TYPE) * WORD_SIZE,
+    DispatchTableSize = sizeof(DISP_TAB_TYPE) * WORD_SIZE,
+
+    HeaderSize = MarkSize + TagSize + SizeSize + DispatchTableSize
+};
 
 enum RuntimeMethods
 {

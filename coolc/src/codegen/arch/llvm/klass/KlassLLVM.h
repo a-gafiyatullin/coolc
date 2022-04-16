@@ -1,6 +1,6 @@
 #pragma once
 
-#include "codegen/constants/Constants.h"
+#include "codegen/decls/Runtime.h"
 #include "codegen/klass/Klass.h"
 
 namespace codegen
@@ -8,15 +8,6 @@ namespace codegen
 class KlassLLVM : public Klass
 {
   public:
-    /*
-     * Header:
-     * 1) Mark
-     * 2) Tag
-     * 3) Size
-     * 4) Dispatch Table
-     */
-    static constexpr int HEADER_FIELDS = 4;
-
     static constexpr char FULL_METHOD_DELIM = '_';
 
     KlassLLVM(const std::shared_ptr<ast::Class> &klass, const KlassBuilder *builder) : Klass(klass, builder)
@@ -29,7 +20,7 @@ class KlassLLVM : public Klass
 
     size_t size() const override
     {
-        return (_fields.size() + HEADER_FIELDS) * WORD_SIZE;
+        return (_fields.size()) * WORD_SIZE + HeaderLayoutSizes::HeaderSize;
     }
 
     std::string method_full_name(const std::string &method_name) const override;
@@ -37,7 +28,7 @@ class KlassLLVM : public Klass
     size_t field_offset(const int &field_num) const override
     {
         GUARANTEE_DEBUG(field_num < _fields.size());
-        return field_num + HEADER_FIELDS;
+        return field_num + HeaderLayout::HeaderLayoutElemets;
     }
 };
 

@@ -24,27 +24,29 @@ void Klass::divide_features(const std::vector<std::shared_ptr<ast::Feature>> &fe
 
     for (const auto &feature : features)
     {
+        const auto &name = feature->_object->_object;
+
         if (std::holds_alternative<ast::MethodFeature>(feature->_base))
         {
-            auto table_entry = std::find_if(_methods.begin(), _methods.end(), [&feature](const auto &entry) {
-                return entry.second->_object->_object == feature->_object->_object;
+            auto table_entry = std::find_if(_methods.begin(), _methods.end(), [&name](const auto &entry) {
+                return entry.second->_object->_object == name;
             });
 
             if (table_entry == _methods.end())
             {
-                CODEGEN_VERBOSE_ONLY(LOG("Adds method \"" + feature->_object->_object + "\""););
+                CODEGEN_VERBOSE_ONLY(LOG("Adds method \"" + name + "\""););
                 _methods.push_back(std::make_pair(_klass, feature));
             }
             else
             {
-                CODEGEN_VERBOSE_ONLY(LOG("Overload method \"" + feature->_object->_object + "\""););
+                CODEGEN_VERBOSE_ONLY(LOG("Overload method \"" + name + "\""););
                 table_entry->first = _klass;
                 table_entry->second = feature;
             }
         }
         else
         {
-            CODEGEN_VERBOSE_ONLY(LOG("Adds field \"" + feature->_object->_object + "\""););
+            CODEGEN_VERBOSE_ONLY(LOG("Adds field \"" + name + "\""););
             _fields.push_back(feature);
         }
     }
@@ -71,7 +73,7 @@ void Klass::dump_methods() const
 
     for (const auto &m : _methods)
     {
-        LOG_NO_CR(m.second->_type->_string + " " + m.first->_string + "::" + m.second->_object->_object + "(");
+        LOG_NO_CR(m.first->_string + "::" + m.second->_object->_object + "(");
 
         const auto &formals = std::get<ast::MethodFeature>(m.second->_base)._formals;
         auto n = 0;
@@ -82,7 +84,7 @@ void Klass::dump_methods() const
             LOG_NO_CR_NO_IDENT(f->_object->_object + ": " + f->_type->_string + (n != formals_num ? ", " : ""));
         }
 
-        LOG_NO_IDENT(")");
+        LOG_NO_IDENT(") -> " + m.second->_type->_string);
     }
 
     LOG_EXIT("ACTUAL METHODS.");

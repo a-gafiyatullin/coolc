@@ -2,7 +2,6 @@
 
 #include "codegen/arch/llvm/klass/KlassLLVM.h"
 #include "codegen/decls/Runtime.h"
-#include "decls/Decls.h"
 #include <llvm/IR/Module.h>
 
 namespace codegen
@@ -34,17 +33,14 @@ class RuntimeLLVM : public Runtime<RuntimeMethod, llvm::Value *>
 {
     friend class RuntimeMethod;
 
-  public:
-    /**
-     * @brief Void pointer type for convinience
-     *
-     */
-    llvm::Type *_void_ptr_type;
-    llvm::Type *_int32_type;
-    llvm::Type *_int64_type;
-    llvm::Type *_void_type;
-
   private:
+    llvm::Type *const _int8_type;
+    llvm::Type *const _int32_type;
+    llvm::Type *const _int64_type;
+    llvm::Type *const _void_type;
+
+    llvm::Type *_header_layout_types[HeaderLayoutElemets];
+
     const RuntimeMethod _equals;
 
     // Object class methods
@@ -74,5 +70,56 @@ class RuntimeLLVM : public Runtime<RuntimeMethod, llvm::Value *>
      * @param module llvm::Module for function declarations
      */
     explicit RuntimeLLVM(llvm::Module &module);
+
+    /**
+     * @brief Get header layout element type
+     *
+     * @param elem Element
+     * @return Type
+     */
+    inline llvm::Type *header_elem_type(const HeaderLayout &elem) const
+    {
+        return _header_layout_types[elem];
+    }
+
+    /**
+     * @brief Get type for 32 bit int
+     *
+     * @return Type of 32 bit int
+     */
+    inline llvm::Type *int32_type() const
+    {
+        return _int32_type;
+    }
+
+    /**
+     * @brief Get type for 64 bit int
+     *
+     * @return Type of 64 bit int
+     */
+    inline llvm::Type *int64_type() const
+    {
+        return _int64_type;
+    }
+
+    /**
+     * @brief Get type for void
+     *
+     * @return Type of void
+     */
+    inline llvm::Type *void_type() const
+    {
+        return _void_type;
+    }
+
+    /**
+     * @brief Get type for 8 bit int
+     *
+     * @return Type of 8 bit int
+     */
+    inline llvm::Type *int8_type() const
+    {
+        return _int8_type;
+    }
 };
 }; // namespace codegen

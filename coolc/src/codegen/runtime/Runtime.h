@@ -15,10 +15,10 @@ extern "C"
      */
     struct ObjectLayout
     {
-        long int _mark;
-        long int _tag;
-        long int _size;
-        void *_dispatch_table;
+        MARK_TYPE _mark;
+        TAG_TYPE _tag;
+        SIZE_TYPE _size;
+        DISP_TAB_TYPE _dispatch_table;
     };
 
     /**
@@ -60,14 +60,14 @@ extern "C"
     struct IntLayout
     {
         ObjectLayout _header;
-        long int _value;
+        long long int _value;
     };
     // ------------------------------ String ------------------------------
     struct StringLayout
     {
         ObjectLayout _header;
-        void *_string_size;
-        void *_string; // null terminated
+        IntLayout *_string_size;
+        char *_string; // null terminated
     };
 
     /**

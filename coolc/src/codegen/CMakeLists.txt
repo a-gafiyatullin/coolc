@@ -22,6 +22,5 @@ add_library(codegen STATIC
     
     symnames/NameConstructor.cpp
     klass/Klass.cpp
-    constants/Constants.cpp
     decls/Runtime.cpp
     )

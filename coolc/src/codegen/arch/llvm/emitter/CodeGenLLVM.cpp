@@ -13,7 +13,7 @@ CodeGenLLVM::CodeGenLLVM(const std::shared_ptr<semant::ClassNode> &root)
       _runtime(_module), _data(_builder, _module, _runtime)
 {
     DEBUG_ONLY(_table.set_printer([](const std::string &name, const Symbol &s) {
-        LOG("Added symbol " + name + ": " + static_cast<std::string>(s))
+        LOG("Added symbol \"" + name + "\": " + static_cast<std::string>(s))
     }));
 }
 
@@ -48,7 +48,7 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
     }
 
     // Create a new basic block to start insertion into.
-    auto *entry = llvm::BasicBlock::Create(_context, static_cast<std::string>(NameConstructor::ENTRY_BLOCK_NAME), func);
+    auto *entry = llvm::BasicBlock::Create(_context, static_cast<std::string>(Names::ENTRY_BLOCK_NAME), func);
     __ SetInsertPoint(entry);
 
     __ CreateRet(emit_expr(method->_expr));
@@ -61,28 +61,28 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
 
 void CodeGenLLVM::emit_class_init_method_inner()
 {
-    // TODO: do we need constructor for Strings?
+    // String init method is runtime method
     if (semant::Semant::is_string(_current_class->_type))
     {
         return;
     }
-    // Note, that init method don't init header
 
+    // Note, that init method don't init header
     const auto &current_class_name = _current_class->_type->_string;
-    auto *const func = _module.getFunction(NameConstructor::init_method(current_class_name));
+    auto *const func = _module.getFunction(Names::init_method(current_class_name));
 
     GUARANTEE_DEBUG(func);
 
     // Create a new basic block to start insertion into.
-    auto *entry = llvm::BasicBlock::Create(_context, static_cast<std::string>(NameConstructor::ENTRY_BLOCK_NAME), func);
+    auto *entry = llvm::BasicBlock::Create(_context, static_cast<std::string>(Names::ENTRY_BLOCK_NAME), func);
     __ SetInsertPoint(entry);
 
     // call parent constructor
     if (!semant::Semant::is_empty_type(_current_class->_parent)) // Object moment
     {
-        const auto &parent_init = NameConstructor::init_method(_current_class->_parent->_string);
+        const auto &parent_init = Names::init_method(_current_class->_parent->_string);
         // TODO: maybe better way to pass args?
-        __ CreateCall(_module.getFunction(parent_init), {func->getArg(0)}, NameConstructor::call(parent_init));
+        __ CreateCall(_module.getFunction(parent_init), {func->getArg(0)}, Names::call(parent_init));
     }
 
     const auto &klass = _builder->klass(current_class_name);
@@ -99,7 +99,7 @@ void CodeGenLLVM::emit_class_init_method_inner()
 
             const auto &offset = this_field._value._offset;
             auto *const field_ptr =
-                __ CreateStructGEP(_data.class_struct(klass), func->getArg(0), offset, NameConstructor::gep(name));
+                __ CreateStructGEP(_data.class_struct(klass), func->getArg(0), offset, Names::gep(name));
 
             if (feature->_expr)
             {
@@ -129,11 +129,6 @@ void CodeGenLLVM::emit_class_init_method_inner()
                     // TODO: maybe carry out initial value to class field?
                     // TODO: bool is 64 bit int now
                     initial_val = llvm::ConstantInt::get(llvm::Type::getInt64Ty(_context), 0);
-                }
-                else if (semant::Semant::is_native_string(feature->_type))
-                {
-                    // TODO: maybe carry out type to class field?
-                    // TODO: do we really need init method for Strings?
                 }
                 else
                 {
@@ -213,7 +208,7 @@ llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &ex
         auto *equals_func = _runtime.method(RuntimeMethodsNames[RuntimeMethods::EQUALS])->_func;
 
         auto *const false_branch_res =
-            __ CreateCall(equals_func, {lhs, rhs}, NameConstructor::call(RuntimeMethodsNames[RuntimeMethods::EQUALS]));
+            __ CreateCall(equals_func, {lhs, rhs}, Names::call(RuntimeMethodsNames[RuntimeMethods::EQUALS]));
         __ CreateBr(merge_bb);
 
         // merge results
@@ -234,6 +229,7 @@ llvm::Value *CodeGenLLVM::emit_unary_expr_inner(const ast::UnaryExpression &expr
 
 llvm::Value *CodeGenLLVM::emit_bool_expr(const ast::BoolExpression &expr)
 {
+    return _data.bool_const(expr._value);
 }
 
 llvm::Value *CodeGenLLVM::emit_int_expr(const ast::IntExpression &expr)
@@ -243,6 +239,7 @@ llvm::Value *CodeGenLLVM::emit_int_expr(const ast::IntExpression &expr)
 
 llvm::Value *CodeGenLLVM::emit_string_expr(const ast::StringExpression &expr)
 {
+    return _data.string_const(expr._string);
 }
 
 llvm::Value *CodeGenLLVM::emit_object_expr_inner(const ast::ObjectExpression &expr)
@@ -266,24 +263,32 @@ llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass
         auto *const klass_struct = _data.class_struct(klass);
 
         auto *const func = _runtime.method(RuntimeMethodsNames[RuntimeMethods::GC_ALLOC])->_func;
-        // TODO: create const by type?
-        auto *const tag =
-            llvm::ConstantInt::get(klass_struct->getElementType(DataLLVM::HeaderLayout::Tag), klass->tag());
-        auto *const size =
-            llvm::ConstantInt::get(klass_struct->getElementType(DataLLVM::HeaderLayout::Size), klass->size());
+
+        // prepare tag, size and dispatch table
+        auto *const tag = llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag());
+        auto *const size = llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size());
         auto *const disp_table = _data.class_disp_tab(klass);
         auto *const raw_table =
-            __ CreateBitCast(disp_table, _runtime._void_ptr_type, NameConstructor::cast(disp_table->getName()));
-        auto *const raw_object = __ CreateCall(func, {tag, size, raw_table},
-                                               NameConstructor::call(RuntimeMethodsNames[RuntimeMethods::GC_ALLOC]));
+            __ CreateBitCast(disp_table, _runtime.void_type()->getPointerTo(), Names::cast(disp_table->getName()));
 
-        return __ CreateBitCast(raw_object, klass_struct->getPointerTo(),
-                                NameConstructor::cast(klass_struct->getName()));
+        // call allocation and cast to this klass pointer
+        auto *const raw_object =
+            __ CreateCall(func, {tag, size, raw_table}, Names::call(RuntimeMethodsNames[RuntimeMethods::GC_ALLOC]));
+        auto *const object =
+            __ CreateBitCast(raw_object, klass_struct->getPointerTo(), Names::cast(klass_struct->getName()));
+
+        // call init
+        const auto init_method = Names::init_method(klass->name());
+        __ CreateCall(_module.getFunction(init_method), {object}, Names::call(init_method));
+
+        // object is ready
+        return object;
     }
 }
 
 llvm::Value *CodeGenLLVM::emit_new_expr_inner(const ast::NewExpression &expr)
 {
+    return emit_new_inner(expr._type);
 }
 
 llvm::Value *CodeGenLLVM::emit_cases_expr_inner(const ast::CaseExpression &expr)
@@ -304,6 +309,54 @@ llvm::Value *CodeGenLLVM::emit_if_expr_inner(const ast::IfExpression &expr)
 
 llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression &expr)
 {
+    // prepare args
+    std::vector<llvm::Value *> args;
+    args.push_back(nullptr); // dummy for the first arg
+    for (const auto &arg : expr._args)
+    {
+        args.push_back(emit_expr(arg));
+    }
+
+    // get receiver
+    auto *const receiver = emit_expr(expr._expr);
+    args[0] = receiver;
+
+    const auto &method_name = expr._object->_object;
+    auto *const call = std::visit(
+        ast::overloaded{
+            [&](const ast::ObjectDispatchExpression &disp) {
+                const auto &klass =
+                    _builder->klass(semant::Semant::exact_type(expr._expr->_type, _current_class->_type)->_string);
+                const auto disp_table_name = Names::disp_table(klass->name());
+
+                // get pointer on dispatch table pointer
+                auto *const disp_table_ptr_ptr =
+                    __ CreateStructGEP(receiver, HeaderLayout::DispatchTable, Names::gep(disp_table_name));
+
+                // load dispatch table pointer
+                auto *const disp_table_ptr = __ CreateLoad(disp_table_ptr_ptr, Names::load(disp_table_name));
+
+                // get pointer on method address
+                auto *const method_ptr =
+                    __ CreateStructGEP(disp_table_ptr, klass->method_index(method_name), Names::gep(method_name));
+
+                // load method address
+                auto *const method = __ CreateLoad(method_ptr, Names::load(method_name));
+
+                // call
+                return __ CreateCall(method, args, Names::call(method_name));
+            },
+            [&](const ast::StaticDispatchExpression &disp) {
+                auto *const method =
+                    _module.getFunction(_builder->klass(disp._type->_string)->method_full_name(method_name));
+
+                GUARANTEE_DEBUG(method);
+
+                return __ CreateCall(method, args, Names::call(method_name));
+            }},
+        expr._base);
+
+    return call;
 }
 
 llvm::Value *CodeGenLLVM::emit_assign_expr_inner(const ast::AssignExpression &expr)
@@ -332,15 +385,14 @@ void CodeGenLLVM::emit_runtime_main()
         llvm::Function::Create(llvm::FunctionType::get(llvm::Type::getInt32Ty(_context), {}, false),
                                llvm::Function::ExternalLinkage, static_cast<std::string>(RUNTIME_MAIN_FUNC), &_module);
 
-    auto *entry =
-        llvm::BasicBlock::Create(_context, static_cast<std::string>(NameConstructor::ENTRY_BLOCK_NAME), runtime_main);
+    auto *entry = llvm::BasicBlock::Create(_context, static_cast<std::string>(Names::ENTRY_BLOCK_NAME), runtime_main);
     __ SetInsertPoint(entry);
 
     const auto main_klass = _builder->klass(MainClassName);
     auto *const main_object = emit_new_inner(main_klass->klass());
 
     const auto main_method = main_klass->method_full_name(MainMethodName);
-    __ CreateCall(_module.getFunction(main_method), {main_object}, NameConstructor::call(main_method));
+    __ CreateCall(_module.getFunction(main_method), {main_object}, Names::call(main_method));
 
     __ CreateRet(llvm::ConstantInt::get(llvm::Type::getInt32Ty(_context), 0));
 

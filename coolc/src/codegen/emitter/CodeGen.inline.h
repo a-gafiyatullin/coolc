@@ -73,22 +73,20 @@ template <class Value, class Symbol>
 Value CodeGen<Value, Symbol>::emit_expr(const std::shared_ptr<ast::Expression> &expr)
 {
     return std::visit(
-        ast::overloaded{
-            // TODO: do we really need specify ret type?
-            [&](const ast::BoolExpression &bool_expr) -> Value { return emit_bool_expr(bool_expr); },
-            [&](const ast::StringExpression &str) -> Value { return emit_string_expr(str); },
-            [&](const ast::IntExpression &number) -> Value { return emit_int_expr(number); },
-            [&](const ast::ObjectExpression &object) -> Value { return emit_object_expr(object); },
-            [&](const ast::BinaryExpression &binary_expr) -> Value { return emit_binary_expr(binary_expr); },
-            [&](const ast::UnaryExpression &unary_expr) -> Value { return emit_unary_expr(unary_expr); },
-            [&](const ast::NewExpression &alloc) -> Value { return emit_new_expr(alloc); },
-            [&](const ast::CaseExpression &branch) -> Value { return emit_cases_expr(branch); },
-            [&](const ast::LetExpression &let) -> Value { return emit_let_expr(let); },
-            [&](const ast::ListExpression &list) -> Value { return emit_list_expr(list); },
-            [&](const ast::WhileExpression &loop) -> Value { return emit_loop_expr(loop); },
-            [&](const ast::IfExpression &branch) -> Value { return emit_if_expr(branch); },
-            [&](const ast::DispatchExpression &dispatch) -> Value { return emit_dispatch_expr(dispatch); },
-            [&](const ast::AssignExpression &assign) -> Value { return emit_assign_expr(assign); }},
+        ast::overloaded{[&](const ast::BoolExpression &bool_expr) { return emit_bool_expr(bool_expr); },
+                        [&](const ast::StringExpression &str) { return emit_string_expr(str); },
+                        [&](const ast::IntExpression &number) { return emit_int_expr(number); },
+                        [&](const ast::ObjectExpression &object) { return emit_object_expr(object); },
+                        [&](const ast::BinaryExpression &binary_expr) { return emit_binary_expr(binary_expr); },
+                        [&](const ast::UnaryExpression &unary_expr) { return emit_unary_expr(unary_expr); },
+                        [&](const ast::NewExpression &alloc) { return emit_new_expr(alloc); },
+                        [&](const ast::CaseExpression &branch) { return emit_cases_expr(branch); },
+                        [&](const ast::LetExpression &let) { return emit_let_expr(let); },
+                        [&](const ast::ListExpression &list) { return emit_list_expr(list); },
+                        [&](const ast::WhileExpression &loop) { return emit_loop_expr(loop); },
+                        [&](const ast::IfExpression &branch) { return emit_if_expr(branch); },
+                        [&](const ast::DispatchExpression &dispatch) { return emit_dispatch_expr(dispatch); },
+                        [&](const ast::AssignExpression &assign) { return emit_assign_expr(assign); }},
         expr->_data);
 }
 

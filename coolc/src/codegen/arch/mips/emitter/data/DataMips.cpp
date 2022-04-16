@@ -8,9 +8,9 @@ using namespace codegen;
 void DataMips::string_const_inner(const std::string &str)
 {
     const auto &size_label = int_const(str.length());
-    _string_constants.insert({str, Label(NameConstructor::string_constant())});
+    _string_constants.insert({str, Label(Names::string_constant())});
 
-    __ word(-1);
+    __ word(MarkWordDefaultValue);
 
     const auto &string_klass = _builder->klass(BaseClassesNames[BaseClasses::STRING]);
 
@@ -18,7 +18,7 @@ void DataMips::string_const_inner(const std::string &str)
     __ word(string_klass->tag());
     __ word(string_klass->size() / WORD_SIZE +
             std::max(static_cast<int>(std::ceil(str.length() / (double)WORD_SIZE)), 1)); // 4 + str len
-    __ word(Label(NameConstructor::disp_table(string_klass->name())));
+    __ word(Label(Names::disp_table(string_klass->name())));
     __ word(size_label);
     __ encode_string(str);
     __ byte(0);  // \0
@@ -27,31 +27,31 @@ void DataMips::string_const_inner(const std::string &str)
 
 void DataMips::bool_const_inner(const bool &value)
 {
-    _bool_constants.insert({value, Label(NameConstructor::bool_constant())});
+    _bool_constants.insert({value, Label(Names::bool_constant())});
 
-    __ word(-1);
+    __ word(MarkWordDefaultValue);
 
     const auto &bool_klass = _builder->klass(BaseClassesNames[BaseClasses::BOOL]);
 
     const AssemblerMarkSection mark(_asm, _bool_constants.find(value)->second);
     __ word(bool_klass->tag());
-    __ word(bool_klass->size());
-    __ word(Label(NameConstructor::disp_table(bool_klass->name())));
-    __ word(value ? TrueVal : FalseVal);
+    __ word(bool_klass->size() / WORD_SIZE);
+    __ word(Label(Names::disp_table(bool_klass->name())));
+    __ word(value ? TrueValue : FalseValue);
 }
 
 void DataMips::int_const_inner(const int64_t &value)
 {
-    _int_constants.insert({value, Label(NameConstructor::int_constant())});
+    _int_constants.insert({value, Label(Names::int_constant())});
 
-    __ word(-1);
+    __ word(MarkWordDefaultValue);
 
     const auto &int_klass = _builder->klass(BaseClassesNames[BaseClasses::INT]);
 
     const AssemblerMarkSection mark(_asm, _int_constants.find(value)->second);
     __ word(int_klass->tag());
-    __ word(int_klass->size());
-    __ word(Label(NameConstructor::disp_table(int_klass->name())));
+    __ word(int_klass->size() / WORD_SIZE);
+    __ word(Label(Names::disp_table(int_klass->name())));
     __ word(value);
 }
 
@@ -84,14 +84,14 @@ void DataMips::gen_class_obj_tab()
     for (const auto &klass : _builder->klasses())
     {
         const auto &class_name = klass->name();
-        __ word(Label(NameConstructor::prototype(class_name)));
-        __ word(Label(NameConstructor::init_method(class_name)));
+        __ word(Label(Names::prototype(class_name)));
+        __ word(Label(Names::init_method(class_name)));
     }
 }
 
 void DataMips::gen_prototypes()
 {
-    int_const(0);
+    int_const(DefaultValue);
     string_const("");
 
     for (const auto &klass_iter : *_builder)
@@ -119,11 +119,11 @@ DataMips::DataMips(const std::shared_ptr<KlassBuilder> &builder, const RuntimeMi
     __ align(2);
 
     __ global(_runtime.class_name_tab());
-    __ global(Label(NameConstructor::prototype(MainClassName)));
-    __ global(Label(NameConstructor::prototype(BaseClassesNames[BaseClasses::INT])));
-    __ global(Label(NameConstructor::prototype(BaseClassesNames[BaseClasses::STRING])));
-    __ global(Label(NameConstructor::bool_constant())); // false
-    __ global(Label(NameConstructor::bool_constant())); // true
+    __ global(Label(Names::prototype(MainClassName)));
+    __ global(Label(Names::prototype(BaseClassesNames[BaseClasses::INT])));
+    __ global(Label(Names::prototype(BaseClassesNames[BaseClasses::STRING])));
+    __ global(Label(Names::bool_constant())); // false
+    __ global(Label(Names::bool_constant())); // true
     __ global(int_tag);
     __ global(bool_tag);
     __ global(string_tag);
@@ -182,7 +182,7 @@ void DataMips::emit_inner(const std::string &out_file_name)
     const Label heap_start_label(static_cast<std::string>(RuntimeMips::HEAP_START));
     __ global(heap_start_label);
     AssemblerMarkSection(_asm, heap_start_label);
-    __ word(0);
+    __ word(DefaultValue);
 
     out_file << static_cast<std::string>(_code);
 
@@ -193,21 +193,21 @@ void DataMips::class_struct_inner(const std::shared_ptr<Klass> &klass)
 {
     const auto &class_name = klass->name();
 
-    _classes.insert({class_name, Label(NameConstructor::prototype(class_name))});
+    _classes.insert({class_name, Label(Names::prototype(class_name))});
 
-    __ word(-1);
+    __ word(MarkWordDefaultValue);
 
     const AssemblerMarkSection mark(_asm, _classes.find(class_name)->second);
 
-    __ word(klass->tag());                                   // tag
-    __ word(klass->size() / WORD_SIZE);                      // size in words
-    __ word(Label(NameConstructor::disp_table(class_name))); // pointer to dispatch table
+    __ word(klass->tag());                         // tag
+    __ word(klass->size() / WORD_SIZE);            // size in words
+    __ word(Label(Names::disp_table(class_name))); // pointer to dispatch table
 
     // set all fields to void
     std::for_each(klass->fields_begin(), klass->fields_end(), [&](const auto &field) {
         if (!semant::Semant::is_trivial_type(field->_type))
         {
-            __ word(0);
+            __ word(DefaultValue);
         }
         else
         {
@@ -220,7 +220,7 @@ void DataMips::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
 {
     const auto &class_name = klass->name();
 
-    _dispatch_tables.insert({class_name, Label(NameConstructor::disp_table(class_name))});
+    _dispatch_tables.insert({class_name, Label(Names::disp_table(class_name))});
 
     const AssemblerMarkSection mark(_asm, _dispatch_tables.find(class_name)->second);
     const auto &mips_klass = std::static_pointer_cast<KlassMips>(klass);

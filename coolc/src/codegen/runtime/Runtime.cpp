@@ -18,14 +18,55 @@ void *gc_alloc_by_tag(int tag)
 
 void *gc_alloc(int tag, size_t size, void *disp_tab)
 {
-    // TODO: dummy
-    void *object = calloc(1, size);
+    // TODO: dummy allocation. Should be managed by GC
+    void *object = malloc(size);
 
     ObjectLayout *layout = (ObjectLayout *)object;
-    layout->_mark = 0;
+    layout->_mark = MarkWordDefaultValue;
     layout->_tag = tag;
     layout->_size = size;
     layout->_dispatch_table = disp_tab;
 
     return object;
+}
+
+void *IO_out_string(void *receiver, void *str)
+{
+    StringLayout *layout = (StringLayout *)str;
+
+    printf("%s", layout->_string);
+
+    return receiver;
+}
+
+void *Object_type_name(void *receiver)
+{
+}
+
+void *Object_copy(void *receiver)
+{
+}
+
+void *String_length(void *receiver)
+{
+}
+
+void *String_concat(void *receiver, void *str)
+{
+}
+
+void *String_substr(void *receiver, void *index, void *len)
+{
+}
+
+void *IO_in_int(void *receiver)
+{
+}
+
+void *IO_in_string(void *receiver)
+{
+}
+
+void *IO_out_int(void *receiver, void *integer)
+{
 }

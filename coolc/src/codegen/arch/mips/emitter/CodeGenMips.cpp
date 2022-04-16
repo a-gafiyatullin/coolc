@@ -19,10 +19,10 @@ CodeGenMips::CodeGenMips(const std::shared_ptr<semant::ClassNode> &root)
     __ text_section();
 
     // we export some structures and method to global
-    __ global(Label(NameConstructor::init_method(MainClassName)));
-    __ global(Label(NameConstructor::init_method(BaseClassesNames[BaseClasses::INT])));
-    __ global(Label(NameConstructor::init_method(BaseClassesNames[BaseClasses::STRING])));
-    __ global(Label(NameConstructor::init_method(BaseClassesNames[BaseClasses::BOOL])));
+    __ global(Label(Names::init_method(MainClassName)));
+    __ global(Label(Names::init_method(BaseClassesNames[BaseClasses::INT])));
+    __ global(Label(Names::init_method(BaseClassesNames[BaseClasses::STRING])));
+    __ global(Label(Names::init_method(BaseClassesNames[BaseClasses::BOOL])));
     __ global(Label(_builder->klass(MainClassName)->method_full_name(MainMethodName)));
 }
 
@@ -86,8 +86,8 @@ void CodeGenMips::emit_binary_expr_inner(const ast::BinaryExpression &expr)
                                    [&](const ast::LEExpression &le) {
                                        logical_result = true;
 
-                                       const Label true_label(NameConstructor::true_branch());
-                                       const Label end_label(NameConstructor::merge_block());
+                                       const Label true_label(Names::true_branch());
+                                       const Label end_label(Names::merge_block());
 
                                        __ ble(t1, t2, true_label);          // t1 < a0
                                        __ la(_a0, _data.bool_const(false)); // false -> a0 if false
@@ -107,9 +107,9 @@ void CodeGenMips::emit_binary_expr_inner(const ast::BinaryExpression &expr)
     {
         logical_result = true;
 
-        const Label equal_refs_label(NameConstructor::true_branch());
-        const Label equal_primitive_vals_label(NameConstructor::true_branch());
-        const Label equal_end_label(NameConstructor::merge_block());
+        const Label equal_refs_label(Names::true_branch());
+        const Label equal_primitive_vals_label(Names::true_branch());
+        const Label equal_end_label(Names::merge_block());
 
         const Register a1(Register::$a1);
 
@@ -119,7 +119,7 @@ void CodeGenMips::emit_binary_expr_inner(const ast::BinaryExpression &expr)
         __ la(a1, _data.bool_const(false));
         __ jal(*_runtime.method(RuntimeMips::EQUALITY_TEST)); // in a0 expect a0 if the same and a1 if false
         emit_load_bool(_a0, _a0);                             // real value in a0
-        __ beq(_a0, TrueVal, equal_primitive_vals_label);     // do they have same type and value?
+        __ beq(_a0, TrueValue, equal_primitive_vals_label);   // do they have same type and value?
         // no, they dont have the same type and value
         __ la(_a0, _data.bool_const(false)); // end of false branch
         __ j(equal_end_label);               // jump to end
@@ -160,8 +160,8 @@ void CodeGenMips::emit_unary_expr_inner(const ast::UnaryExpression &expr)
     std::visit(ast::overloaded{[&](const ast::IsVoidExpression &isvoid) {
                                    logical_result = true;
 
-                                   const Label its_void_label(NameConstructor::true_branch());
-                                   const Label end_label_label(NameConstructor::merge_block());
+                                   const Label its_void_label(Names::true_branch());
+                                   const Label end_label_label(Names::merge_block());
 
                                    __ beq(_a0, __ zero(), its_void_label);
                                    // false branch
@@ -179,7 +179,7 @@ void CodeGenMips::emit_unary_expr_inner(const ast::UnaryExpression &expr)
                                    // trait it as arith result
                                    __ move(t5, _a0);
                                    emit_load_bool(t5, t5);
-                                   __ xori(t5, t5, TrueVal);
+                                   __ xori(t5, t5, TrueValue);
                                    __ la(_a0, _data.bool_const(false));
                                },
                                [&](const ast::NegExpression &neg) {
@@ -223,13 +223,13 @@ void CodeGenMips::emit_method_epilogue(const int &params_num)
 
 void CodeGenMips::emit_class_init_method_inner()
 {
-    const AssemblerMarkSection mark(_asm, Label(NameConstructor::init_method(_current_class->_type->_string)));
+    const AssemblerMarkSection mark(_asm, Label(Names::init_method(_current_class->_type->_string)));
 
     emit_method_prologue();
 
     if (!semant::Semant::is_empty_type(_current_class->_parent)) // Object moment
     {
-        __ jal(Label(NameConstructor::init_method(
+        __ jal(Label(Names::init_method(
             _current_class->_parent->_string))); // receiver already is in acc, call parent constructor
     }
 
@@ -328,9 +328,9 @@ void CodeGenMips::emit_new_expr_inner(const ast::NewExpression &expr)
     {
         const auto &class_name = _builder->klass(expr._type->_string)->name();
 
-        __ la(_a0, Label(NameConstructor::prototype(class_name)));
-        __ jal(*_runtime.method(RuntimeMips::OBJECT_COPY));      // result in acc
-        __ jal(Label(NameConstructor::init_method(class_name))); // result in acc
+        __ la(_a0, Label(Names::prototype(class_name)));
+        __ jal(*_runtime.method(RuntimeMips::OBJECT_COPY)); // result in acc
+        __ jal(Label(Names::init_method(class_name)));      // result in acc
     }
     else
     {
@@ -387,9 +387,9 @@ void CodeGenMips::emit_cases_expr_inner(const ast::CaseExpression &expr)
 {
     emit_expr(expr._expr);
 
-    auto case_branch_name = NameConstructor::true_branch();
-    const auto no_branch_name = NameConstructor::false_branch();
-    const Label continue_label(NameConstructor::merge_block());
+    auto case_branch_name = Names::true_branch();
+    const auto no_branch_name = Names::false_branch();
+    const Label continue_label(Names::merge_block());
 
     // in brackets because we want to deallocate t1 before next expressions emitting
     {
@@ -418,7 +418,7 @@ void CodeGenMips::emit_cases_expr_inner(const ast::CaseExpression &expr)
 
             __ lw(t1, _a0, 0); // if we here, so object is in acc. Load its tag to t1
 
-            case_branch_name = (i < cases.size() - 1 ? NameConstructor::true_branch() : no_branch_name);
+            case_branch_name = (i < cases.size() - 1 ? Names::true_branch() : no_branch_name);
 
             const auto &klass = _builder->klass(cases[i]->_type->_string);
 
@@ -458,13 +458,13 @@ void CodeGenMips::emit_let_expr_inner(const ast::LetExpression &expr)
 void CodeGenMips::emit_branch_to_label_if_false(const Label &label)
 {
     emit_load_bool(_a0, _a0);
-    __ beq(_a0, FalseVal, label);
+    __ beq(_a0, FalseValue, label);
 }
 
 void CodeGenMips::emit_loop_expr_inner(const ast::WhileExpression &expr)
 {
-    const Label loop_header_label(NameConstructor::loop_header());
-    const Label loop_tail_label(NameConstructor::loop_tail());
+    const Label loop_header_label(Names::loop_header());
+    const Label loop_tail_label(Names::loop_tail());
 
     {
         const AssemblerMarkSection mark(_asm, loop_header_label);
@@ -481,8 +481,8 @@ void CodeGenMips::emit_loop_expr_inner(const ast::WhileExpression &expr)
 
 void CodeGenMips::emit_if_expr_inner(const ast::IfExpression &expr)
 {
-    const Label false_branch_label(NameConstructor::false_branch());
-    const Label continue_label(NameConstructor::merge_block());
+    const Label false_branch_label(Names::false_branch());
+    const Label continue_label(Names::merge_block());
 
     emit_expr(expr._predicate); // result in acc
     emit_branch_to_label_if_false(false_branch_label);
@@ -514,7 +514,7 @@ void CodeGenMips::emit_dispatch_expr_inner(const ast::DispatchExpression &expr)
 
     emit_expr(expr._expr); // receiver in acc
 
-    const Label dispatch_to_void_label(NameConstructor::true_branch());
+    const Label dispatch_to_void_label(Names::true_branch());
     const Register t1(Register::$t1);
     __ beq(_a0, __ zero(), dispatch_to_void_label);
 
@@ -535,7 +535,7 @@ void CodeGenMips::emit_dispatch_expr_inner(const ast::DispatchExpression &expr)
                 __ jal(Label(_builder->klass(disp._type->_string)->method_full_name(method_name)));
             }},
         expr._base);
-    const Label continue_label(NameConstructor::merge_block());
+    const Label continue_label(Names::merge_block());
     __ j(continue_label);
 
     // void

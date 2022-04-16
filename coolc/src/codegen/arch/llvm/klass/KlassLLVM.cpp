@@ -8,8 +8,7 @@ std::string KlassLLVM::method_full_name(const std::string &method_name) const
         return method.second->_object->_object == method_name;
     });
 
-    // TODO: carry out delimeter to class field
-    return NameConstructor::method_full_name(entry->first->_string, entry->second->_object->_object, FULL_METHOD_DELIM);
+    return Names::method_full_name(entry->first->_string, entry->second->_object->_object, FULL_METHOD_DELIM);
 }
 
 std::shared_ptr<Klass> KlassBuilderLLVM::make_klass(const std::shared_ptr<ast::Class> &klass)

@@ -1,6 +1,4 @@
 #include "codegen/arch/llvm/emitter/data/DataLLVM.h"
-#include "codegen/arch/llvm/klass/KlassLLVM.h"
-#include "codegen/arch/llvm/runtime/RuntimeLLVM.h"
 #include "codegen/arch/llvm/symtab/SymbolTableLLVM.h"
 #include "codegen/emitter/CodeGen.h"
 #include <iostream>
