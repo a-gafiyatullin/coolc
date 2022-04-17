@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     const auto analysed_program = do_semant(parsed_program);
 
     std::string src_name(argv[files[0]]);
-    do_codegen(analysed_program, src_name.substr(0, src_name.find_last_of(".")) + ".s");
+    do_codegen(analysed_program, src_name.substr(0, src_name.find_last_of(".")));
 
     return 0;
 }

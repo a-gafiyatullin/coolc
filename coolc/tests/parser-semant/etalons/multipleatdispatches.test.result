@@ -1,0 +1,16 @@
+Class Main is not defined.
+multipleatdispatches.test:3: Undeclared identifier e.
+multipleatdispatches.test:3: Expression type Object does not conform to declared static dispatch type A.
+multipleatdispatches.test:4: Undeclared identifier e1.
+multipleatdispatches.test:4: Static dispatch to undefined class B.
+multipleatdispatches.test:5: Undeclared identifier e2.
+multipleatdispatches.test:5: Static dispatch to undefined class C.
+multipleatdispatches.test:6: Undeclared identifier e3.
+multipleatdispatches.test:6: Static dispatch to undefined class D.
+multipleatdispatches.test:7: Undeclared identifier x.
+multipleatdispatches.test:7: Dispatch to undefined method f.
+multipleatdispatches.test:8: Undeclared identifier y.
+multipleatdispatches.test:8: Dispatch to undefined method g.
+multipleatdispatches.test:9: Undeclared identifier z.
+multipleatdispatches.test:9: Dispatch to undefined method h.
+Compilation halted due to static semantic errors.

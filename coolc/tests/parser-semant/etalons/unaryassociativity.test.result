@@ -1,0 +1,14 @@
+Class Main is not defined.
+unaryassociativity.test:2: Undeclared identifier a.
+unaryassociativity.test:2: Undeclared identifier b.
+unaryassociativity.test:2: Undeclared identifier c.
+unaryassociativity.test:2: non-Int arguments: Object * Object
+unaryassociativity.test:2: non-Int arguments: Bool + Int
+unaryassociativity.test:3: Undeclared identifier a.
+unaryassociativity.test:3: Undeclared identifier b.
+unaryassociativity.test:3: non-Int arguments: Object < Object
+unaryassociativity.test:4: Undeclared identifier a.
+unaryassociativity.test:4: Argument of '~' has type Object instead of Int.
+unaryassociativity.test:4: Undeclared identifier b.
+unaryassociativity.test:4: non-Int arguments: Int + Object
+Compilation halted due to static semantic errors.

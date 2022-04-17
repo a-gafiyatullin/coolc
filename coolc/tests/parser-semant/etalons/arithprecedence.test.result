@@ -1,0 +1,62 @@
+Class Main is not defined.
+arithprecedence.test:3: Undeclared identifier a.
+arithprecedence.test:3: Undeclared identifier b.
+arithprecedence.test:3: non-Int arguments: Object + Object
+arithprecedence.test:3: Undeclared identifier c.
+arithprecedence.test:3: non-Int arguments: Int - Object
+arithprecedence.test:4: Undeclared identifier a.
+arithprecedence.test:4: Undeclared identifier b.
+arithprecedence.test:4: non-Int arguments: Object - Object
+arithprecedence.test:4: Undeclared identifier c.
+arithprecedence.test:4: non-Int arguments: Int + Object
+arithprecedence.test:6: Undeclared identifier a.
+arithprecedence.test:6: Undeclared identifier b.
+arithprecedence.test:6: Undeclared identifier c.
+arithprecedence.test:6: non-Int arguments: Object * Object
+arithprecedence.test:6: non-Int arguments: Object + Int
+arithprecedence.test:7: Undeclared identifier a.
+arithprecedence.test:7: Undeclared identifier b.
+arithprecedence.test:7: non-Int arguments: Object * Object
+arithprecedence.test:7: Undeclared identifier c.
+arithprecedence.test:7: non-Int arguments: Int + Object
+arithprecedence.test:9: Undeclared identifier a.
+arithprecedence.test:9: Undeclared identifier b.
+arithprecedence.test:9: Undeclared identifier c.
+arithprecedence.test:9: non-Int arguments: Object / Object
+arithprecedence.test:9: non-Int arguments: Object + Int
+arithprecedence.test:10: Undeclared identifier a.
+arithprecedence.test:10: Undeclared identifier b.
+arithprecedence.test:10: non-Int arguments: Object / Object
+arithprecedence.test:10: Undeclared identifier c.
+arithprecedence.test:10: non-Int arguments: Int + Object
+arithprecedence.test:12: Undeclared identifier a.
+arithprecedence.test:12: Undeclared identifier b.
+arithprecedence.test:12: Undeclared identifier c.
+arithprecedence.test:12: non-Int arguments: Object * Object
+arithprecedence.test:12: non-Int arguments: Object - Int
+arithprecedence.test:13: Undeclared identifier a.
+arithprecedence.test:13: Undeclared identifier b.
+arithprecedence.test:13: non-Int arguments: Object * Object
+arithprecedence.test:13: Undeclared identifier c.
+arithprecedence.test:13: non-Int arguments: Int - Object
+arithprecedence.test:15: Undeclared identifier a.
+arithprecedence.test:15: Undeclared identifier b.
+arithprecedence.test:15: Undeclared identifier c.
+arithprecedence.test:15: non-Int arguments: Object / Object
+arithprecedence.test:15: non-Int arguments: Object - Int
+arithprecedence.test:16: Undeclared identifier a.
+arithprecedence.test:16: Undeclared identifier b.
+arithprecedence.test:16: non-Int arguments: Object / Object
+arithprecedence.test:16: Undeclared identifier c.
+arithprecedence.test:16: non-Int arguments: Int - Object
+arithprecedence.test:18: Undeclared identifier a.
+arithprecedence.test:18: Undeclared identifier b.
+arithprecedence.test:18: non-Int arguments: Object * Object
+arithprecedence.test:18: Undeclared identifier c.
+arithprecedence.test:18: non-Int arguments: Int / Object
+arithprecedence.test:19: Undeclared identifier a.
+arithprecedence.test:19: Undeclared identifier b.
+arithprecedence.test:19: non-Int arguments: Object / Object
+arithprecedence.test:19: Undeclared identifier c.
+arithprecedence.test:19: non-Int arguments: Int * Object
+Compilation halted due to static semantic errors.

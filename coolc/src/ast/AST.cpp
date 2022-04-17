@@ -122,7 +122,7 @@ void dump_dispatch(const int &offset, const DispatchExpression &dispatch)
                               dump_expression(offset + 2, dispatch._expr);
                               dump_type(offset + 2, static_disp._type);
                           },
-                          [&](const ObjectDispatchExpression &obj_disp) {
+                          [&](const VirtualDispatchExpression &obj_disp) {
                               std::cout << std::string(offset, ' ') << "_dispatch" << std::endl;
 
                               dump_expression(offset + 2, dispatch._expr);

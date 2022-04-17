@@ -1,0 +1,2 @@
+selftypeattribute.test:2: Inferred type Main of initialization of attribute a does not conform to declared type SELF_TYPE.
+Compilation halted due to static semantic errors.

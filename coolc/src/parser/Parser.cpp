@@ -693,7 +693,7 @@ std::shared_ptr<ast::Expression> Parser::parse_maybe_dispatch_or_oper(const std:
     else if (_next_token->same_token_type(lexer::Token::DOT))
     {
         is_dispatch = true;
-        dispatch._base = ast::ObjectDispatchExpression();
+        dispatch._base = ast::VirtualDispatchExpression();
     }
 
     if (is_dispatch)

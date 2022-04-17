@@ -3,6 +3,11 @@
 .cache
 build/
 .a
+tests/lexer/results/*.result
+tests/parser-semant/results/*.result
+tests/codegen/results/*.result
+tests/codegen/tests/*.o
+tests/parser-semant/tests/*.o
 lib/
 bin/
 .clangd/

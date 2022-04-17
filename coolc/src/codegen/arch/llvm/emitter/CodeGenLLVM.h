@@ -15,6 +15,7 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
 {
   private:
     static constexpr std::string_view RUNTIME_MAIN_FUNC = "main";
+    static constexpr std::string_view EXT = ".o";
 
     // llvm related stuff
     llvm::LLVMContext _context;

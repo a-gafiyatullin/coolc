@@ -1,0 +1,2 @@
+caseselftype.test:10: Identifier b declared with type SELF_TYPE in case branch.
+Compilation halted due to static semantic errors.

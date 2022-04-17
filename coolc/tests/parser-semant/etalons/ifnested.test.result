@@ -1,0 +1,9 @@
+Class Main is not defined.
+ifnested.test:3: Undeclared identifier x.
+ifnested.test:3: Illegal comparison with a basic type.
+ifnested.test:3: Undeclared identifier x.
+ifnested.test:3: non-Int arguments: Object < Int
+ifnested.test:3: 'new' used with undefined class Foo.
+ifnested.test:3: Undeclared identifier baz.
+ifnested.test:3: Inferred return type Object of method bar does not conform to declared return type Int.
+Compilation halted due to static semantic errors.

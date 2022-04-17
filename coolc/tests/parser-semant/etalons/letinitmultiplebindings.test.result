@@ -1,0 +1,3 @@
+Class Main is not defined.
+letinitmultiplebindings.test:3: Inferred return type Int of method baz does not conform to declared return type String.
+Compilation halted due to static semantic errors.

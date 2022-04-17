@@ -1,0 +1,5 @@
+Class Main is not defined.
+comparisons-assoc.test:3: Undeclared identifier x.
+comparisons-assoc.test:3: Illegal comparison with a basic type.
+comparisons-assoc.test:3: Inferred return type Bool of method bar does not conform to declared return type Int.
+Compilation halted due to static semantic errors.

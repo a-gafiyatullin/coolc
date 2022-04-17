@@ -1,0 +1,9 @@
+Class Main is not defined.
+multipledispatches.test:3: Dispatch to undefined method g.
+multipledispatches.test:4: Undeclared identifier x.
+multipledispatches.test:4: Dispatch to undefined method h.
+multipledispatches.test:5: Method f called with wrong number of arguments.
+multipledispatches.test:6: Method f called with wrong number of arguments.
+multipledispatches.test:7: Dispatch to undefined method z.
+multipledispatches.test:2: Inferred return type Object of method f does not conform to declared return type Int.
+Compilation halted due to static semantic errors.

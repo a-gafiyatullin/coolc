@@ -1,0 +1,3 @@
+existancetype4.test:3: Class C of let-bound identifier y is undefined.
+existancetype4.test:4: Class A of let-bound identifier x is undefined.
+Compilation halted due to static semantic errors.

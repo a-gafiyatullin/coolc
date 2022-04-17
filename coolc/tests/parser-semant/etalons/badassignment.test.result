@@ -1,0 +1,3 @@
+badassignment.test:5: Assignment to undeclared variable x.
+badassignment.test:5: Assignment to undeclared variable x.
+Compilation halted due to static semantic errors.

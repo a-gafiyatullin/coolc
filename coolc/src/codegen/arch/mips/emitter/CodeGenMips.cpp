@@ -28,11 +28,13 @@ CodeGenMips::CodeGenMips(const std::shared_ptr<semant::ClassNode> &root)
 
 void CodeGenMips::emit(const std::string &out_file_name)
 {
+    const std::string asm_file = out_file_name + static_cast<std::string>(EXT);
+
     emit_class_code(_builder->root()); // emit
 
-    _data.emit(out_file_name); // record data
+    _data.emit(asm_file); // record data
 
-    std::ofstream out_file(out_file_name, std::ios::app); // open file
+    std::ofstream out_file(asm_file, std::ios::app); // open file
 
     Assembler::check_labels(); // verify that all labels were binded
 
@@ -522,7 +524,7 @@ void CodeGenMips::emit_dispatch_expr_inner(const ast::DispatchExpression &expr)
     // not void
     std::visit(
         ast::overloaded{
-            [&](const ast::ObjectDispatchExpression &disp) {
+            [&](const ast::VirtualDispatchExpression &disp) {
                 __ lw(t1, _a0, DISPATCH_TABLE_OFFSET); // load dispatch table
                 __ lw(t1, t1,
                       _builder->klass(semant::Semant::exact_type(expr._expr->_type, _current_class->_type)->_string)

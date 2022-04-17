@@ -1,0 +1,2 @@
+nottype.test:3: Argument of 'not' has type String instead of Bool.
+Compilation halted due to static semantic errors.

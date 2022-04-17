@@ -1,0 +1,9 @@
+formallists.test:11: Method f is multiply defined.
+Class Main is not defined.
+formallists.test:5: Inferred return type SELF_TYPE of method g does not conform to declared return type IO.
+formallists.test:8: Formal parameter y cannot have type SELF_TYPE.
+formallists.test:9: Undeclared identifier x.
+formallists.test:8: Inferred return type Object of method h does not conform to declared return type SELF_TYPE.
+formallists.test:12: non-Int arguments: Int + Bool
+formallists.test:12: non-Int arguments: Int + Object
+Compilation halted due to static semantic errors.

@@ -1,0 +1,4 @@
+Class Main is not defined.
+associativitydiv.test:5: non-Int arguments: String / Int
+associativitydiv.test:4: Inferred return type Int of method moo2 does not conform to declared return type Hello.
+Compilation halted due to static semantic errors.

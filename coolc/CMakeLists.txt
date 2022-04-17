@@ -37,8 +37,8 @@ if(UBSAN)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=undefined -fno-omit-frame-pointer")
 endif()
 
-message(STATUS "FRONTEND CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
-message(STATUS "FRONTEND CMAKE_CXX_FLAGS_DEBUG = ${CMAKE_CXX_FLAGS_DEBUG}")
+message(STATUS "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
+message(STATUS "CMAKE_CXX_FLAGS_DEBUG = ${CMAKE_CXX_FLAGS_DEBUG}")
 
 unset(ASAN CACHE)
 unset(UBSAN CACHE)
@@ -60,46 +60,45 @@ add_executable(coolc src/coolc.cpp)
 
 target_link_libraries(coolc lexer parser semant utils ast codegen decls ${LIBS})
 
-enable_testing()
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    enable_testing()
 
-if(ARCH STREQUAL "MIPS")
-    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    include_directories(tests/src)
 
-        execute_process (
-            COMMAND sh -c "rm ${PROJECT_SOURCE_DIR}/tests/codegen/mips/end-to-end/*.s"
+    find_package(GTest REQUIRED)
+    include_directories(${GTEST_INCLUDE_DIRS})
+
+    add_test(PrepareLexerTestsResults
+        ${PROJECT_SOURCE_DIR}/tests/lexer/make_results.sh
+        ${EXECUTABLE_OUTPUT_PATH}
         )
+    add_executable(lexer_tests tests/src/test.cpp tests/src/lexer/test.cpp)
+    target_link_libraries(lexer_tests ${GTEST_LIBRARIES} pthread -lgtest_main)
+    add_test(LexerTests ${EXECUTABLE_OUTPUT_PATH}/lexer_tests)
 
-        add_test(
-            NAME Lexer
-            COMMAND python3
-            ${PROJECT_SOURCE_DIR}/tests/e2e.py
-            ${PROJECT_SOURCE_DIR}/tests/reference/bin/lexer
-            ""
-            ${PROJECT_SOURCE_DIR}/bin/coolc
-            "+TokensOnly"
-            ${PROJECT_SOURCE_DIR}/tests/lexer/end-to-end/
-            ".cool")
+    add_test(PrepareParserSemantTestsResults
+        ${PROJECT_SOURCE_DIR}/tests/parser-semant/make_results.sh
+        ${EXECUTABLE_OUTPUT_PATH}
+        )
+    add_executable(parser_semant_tests tests/src/test.cpp tests/src/parser-semant/test.cpp)
+    target_link_libraries(parser_semant_tests ${GTEST_LIBRARIES} pthread -lgtest_main)
+    add_test(ParserSemantTests ${EXECUTABLE_OUTPUT_PATH}/parser_semant_tests)
 
-        add_test(
-            NAME ParserSemant
-            COMMAND python3
-            ${PROJECT_SOURCE_DIR}/tests/e2e.py
-            ${PROJECT_SOURCE_DIR}/tests/parser-semant/reference-coolc.sh
-            "${PROJECT_SOURCE_DIR}/tests/reference/bin"
-            ${PROJECT_SOURCE_DIR}/bin/coolc
-            "+PrintFinalAST"
-            ${PROJECT_SOURCE_DIR}/tests/parser-semant/end-to-end/
-            ".test")
-
-        add_test(
-            NAME CodeGen
-            COMMAND python3
-            ${PROJECT_SOURCE_DIR}/tests/e2e.py
-            ${PROJECT_SOURCE_DIR}/tests/codegen/mips/start-spim.sh
-            "${PROJECT_SOURCE_DIR}/tests/reference/bin ${PROJECT_SOURCE_DIR}/tests/reference/bin -g"
-            ${PROJECT_SOURCE_DIR}/tests/codegen/mips/start-spim.sh
-            "${PROJECT_SOURCE_DIR}/tests/reference/bin ${PROJECT_SOURCE_DIR}/bin"
-            ${PROJECT_SOURCE_DIR}/tests/codegen/mips/end-to-end/
-            ".cl")
+    if(ARCH STREQUAL "MIPS")
+        set(RUN_DIR mips)
+        set(EXTNSN  ".s")
+    else()
+        set(RUN_DIR arch)
+        set(EXTNSN  ".o")
     endif()
+
+    add_test(PrepareCodegenTestsResults
+        ${PROJECT_SOURCE_DIR}/tests/codegen/make_results.sh
+        ${EXECUTABLE_OUTPUT_PATH}
+        ${PROJECT_SOURCE_DIR}/tests/codegen/arch/${RUN_DIR}/run.sh
+        ${EXTNSN}
+        )
+    add_executable(codegen_tests tests/src/test.cpp tests/src/codegen/test.cpp)
+    target_link_libraries(codegen_tests ${GTEST_LIBRARIES} pthread -lgtest_main)
+    add_test(CodegenTests ${EXECUTABLE_OUTPUT_PATH}/codegen_tests)
 endif()

@@ -1,0 +1,2 @@
+existancetype.test:3: Undefined return type C in method a.
+Compilation halted due to static semantic errors.

@@ -1,0 +1,3 @@
+caseself.test:7: 'self' bound in 'case'.
+caseself.test:7: Undeclared identifier b.
+Compilation halted due to static semantic errors.

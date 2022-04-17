@@ -1,0 +1,17 @@
+hello, world
+printed via dynamic dispatch
+tested static dispatch and 'new IO'
+an int: 3
+gonna make a Blah
+gonna call doThemAll
+basics:
+more advanced:
+bigIf
+bigMath
+bigAssign
+bigWhile
+bigSelf
+bigStrCompare
+bigCase
+bigAttrAccess
+looks ok!

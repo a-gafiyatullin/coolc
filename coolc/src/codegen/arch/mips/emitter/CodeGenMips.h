@@ -20,6 +20,8 @@ class CodeGenMips : public CodeGen<void, Symbol>
     static constexpr int OBJECT_HEADER_SIZE_IN_BYTES = 3 * WORD_SIZE;
     static constexpr int DISPATCH_TABLE_OFFSET = 2 * WORD_SIZE;
 
+    static constexpr std::string_view EXT = ".s";
+
     CodeBuffer _code;     // main code buffer for main assembler
     Assembler _asm;       // main assembler
     RuntimeMips _runtime; // Runtime methods and tables

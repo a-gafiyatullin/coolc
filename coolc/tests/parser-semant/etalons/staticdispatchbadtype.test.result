@@ -1,0 +1,2 @@
+staticdispatchbadtype.test:3: Static dispatch to undefined class L.
+Compilation halted due to static semantic errors.

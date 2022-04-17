@@ -324,7 +324,7 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
     const auto &method_name = expr._object->_object;
     auto *const call = std::visit(
         ast::overloaded{
-            [&](const ast::ObjectDispatchExpression &disp) {
+            [&](const ast::VirtualDispatchExpression &disp) {
                 const auto &klass =
                     _builder->klass(semant::Semant::exact_type(expr._expr->_type, _current_class->_type)->_string);
                 const auto disp_table_name = Names::disp_table(klass->name());
@@ -402,7 +402,9 @@ void CodeGenLLVM::emit_runtime_main()
 
 void CodeGenLLVM::emit(const std::string &out_file)
 {
-    _data.emit(out_file);
+    const std::string obj_file = out_file + static_cast<std::string>(EXT);
+
+    _data.emit(obj_file);
 
     emit_class_code(_builder->root()); // emit
     emit_runtime_main();
@@ -444,7 +446,7 @@ void CodeGenLLVM::emit(const std::string &out_file)
     CODEGEN_VERBOSE_ONLY(LOG("Initialized target machine."));
 
     std::error_code ec;
-    llvm::raw_fd_ostream dest(out_file, ec);
+    llvm::raw_fd_ostream dest(obj_file, ec);
     // TODO: better way for error handling
     if (ec)
     {

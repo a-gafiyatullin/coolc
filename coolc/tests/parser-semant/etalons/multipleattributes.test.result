@@ -1,0 +1,3 @@
+multipleattributes.test:9: Attribute a is multiply defined in class.
+Class Main is not defined.
+Compilation halted due to static semantic errors.

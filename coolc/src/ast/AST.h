@@ -89,13 +89,13 @@ struct StaticDispatchExpression
     std::shared_ptr<Type> _type;
 };
 
-struct ObjectDispatchExpression
+struct VirtualDispatchExpression
 {
 };
 
 struct DispatchExpression
 {
-    std::variant<ObjectDispatchExpression, StaticDispatchExpression> _base;
+    std::variant<VirtualDispatchExpression, StaticDispatchExpression> _base;
 
     std::shared_ptr<Expression> _expr;
     std::shared_ptr<ObjectExpression> _object;

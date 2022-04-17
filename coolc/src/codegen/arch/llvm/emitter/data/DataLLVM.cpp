@@ -207,7 +207,7 @@ void DataLLVM::int_const_inner(const int64_t &value)
     const_global->setInitializer(llvm::ConstantStruct::get(
         int_struct, {llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordDefaultValue, true),
                      llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag(), true),
-                     llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size()),
+                     llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size() / WORD_SIZE),
                      _dispatch_tables.at(BaseClassesNames[BaseClasses::INT]),
                      llvm::ConstantInt::get(int_struct->getElementType(HeaderLayout::DispatchTable + 1), value,
                                             true)})); // value field
@@ -246,9 +246,7 @@ llvm::Constant *DataLLVM::make_char_string(const std::string &str)
     // TODO: need this?
     // const_global->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
-    // 4. Return a cast to an i8*
-    // TODO: does it work?
-    return llvm::ConstantExpr::getBitCast(const_global, char_type->getPointerTo());
+    return const_global;
 }
 
 void DataLLVM::string_const_inner(const std::string &str)
@@ -263,7 +261,7 @@ void DataLLVM::string_const_inner(const std::string &str)
         str_struct,
         {llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordDefaultValue, true),
          llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag(), true),
-         llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size()),
+         llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size() / WORD_SIZE),
          _dispatch_tables.at(BaseClassesNames[BaseClasses::STRING]), int_const(str.length()), // length field
          make_char_string(str)}));                                                            // string field
 
@@ -285,7 +283,7 @@ void DataLLVM::bool_const_inner(const bool &value)
     const_global->setInitializer(llvm::ConstantStruct::get(
         bool_struct, {llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordDefaultValue, true),
                       llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag(), true),
-                      llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size()),
+                      llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size() / WORD_SIZE),
                       _dispatch_tables.at(BaseClassesNames[BaseClasses::BOOL]),
                       llvm::ConstantInt::get(bool_struct->getElementType(HeaderLayout::DispatchTable + 1), value,
                                              true)})); // value field

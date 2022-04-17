@@ -1,0 +1,8 @@
+Class Main is not defined.
+letparens.test:2: Undeclared identifier b.
+letparens.test:2: non-Int arguments: Int + Object
+letparens.test:3: Undeclared identifier b.
+letparens.test:3: non-Int arguments: Int + Object
+letparens.test:4: Undeclared identifier b.
+letparens.test:4: non-Int arguments: Int + Object
+Compilation halted due to static semantic errors.

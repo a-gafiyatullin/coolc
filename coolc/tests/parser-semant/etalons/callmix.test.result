@@ -1,0 +1,200 @@
+#1
+_program
+  #1
+  _class
+    Main
+    Object
+    "callmix.test"
+    (
+    #2
+    _method
+      main
+      Object
+      #3
+      _dispatch
+        #3
+        _new
+          Bar
+        : Bar
+        bar
+        (
+        )
+      : Object
+    )
+  #7
+  _class
+    Foo
+    IO
+    "callmix.test"
+    (
+    #8
+    _method
+      foo
+      SELF_TYPE
+      #9
+      _block
+        #10
+        _dispatch
+          #10
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #10
+          _string
+            "Foo.foo()\n"
+          : String
+          )
+        : SELF_TYPE
+        #11
+        _dispatch
+          #11
+          _object
+            self
+          : SELF_TYPE
+          foo
+          (
+          )
+        : SELF_TYPE
+        #12
+        _object
+          self
+        : SELF_TYPE
+      : SELF_TYPE
+    )
+  #17
+  _class
+    Bar
+    Foo
+    "callmix.test"
+    (
+    #18
+    _method
+      foo
+      SELF_TYPE
+      #19
+      _block
+        #20
+        _dispatch
+          #20
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #20
+          _string
+            "Bar.foo()\n"
+          : String
+          )
+        : SELF_TYPE
+        #21
+        _new
+          SELF_TYPE
+        : SELF_TYPE
+      : SELF_TYPE
+    #25
+    _method
+      bar
+      Object
+      #26
+      _typcase
+        #26
+        _dispatch
+          #26
+          _object
+            self
+          : SELF_TYPE
+          foo
+          (
+          )
+        : SELF_TYPE
+        #27
+        _branch
+          f
+          Foo
+          #27
+          _static_dispatch
+            #27
+            _object
+              f
+            : Foo
+            Foo
+            foo
+            (
+            )
+          : Foo
+        #28
+        _branch
+          b
+          Bar
+          #28
+          _dispatch
+            #28
+            _new
+              Bazz
+            : Bazz
+            foo
+            (
+            )
+          : Bazz
+        #29
+        _branch
+          o
+          Object
+          #29
+          _dispatch
+            #29
+            _object
+              self
+            : SELF_TYPE
+            foo
+            (
+            )
+          : SELF_TYPE
+      : Foo
+    )
+  #34
+  _class
+    Bazz
+    Bar
+    "callmix.test"
+    (
+    #35
+    _method
+      foo
+      SELF_TYPE
+      #36
+      _block
+        #37
+        _dispatch
+          #37
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #37
+          _string
+            "Bazz.foo()\n"
+          : String
+          )
+        : SELF_TYPE
+        #38
+        _static_dispatch
+          #38
+          _new
+            Bar
+          : Bar
+          Foo
+          foo
+          (
+          )
+        : Bar
+        #39
+        _object
+          self
+        : SELF_TYPE
+      : SELF_TYPE
+    )
