@@ -7,7 +7,6 @@
 extern "C"
 {
     extern "C" void *ClassNameTab; // must be defined by coolc. It is the pointer of the first name
-    // extern void **ClassObjTab;  // must be defined by coolc
 
     /**
      * @brief Structure of the Object header
@@ -132,14 +131,6 @@ extern "C"
     void *IO_in_int(void *receiver);
 
     // -------------------------------------- GC --------------------------------------
-
-    /**
-     * @brief Allocate object using tag
-     *
-     * @param tag Class tag
-     * @return Pointer to the newly allocated object
-     */
-    void *gc_alloc_by_tag(int tag);
 
     /**
      * @brief Allocate object with known size

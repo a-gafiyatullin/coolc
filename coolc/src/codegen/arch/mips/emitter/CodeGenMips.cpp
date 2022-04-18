@@ -88,8 +88,8 @@ void CodeGenMips::emit_binary_expr_inner(const ast::BinaryExpression &expr)
                                    [&](const ast::LEExpression &le) {
                                        logical_result = true;
 
-                                       const Label true_label(Names::true_branch());
-                                       const Label end_label(Names::merge_block());
+                                       const Label true_label(Names::name(Names::Comment::TRUE_BRANCH));
+                                       const Label end_label(Names::name(Names::Comment::MERGE_BLOCK));
 
                                        __ ble(t1, t2, true_label);          // t1 < a0
                                        __ la(_a0, _data.bool_const(false)); // false -> a0 if false
@@ -109,9 +109,9 @@ void CodeGenMips::emit_binary_expr_inner(const ast::BinaryExpression &expr)
     {
         logical_result = true;
 
-        const Label equal_refs_label(Names::true_branch());
-        const Label equal_primitive_vals_label(Names::true_branch());
-        const Label equal_end_label(Names::merge_block());
+        const Label equal_refs_label(Names::name(Names::Comment::TRUE_BRANCH));
+        const Label equal_primitive_vals_label(Names::name(Names::Comment::TRUE_BRANCH));
+        const Label equal_end_label(Names::name(Names::Comment::MERGE_BLOCK));
 
         const Register a1(Register::$a1);
 
@@ -119,7 +119,8 @@ void CodeGenMips::emit_binary_expr_inner(const ast::BinaryExpression &expr)
         // no, they dont have the same reference
         __ la(_a0, _data.bool_const(true)); // if no, set a0 to true, a1 to false
         __ la(a1, _data.bool_const(false));
-        __ jal(*_runtime.method(RuntimeMips::EQUALITY_TEST)); // in a0 expect a0 if the same and a1 if false
+        __ jal(*_runtime.symbol_by_id(
+            RuntimeMips::RuntimeMipsSymbols::EQUALITY_TEST)); // in a0 expect a0 if the same and a1 if false
         emit_load_bool(_a0, _a0);                             // real value in a0
         __ beq(_a0, TrueValue, equal_primitive_vals_label);   // do they have same type and value?
         // no, they dont have the same type and value
@@ -144,7 +145,7 @@ void CodeGenMips::emit_binary_expr_inner(const ast::BinaryExpression &expr)
 
     // object in a0, result in t5
     // create object and set field
-    __ jal(*_runtime.method(RuntimeMips::OBJECT_COPY));
+    __ jal(*_runtime.symbol_by_id(RuntimeMips::RuntimeMipsSymbols::OBJECT_COPY));
     // result in a0
     if (!logical_result)
     {
@@ -162,8 +163,8 @@ void CodeGenMips::emit_unary_expr_inner(const ast::UnaryExpression &expr)
     std::visit(ast::overloaded{[&](const ast::IsVoidExpression &isvoid) {
                                    logical_result = true;
 
-                                   const Label its_void_label(Names::true_branch());
-                                   const Label end_label_label(Names::merge_block());
+                                   const Label its_void_label(Names::name(Names::Comment::TRUE_BRANCH));
+                                   const Label end_label_label(Names::name(Names::Comment::MERGE_BLOCK));
 
                                    __ beq(_a0, __ zero(), its_void_label);
                                    // false branch
@@ -192,7 +193,7 @@ void CodeGenMips::emit_unary_expr_inner(const ast::UnaryExpression &expr)
                expr._base);
     // object in a0, result in t5
     // create object and set field
-    __ jal(*_runtime.method(RuntimeMips::OBJECT_COPY));
+    __ jal(*_runtime.symbol_by_id(RuntimeMips::RuntimeMipsSymbols::OBJECT_COPY));
     // result in a0
     if (!logical_result)
     {
@@ -331,8 +332,8 @@ void CodeGenMips::emit_new_expr_inner(const ast::NewExpression &expr)
         const auto &class_name = _builder->klass(expr._type->_string)->name();
 
         __ la(_a0, Label(Names::prototype(class_name)));
-        __ jal(*_runtime.method(RuntimeMips::OBJECT_COPY)); // result in acc
-        __ jal(Label(Names::init_method(class_name)));      // result in acc
+        __ jal(*_runtime.symbol_by_id(RuntimeMips::RuntimeMipsSymbols::OBJECT_COPY)); // result in acc
+        __ jal(Label(Names::init_method(class_name)));                                // result in acc
     }
     else
     {
@@ -342,11 +343,11 @@ void CodeGenMips::emit_new_expr_inner(const ast::NewExpression &expr)
 
         __ lw(t6, _s0, 0);                                       // load tag of "this"
         __ sll(t5, t6, OBJECT_HEADER_SIZE_IN_BYTES / WORD_SIZE); // calculate offset in object table
-        __ la(t6, _runtime.class_obj_tab());                     // load object table
-        __ addu(t5, t6, t5);                                     // find protobj position in table
+        __ la(t6, *_runtime.symbol_by_id(RuntimeMips::RuntimeMipsSymbols::CLASS_OBJ_TAB)); // load object table
+        __ addu(t5, t6, t5); // find protobj position in table
 
         __ lw(_a0, t5, 0);
-        __ jal(*_runtime.method(RuntimeMips::OBJECT_COPY)); // result in acc
+        __ jal(*_runtime.symbol_by_id(RuntimeMips::RuntimeMipsSymbols::OBJECT_COPY)); // result in acc
 
         __ lw(t5, t5, WORD_SIZE); // next slot is init method
         __ jalr(t5);
@@ -389,9 +390,9 @@ void CodeGenMips::emit_cases_expr_inner(const ast::CaseExpression &expr)
 {
     emit_expr(expr._expr);
 
-    auto case_branch_name = Names::true_branch();
-    const auto no_branch_name = Names::false_branch();
-    const Label continue_label(Names::merge_block());
+    auto case_branch_name = Names::name(Names::Comment::TRUE_BRANCH);
+    const auto no_branch_name = Names::name(Names::Comment::FALSE_BRANCH);
+    const Label continue_label(Names::name(Names::Comment::MERGE_BLOCK));
 
     // in brackets because we want to deallocate t1 before next expressions emitting
     {
@@ -399,9 +400,9 @@ void CodeGenMips::emit_cases_expr_inner(const ast::CaseExpression &expr)
 
         __ bne(_a0, __ zero(), Label(case_branch_name)); // is expression void
         // yes, it is void
-        __ la(_a0, _data.string_const(_current_class->_file_name)); // save file name to a0
-        __ li(t1, expr._expr->_line_number);                        // save line number to t1
-        __ jal(*_runtime.method(RuntimeMips::CASE_ABORT2));         // abort
+        __ la(_a0, _data.string_const(_current_class->_file_name));                   // save file name to a0
+        __ li(t1, expr._expr->_line_number);                                          // save line number to t1
+        __ jal(*_runtime.symbol_by_id(RuntimeMips::RuntimeMipsSymbols::CASE_ABORT2)); // abort
     }
 
     // we want to generate code for the the most precise cases first, so sort cases by tag
@@ -420,7 +421,7 @@ void CodeGenMips::emit_cases_expr_inner(const ast::CaseExpression &expr)
 
             __ lw(t1, _a0, 0); // if we here, so object is in acc. Load its tag to t1
 
-            case_branch_name = (i < cases.size() - 1 ? Names::true_branch() : no_branch_name);
+            case_branch_name = (i < cases.size() - 1 ? Names::name(Names::Comment::TRUE_BRANCH) : no_branch_name);
 
             const auto &klass = _builder->klass(cases[i]->_type->_string);
 
@@ -441,7 +442,7 @@ void CodeGenMips::emit_cases_expr_inner(const ast::CaseExpression &expr)
 
     {
         const AssemblerMarkSection mark(_asm, Label(no_branch_name));
-        __ jal(*_runtime.method(RuntimeMips::CASE_ABORT)); // abort
+        __ jal(*_runtime.symbol_by_id(RuntimeMips::RuntimeMipsSymbols::CASE_ABORT)); // abort
     }
 
     const AssemblerMarkSection mark(_asm, continue_label);
@@ -465,8 +466,8 @@ void CodeGenMips::emit_branch_to_label_if_false(const Label &label)
 
 void CodeGenMips::emit_loop_expr_inner(const ast::WhileExpression &expr)
 {
-    const Label loop_header_label(Names::loop_header());
-    const Label loop_tail_label(Names::loop_tail());
+    const Label loop_header_label(Names::name(Names::Comment::LOOP_HEADER));
+    const Label loop_tail_label(Names::name(Names::Comment::LOOP_TAIL));
 
     {
         const AssemblerMarkSection mark(_asm, loop_header_label);
@@ -483,8 +484,8 @@ void CodeGenMips::emit_loop_expr_inner(const ast::WhileExpression &expr)
 
 void CodeGenMips::emit_if_expr_inner(const ast::IfExpression &expr)
 {
-    const Label false_branch_label(Names::false_branch());
-    const Label continue_label(Names::merge_block());
+    const Label false_branch_label(Names::name(Names::Comment::FALSE_BRANCH));
+    const Label continue_label(Names::name(Names::Comment::MERGE_BLOCK));
 
     emit_expr(expr._predicate); // result in acc
     emit_branch_to_label_if_false(false_branch_label);
@@ -516,7 +517,7 @@ void CodeGenMips::emit_dispatch_expr_inner(const ast::DispatchExpression &expr)
 
     emit_expr(expr._expr); // receiver in acc
 
-    const Label dispatch_to_void_label(Names::true_branch());
+    const Label dispatch_to_void_label(Names::name(Names::Comment::TRUE_BRANCH));
     const Register t1(Register::$t1);
     __ beq(_a0, __ zero(), dispatch_to_void_label);
 
@@ -537,7 +538,7 @@ void CodeGenMips::emit_dispatch_expr_inner(const ast::DispatchExpression &expr)
                 __ jal(Label(_builder->klass(disp._type->_string)->method_full_name(method_name)));
             }},
         expr._base);
-    const Label continue_label(Names::merge_block());
+    const Label continue_label(Names::name(Names::Comment::MERGE_BLOCK));
     __ j(continue_label);
 
     // void
@@ -545,7 +546,7 @@ void CodeGenMips::emit_dispatch_expr_inner(const ast::DispatchExpression &expr)
         const AssemblerMarkSection mark(_asm, dispatch_to_void_label);
         __ li(t1, expr._expr->_line_number);
         __ la(_a0, _data.string_const(_current_class->_file_name));
-        __ jal(*_runtime.method(RuntimeMips::DISPATCH_ABORT));
+        __ jal(*_runtime.symbol_by_id(RuntimeMips::RuntimeMipsSymbols::DISPATCH_ABORT));
     }
 
     const AssemblerMarkSection mark(_asm, continue_label);
@@ -592,5 +593,5 @@ void CodeGenMips::emit_gc_update(const Register &obj, const int &offset)
 {
     Register a1(Register::$a1);
     __ addiu(a1, obj, offset);
-    __ jal(*_runtime.method(RuntimeMips::GEN_GC_ASSIGN));
+    __ jal(*_runtime.symbol_by_id(RuntimeMips::RuntimeMipsSymbols::GEN_GC_ASSIGN));
 }

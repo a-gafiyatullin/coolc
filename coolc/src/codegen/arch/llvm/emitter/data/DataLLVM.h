@@ -32,7 +32,6 @@ class DataLLVM : public Data<llvm::GlobalVariable *, llvm::StructType *>
     llvm::GlobalVariable *make_disp_table(const std::string &name, llvm::StructType *type,
                                           const std::vector<llvm::Constant *> &methods);
     void make_init_method(const std::shared_ptr<Klass> &klass);
-    llvm::Constant *make_char_string(const std::string &str);
 
   public:
     /**
@@ -43,6 +42,14 @@ class DataLLVM : public Data<llvm::GlobalVariable *, llvm::StructType *>
      * @param runtime Runtime methods
      */
     DataLLVM(const std::shared_ptr<KlassBuilder> &builder, llvm::Module &module, const RuntimeLLVM &runtime);
+
+    /**
+     * @brief Create C-like null-terminated string
+     *
+     * @param str String to create
+     * @return LLVM representation of the string
+     */
+    llvm::Constant *make_char_string(const std::string &str);
 };
 
 }; // namespace codegen

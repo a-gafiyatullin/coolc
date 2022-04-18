@@ -9,47 +9,42 @@ namespace codegen
  * @brief Runtime declarations for SPIM
  *
  */
-class RuntimeMips : public Runtime<const Label, Label>
+class RuntimeMips : public Runtime<const Label>
 {
   public:
-    /**
-     * @brief Runtime methods names
-     *
-     */
-    static constexpr std::string_view EQUALITY_TEST = "equality_test";
-    static constexpr std::string_view OBJECT_COPY = "Object.copy";
-    static constexpr std::string_view CASE_ABORT = "_case_abort";
-    static constexpr std::string_view CASE_ABORT2 = "_case_abort2";
-    static constexpr std::string_view DISPATCH_ABORT = "_dispatch_abort";
+    enum RuntimeMipsSymbols
+    {
+        EQUALITY_TEST,
+        OBJECT_COPY,
+        CASE_ABORT,
+        CASE_ABORT2,
+        DISPATCH_ABORT,
 
-    /**
-     * @brief GC methods names
-     *
-     */
-    static constexpr std::string_view GEN_GC_ASSIGN = "_GenGC_Assign";
-    static constexpr std::string_view MEM_MGR_INIT = "_MemMgr_INITIALIZER";
-    static constexpr std::string_view MEM_MGR_COLLECTOR = "_MemMgr_COLLECTOR";
-    static constexpr std::string_view GEN_GC_INIT = "_GenGC_Init";
-    static constexpr std::string_view MEM_MGR_TEST = "_MemMgr_TEST";
-    static constexpr std::string_view GEN_GC_COLLECT = "_GenGC_Collect";
+        GEN_GC_ASSIGN,
+        MEM_MGR_INIT,
+        MEM_MGR_COLLECTOR,
+        GEN_GC_INIT,
+        MEM_MGR_TEST,
+        GEN_GC_COLLECT,
 
-    /**
-     * @brief Tag names
-     *
-     */
-    static constexpr std::string_view INT_TAG_NAME = "_int_tag";
-    static constexpr std::string_view BOOL_TAG_NAME = "_bool_tag";
-    static constexpr std::string_view STRING_TAG_NAME = "_string_tag";
+        INT_TAG_NAME,
+        BOOL_TAG_NAME,
+        STRING_TAG_NAME,
 
-    /**
-     * @brief Other runtime-related names
-     *
-     */
-    static constexpr std::string_view HEAP_START = "heap_start";
+        HEAP_START,
+
+        CLASS_OBJ_TAB,
+        CLASS_NAME_TAB,
+
+        RuntimeMipsSymbolsSize
+    };
 
   private:
-    static constexpr std::string_view CLASS_OBJ_TAB = "class_objTab";
-    static constexpr std::string_view CLASS_NAME_TAB = "class_nameTab";
+    static const std::string SYMBOLS[RuntimeMipsSymbolsSize];
+
+    // Runtime tables
+    const Label _class_name_tab;
+    const Label _class_obj_tab;
 
     // runtime method labels
     const Label _equality_test;
@@ -62,15 +57,9 @@ class RuntimeMips : public Runtime<const Label, Label>
   public:
     RuntimeMips();
 
-    /**
-     * @brief Get runtime method info by name
-     *
-     * @param name Runtime method name
-     * @return Runtime method info
-     */
-    inline const Label *method(const std::string_view &name)
+    std::string symbol_name(const int &id) const override
     {
-        return Runtime::method(static_cast<std::string>(name));
+        return SYMBOLS[id];
     }
 };
 }; // namespace codegen

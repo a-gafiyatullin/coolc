@@ -1,12 +1,31 @@
 #pragma once
 
-#include "codegen/arch/llvm/klass/KlassLLVM.h"
 #include "codegen/decls/Runtime.h"
 #include <llvm/IR/Module.h>
 
 namespace codegen
 {
 class RuntimeLLVM;
+
+enum HeaderLayout
+{
+    Mark,
+    Tag,
+    Size,
+    DispatchTable,
+
+    HeaderLayoutElemets
+};
+
+enum HeaderLayoutSizes
+{
+    MarkSize = sizeof(MARK_TYPE) * WORD_SIZE,
+    TagSize = sizeof(TAG_TYPE) * WORD_SIZE,
+    SizeSize = sizeof(SIZE_TYPE) * WORD_SIZE,
+    DispatchTableSize = sizeof(DISP_TAB_TYPE) * WORD_SIZE,
+
+    HeaderSize = MarkSize + TagSize + SizeSize + DispatchTableSize
+};
 
 /**
  * @brief Information for one runtime method
@@ -29,11 +48,38 @@ struct RuntimeMethod
                   const std::initializer_list<llvm::Type *> &args, RuntimeLLVM &runtime);
 };
 
-class RuntimeLLVM : public Runtime<RuntimeMethod, llvm::Value *>
+class RuntimeLLVM : public Runtime<RuntimeMethod>
 {
     friend class RuntimeMethod;
 
+  public:
+    enum RuntimeLLVMSymbols
+    {
+        OBJECT_ABORT,
+        OBJECT_TYPE_NAME,
+        OBJECT_COPY,
+
+        STRING_LENGTH,
+        STRING_CONCAT,
+        STRING_SUBSTR,
+
+        IO_OUT_STRING,
+        IO_OUT_INT,
+        IO_IN_STRING,
+        IO_IN_INT,
+
+        EQUALS,
+        GC_ALLOC,
+
+        CLASS_NAME_TAB,
+        CLASS_OBJ_TAB,
+
+        RuntimeLLVMSymbolsSize
+    };
+
   private:
+    static const std::string SYMBOLS[RuntimeLLVMSymbolsSize];
+
     llvm::Type *const _int8_type;
     llvm::Type *const _int32_type;
     llvm::Type *const _int64_type;
@@ -61,7 +107,6 @@ class RuntimeLLVM : public Runtime<RuntimeMethod, llvm::Value *>
 
     // GC
     const RuntimeMethod _gc_alloc;
-    const RuntimeMethod _gc_alloc_by_tag;
 
   public:
     /**
@@ -120,6 +165,11 @@ class RuntimeLLVM : public Runtime<RuntimeMethod, llvm::Value *>
     inline llvm::Type *int8_type() const
     {
         return _int8_type;
+    }
+
+    std::string symbol_name(const int &id) const override
+    {
+        return SYMBOLS[id];
     }
 };
 }; // namespace codegen

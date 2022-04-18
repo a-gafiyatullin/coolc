@@ -9,55 +9,44 @@ namespace codegen
  */
 class Names
 {
+  public:
+    enum Comment
+    {
+        DISP_TAB,
+        PROTOTYPE,
+        INIT_METHOD,
+        TYPE,
+        TRUE_BRANCH,
+        FALSE_BRANCH,
+        MERGE_BLOCK,
+        LOOP_HEADER,
+        LOOP_TAIL,
+        CALL,
+        GEP,
+        LOAD,
+        CAST,
+        CHAR_STRING,
+        CONST_BOOL,
+        CONST_INT,
+        CONST_STRING,
+        ENTRY_BLOCK,
+        SUB,
+        ADD,
+        MUL,
+        DIV,
+        CMP_SLT,
+        CMP_SLE,
+        CMP_EQ,
+        PHI,
+
+        CommentsNumber
+    };
+
   private:
-    static int TrueBranchLabelNum;
-    static int FalseBranchLabelNum;
-    static int MergeBlockLabelNum;
-    static int LoopHeaderLabelNum;
-    static int LoopTailLabelNum;
-    static int IntegerNum;
-    static int BooleanNum;
-    static int StringNum;
+    static const std::pair<std::string, bool> COMMENT_NAMES[CommentsNumber];
+    static int CommentNumber[CommentsNumber];
 
   public:
-    /**
-     * @brief Suffices for prototypes and init methods construction
-     *
-     */
-    static constexpr std::string_view DISP_TAB_SUFFIX = "_dispTab";
-    static constexpr std::string_view PROTOTYPE_SUFFIX = "_protObj";
-    static constexpr std::string_view INIT_SUFFIX = "_init";
-    static constexpr std::string_view TYPE_SUFFIX = "_type";
-
-    /**
-     * @brief Prefixes for code generation names construction
-     *
-     */
-    static constexpr std::string_view TRUE_BRANCH_PREFIX = "true_";
-    static constexpr std::string_view FALSE_BRANCH_PREFIX = "false_";
-    static constexpr std::string_view MERGE_BLOCK_PREFIX = "merge_";
-    static constexpr std::string_view LOOP_HEADER_PREFIX = "loop_header_";
-    static constexpr std::string_view LOOP_TAIL_PREFIX = "loop_tail_";
-
-    /**
-     * @brief Prefixes for constants
-     *
-     */
-    static constexpr std::string_view CONST_BOOL_PREFIX = "bool_const_";
-    static constexpr std::string_view CONST_INT_PREFIX = "int_const_";
-    static constexpr std::string_view CONST_STRING_PREFIX = "str_const_";
-
-    /**
-     * @brief Names for code generation
-     *
-     */
-    static constexpr std::string_view ENTRY_BLOCK_NAME = "entry_block";
-    static constexpr std::string_view CALL_PREFIX = "call_";
-    static constexpr std::string_view GEP_PREFIX = "gep_";
-    static constexpr std::string_view LOAD_PREFIX = "load_";
-    static constexpr std::string_view CAST_TO_PREFIX = "cast_to_";
-    static constexpr std::string_view RUNTIME_STRING_SUFFIX = "_char_str";
-
     /**
      * @brief Get the dispatch table name
      *
@@ -66,7 +55,7 @@ class Names
      */
     inline static std::string disp_table(const std::string &klass)
     {
-        return klass + static_cast<std::string>(DISP_TAB_SUFFIX);
+        return name(DISP_TAB, klass);
     }
 
     /**
@@ -77,7 +66,7 @@ class Names
      */
     inline static std::string prototype(const std::string &klass)
     {
-        return klass + static_cast<std::string>(PROTOTYPE_SUFFIX);
+        return name(PROTOTYPE, klass);
     }
 
     /**
@@ -88,38 +77,7 @@ class Names
      */
     inline static std::string init_method(const std::string &klass)
     {
-        return klass + static_cast<std::string>(INIT_SUFFIX);
-    }
-
-    /**
-     * @brief Get free integer constant name
-     *
-     * @return Integer constant name
-     */
-    inline static std::string int_constant()
-    {
-        return static_cast<std::string>(CONST_INT_PREFIX) + std::to_string(IntegerNum++);
-    }
-
-    /**
-     * @brief Get free bool constant name
-     *
-     * @return Bool constant name
-     */
-    inline static std::string bool_constant()
-    {
-        BooleanNum = BooleanNum % 2;
-        return static_cast<std::string>(CONST_BOOL_PREFIX) + std::to_string(BooleanNum++);
-    }
-
-    /**
-     * @brief Get free string constant name
-     *
-     * @return String constant name
-     */
-    inline static std::string string_constant()
-    {
-        return static_cast<std::string>(CONST_STRING_PREFIX) + std::to_string(StringNum++);
+        return name(INIT_METHOD, klass);
     }
 
     /**
@@ -136,120 +94,79 @@ class Names
     }
 
     /**
-     * @brief Get type name of the var
+     * @brief Get free integer constant name
      *
-     * @param var Some variable
-     * @return Type name
+     * @return Integer constant name
      */
-    inline static std::string type(const std::string &var)
+    inline static std::string int_constant()
     {
-        return var + static_cast<std::string>(TYPE_SUFFIX);
-    }
-
-    // -------------------------------------- CODEGEN SUPPORT --------------------------------------
-    /**
-     * @brief Get free true branch label name
-     *
-     * @return True branch label name
-     */
-    inline static std::string true_branch()
-    {
-        return static_cast<std::string>(TRUE_BRANCH_PREFIX) + std::to_string(TrueBranchLabelNum++);
+        return name(CONST_INT);
     }
 
     /**
-     * @brief Get free false branch label name
+     * @brief Get free bool constant name
      *
-     * @return False branch label name
+     * @return Bool constant name
      */
-    inline static std::string false_branch()
+    inline static std::string bool_constant()
     {
-        return static_cast<std::string>(FALSE_BRANCH_PREFIX) + std::to_string(FalseBranchLabelNum++);
+        CommentNumber[CONST_BOOL] %= 2;
+        return name(CONST_BOOL);
     }
 
     /**
-     * @brief Get free merge block label name
+     * @brief Get free string constant name
      *
-     * @return Merge block label name
+     * @return String constant name
      */
-    inline static std::string merge_block()
+    inline static std::string string_constant()
     {
-        return static_cast<std::string>(MERGE_BLOCK_PREFIX) + std::to_string(MergeBlockLabelNum++);
+        return name(CONST_STRING);
     }
 
     /**
-     * @brief Get free loop header label name
+     * @brief Get name for string
      *
-     * @return Loop header label name
+     * @param type Name type
+     * @param str String
+     * @return Name for string
      */
-    inline static std::string loop_header()
+    inline static std::string name(const Comment &type, const std::string &str)
     {
-        return static_cast<std::string>(LOOP_HEADER_PREFIX) + std::to_string(LoopHeaderLabelNum++);
+        if (COMMENT_NAMES[type].second)
+        {
+            return str + COMMENT_NAMES[type].first;
+        }
+
+        return COMMENT_NAMES[type].first + str;
     }
 
     /**
-     * @brief Get free loop tail label name
+     * @brief Get new name of the specified type
      *
-     * @return Loop tail label name
+     * @param type Name type
+     * @param next Do next
+     * @return Name of the specified type
      */
-    inline static std::string loop_tail()
+    inline static std::string name(const Comment &type)
     {
-        return static_cast<std::string>(LOOP_TAIL_PREFIX) + std::to_string(LoopTailLabelNum++);
+        if (COMMENT_NAMES[type].second)
+        {
+            return std::to_string((CommentNumber[type]++)) + COMMENT_NAMES[type].first;
+        }
+
+        return COMMENT_NAMES[type].first + std::to_string((CommentNumber[type]++));
     }
 
     /**
-     * @brief Get comment for call intsruction
+     * @brief Get raw name of the specified type
      *
-     * @param method Method to call
-     * @return String comment
+     * @param type Name type
+     * @return Raw Name of the specified type
      */
-    inline static std::string call(const std::string &method)
+    inline static std::string comment(const Comment &type)
     {
-        return static_cast<std::string>(CALL_PREFIX) + method;
-    }
-
-    /**
-     * @brief Get comment for get element pointer intsruction
-     *
-     * @param object Object to get element pointer
-     * @return String comment
-     */
-    inline static std::string gep(const std::string &object)
-    {
-        return static_cast<std::string>(GEP_PREFIX) + object;
-    }
-
-    /**
-     * @brief Get comment for load intsruction
-     *
-     * @param object Object pointer to load
-     * @return String comment
-     */
-    inline static std::string load(const std::string &object)
-    {
-        return static_cast<std::string>(LOAD_PREFIX) + object;
-    }
-
-    /**
-     * @brief Get comment for bitcast intsruction
-     *
-     * @param type Destination type
-     * @return String comment
-     */
-    inline static std::string cast(const std::string &type)
-    {
-        return static_cast<std::string>(CAST_TO_PREFIX) + type;
-    }
-
-    /**
-     * @brief Get name for char string
-     *
-     * @param method String
-     * @return String comment
-     */
-    inline static std::string char_str(const std::string &str)
-    {
-        return str + static_cast<std::string>(RUNTIME_STRING_SUFFIX);
+        return COMMENT_NAMES[type].first;
     }
 };
 }; // namespace codegen

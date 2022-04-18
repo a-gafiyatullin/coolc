@@ -3,50 +3,43 @@
 
 using namespace codegen;
 
-#define FULL_METHOD_NAME(klass_id, method)                                                                             \
-    Names::method_full_name(BaseClassesNames[klass_id], method, KlassLLVM::FULL_METHOD_DELIM)
-
 DataLLVM::DataLLVM(const std::shared_ptr<KlassBuilder> &builder, llvm::Module &module, const RuntimeLLVM &runtime)
     : Data(builder), _module(module), _runtime(runtime)
 {
-    make_base_class(
-        _builder->klass(BaseClassesNames[BaseClasses::OBJECT]), {},
-        {runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::ABORT]))->_func,
-         runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::TYPE_NAME]))->_func,
-         runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::COPY]))->_func});
+    make_base_class(_builder->klass(BaseClassesNames[BaseClasses::OBJECT]), {},
+                    {runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_ABORT)->_func,
+                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_TYPE_NAME)->_func,
+                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_COPY)->_func});
 
-    make_base_class(
-        _builder->klass(BaseClassesNames[BaseClasses::INT]), {_runtime.int64_type()},
-        {runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::ABORT]))->_func,
-         runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::TYPE_NAME]))->_func,
-         runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::COPY]))->_func});
+    make_base_class(_builder->klass(BaseClassesNames[BaseClasses::INT]), {_runtime.int64_type()},
+                    {runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_ABORT)->_func,
+                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_TYPE_NAME)->_func,
+                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_COPY)->_func});
 
     // use 64 bit field for allignment
-    make_base_class(
-        _builder->klass(BaseClassesNames[BaseClasses::BOOL]), {_runtime.int64_type()},
-        {runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::ABORT]))->_func,
-         runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::TYPE_NAME]))->_func,
-         runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::COPY]))->_func});
+    make_base_class(_builder->klass(BaseClassesNames[BaseClasses::BOOL]), {_runtime.int64_type()},
+                    {runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_ABORT)->_func,
+                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_TYPE_NAME)->_func,
+                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_COPY)->_func});
 
     make_base_class(
         _builder->klass(BaseClassesNames[BaseClasses::STRING]),
         {_classes[BaseClassesNames[BaseClasses::INT]]->getPointerTo(), _runtime.int8_type()->getPointerTo()},
-        {runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::ABORT]))->_func,
-         runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::TYPE_NAME]))->_func,
-         runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::COPY]))->_func,
-         runtime.method(FULL_METHOD_NAME(BaseClasses::STRING, StringMethodsNames[StringMethods::LENGTH]))->_func,
-         runtime.method(FULL_METHOD_NAME(BaseClasses::STRING, StringMethodsNames[StringMethods::CONCAT]))->_func,
-         runtime.method(FULL_METHOD_NAME(BaseClasses::STRING, StringMethodsNames[StringMethods::SUBSTR]))->_func});
+        {runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_ABORT)->_func,
+         runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_TYPE_NAME)->_func,
+         runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_COPY)->_func,
+         runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::STRING_LENGTH)->_func,
+         runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::STRING_CONCAT)->_func,
+         runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::STRING_SUBSTR)->_func});
 
-    make_base_class(
-        _builder->klass(BaseClassesNames[BaseClasses::IO]), {},
-        {runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::ABORT]))->_func,
-         runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::TYPE_NAME]))->_func,
-         runtime.method(FULL_METHOD_NAME(BaseClasses::OBJECT, ObjectMethodsNames[ObjectMethods::COPY]))->_func,
-         runtime.method(FULL_METHOD_NAME(BaseClasses::IO, IOMethodsNames[IOMethods::OUT_STRING]))->_func,
-         runtime.method(FULL_METHOD_NAME(BaseClasses::IO, IOMethodsNames[IOMethods::OUT_INT]))->_func,
-         runtime.method(FULL_METHOD_NAME(BaseClasses::IO, IOMethodsNames[IOMethods::IN_STRING]))->_func,
-         runtime.method(FULL_METHOD_NAME(BaseClasses::IO, IOMethodsNames[IOMethods::IN_INT]))->_func});
+    make_base_class(_builder->klass(BaseClassesNames[BaseClasses::IO]), {},
+                    {runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_ABORT)->_func,
+                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_TYPE_NAME)->_func,
+                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_COPY)->_func,
+                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::IO_OUT_STRING)->_func,
+                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::IO_OUT_INT)->_func,
+                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::IO_IN_STRING)->_func,
+                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::IO_IN_INT)->_func});
 }
 
 llvm::GlobalVariable *DataLLVM::make_disp_table(const std::string &name, llvm::StructType *type,
@@ -96,7 +89,7 @@ void DataLLVM::make_base_class(const std::shared_ptr<Klass> &klass, const std::v
 
     // set dispatch table
     auto *const dispatch_table_type =
-        llvm::StructType::create(_module.getContext(), method_types, Names::type(disp_tab_name));
+        llvm::StructType::create(_module.getContext(), method_types, Names::name(Names::Comment::TYPE, disp_tab_name));
     fields.push_back(dispatch_table_type->getPointerTo());
 
     // add fields
@@ -190,10 +183,11 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
 
     const auto &class_name = klass->name();
     const auto &disp_tab_name = Names::disp_table(class_name);
-    _dispatch_tables.insert({class_name, make_disp_table(disp_tab_name,
-                                                         llvm::StructType::create(_module.getContext(), method_types,
-                                                                                  Names::type(disp_tab_name)),
-                                                         methods)});
+    _dispatch_tables.insert(
+        {class_name, make_disp_table(disp_tab_name,
+                                     llvm::StructType::create(_module.getContext(), method_types,
+                                                              Names::name(Names::Comment::TYPE, disp_tab_name)),
+                                     methods)});
 }
 
 void DataLLVM::int_const_inner(const int64_t &value)
@@ -237,8 +231,8 @@ llvm::Constant *DataLLVM::make_char_string(const std::string &str)
     auto *const initializer = llvm::ConstantArray::get(llvm::ArrayType::get(char_type, chars.size()), chars);
 
     // 3. Create the declaration statement
-    auto *const const_global =
-        (llvm::GlobalVariable *)_module.getOrInsertGlobal(Names::char_str(str), initializer->getType());
+    auto *const const_global = (llvm::GlobalVariable *)_module.getOrInsertGlobal(
+        Names::name(Names::Comment::CHAR_STRING, str), initializer->getType());
     const_global->setInitializer(initializer);
     const_global->setConstant(true);
     const_global->setLinkage(llvm::GlobalValue::PrivateLinkage);
@@ -301,6 +295,25 @@ void DataLLVM::gen_class_obj_tab()
     {
         class_struct(klass);
     }
+
+    std::vector<llvm::Constant *> init_methods;
+    for (const auto &klass : _builder->klasses())
+    {
+        auto *const init_method = _module.getFunction(Names::init_method(klass->name()));
+        GUARANTEE_DEBUG(init_method);
+        init_methods.push_back(init_method);
+    }
+
+    // array of init methods
+    GUARANTEE_DEBUG(init_methods.size());
+    auto *const initializer =
+        llvm::ConstantArray::get(llvm::ArrayType::get(init_methods[0]->getType(), init_methods.size()), init_methods);
+
+    auto *const const_global = static_cast<llvm::GlobalVariable *>(_module.getOrInsertGlobal(
+        _runtime.symbol_name(RuntimeLLVM::RuntimeLLVMSymbols::CLASS_OBJ_TAB), initializer->getType()));
+    const_global->setInitializer(initializer);
+    const_global->setConstant(true);
+    const_global->setLinkage(llvm::GlobalValue::PrivateLinkage);
 }
 
 void DataLLVM::gen_class_name_tab()
@@ -317,7 +330,7 @@ void DataLLVM::gen_class_name_tab()
         names);
 
     auto *const const_global = (llvm::GlobalVariable *)_module.getOrInsertGlobal(
-        RuntimeStructuresNames[RuntimeStructures::CLASS_NAMES_TABLE], initializer->getType());
+        _runtime.symbol_name(RuntimeLLVM::RuntimeLLVMSymbols::CLASS_NAME_TAB), initializer->getType());
     const_global->setInitializer(initializer);
     const_global->setConstant(true);
     const_global->setLinkage(llvm::GlobalValue::ExternalLinkage); // visible for runtime

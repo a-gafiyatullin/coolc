@@ -1,100 +1,50 @@
 #pragma once
 
 #include "codegen/constants/Constants.h"
+#include "utils/Utils.h"
 #include <unordered_map>
 
 namespace codegen
 {
-
-enum HeaderLayout
-{
-    Mark,
-    Tag,
-    Size,
-    DispatchTable,
-
-    HeaderLayoutElemets
-};
-
-enum HeaderLayoutSizes
-{
-    MarkSize = sizeof(MARK_TYPE) * WORD_SIZE,
-    TagSize = sizeof(TAG_TYPE) * WORD_SIZE,
-    SizeSize = sizeof(SIZE_TYPE) * WORD_SIZE,
-    DispatchTableSize = sizeof(DISP_TAB_TYPE) * WORD_SIZE,
-
-    HeaderSize = MarkSize + TagSize + SizeSize + DispatchTableSize
-};
-
-enum RuntimeMethods
-{
-    EQUALS,
-    GC_ALLOC,
-    GC_ALLOC_BY_TAG,
-
-    RuntimeMethodsSize
-};
-
-extern const char *const RuntimeMethodsNames[RuntimeMethodsSize];
-
-enum RuntimeStructures
-{
-    CLASS_NAMES_TABLE,
-    CLASS_OBJ_TABLE,
-
-    RuntimeStructuresSize
-};
-
-extern const char *const RuntimeStructuresNames[RuntimeStructuresSize];
-
 /**
  * @brief Runtime declaration for rt-lib
  *
  */
-template <class MethodHandle, class LabelHandle> class Runtime
+template <class SymbolHandle> class Runtime
 {
   protected:
-    std::unordered_map<std::string, MethodHandle *> _method_by_name;
-
-    // Runtime tables
-    const LabelHandle _class_name_tab;
-    const LabelHandle _class_obj_tab;
-
-    Runtime(const LabelHandle &class_name_tab, const LabelHandle &class_obj_tab)
-        : _class_name_tab(class_name_tab), _class_obj_tab(class_obj_tab)
-    {
-    }
+    std::unordered_map<std::string, SymbolHandle *> _symbol_by_name;
 
   public:
     /**
-     * @brief Get runtime method info by name
+     * @brief Get runtime symbol info by name
      *
-     * @param name Runtime method name
-     * @return Runtime method info
+     * @param name Runtime symbol name
+     * @return Runtime symbol info
      */
-    MethodHandle *method(const std::string &name) const
+    inline SymbolHandle *symbol(const std::string &name) const
     {
-        return _method_by_name.find(name) != _method_by_name.end() ? _method_by_name.at(name) : NULL;
+        return _symbol_by_name.find(name) != _symbol_by_name.end() ? _symbol_by_name.at(name) : NULL;
     }
 
     /**
-     * @brief Get class name table
+     * @brief Get runtime symbol name by id
      *
-     * @return Class name table
+     * @param id Identifier
+     * @return Runtime symbol name
      */
-    const LabelHandle &class_name_tab() const
-    {
-        return _class_name_tab;
-    }
+    virtual std::string symbol_name(const int &id) const = 0;
 
     /**
-     * @brief Get class object table
+     * @brief Get runtime symbol info by id
      *
-     * @return Class object table
+     * @param id Identifier
+     * @return Runtime symbol info
      */
-    const LabelHandle &class_obj_tab() const
+    inline SymbolHandle *symbol_by_id(const int &id) const
     {
-        return _class_obj_tab;
+        GUARANTEE_DEBUG(_symbol_by_name.find(symbol_name(id)) != _symbol_by_name.end());
+        return symbol(symbol_name(id));
     }
 };
 }; // namespace codegen

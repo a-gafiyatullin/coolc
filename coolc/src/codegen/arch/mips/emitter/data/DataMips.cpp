@@ -65,7 +65,7 @@ void DataMips::gen_class_name_tab()
         string_const(klass->name());
     }
 
-    const AssemblerMarkSection mark(_asm, _runtime.class_name_tab());
+    const AssemblerMarkSection mark(_asm, *_runtime.symbol_by_id(RuntimeMips::RuntimeMipsSymbols::CLASS_NAME_TAB));
 
     // gather to table
     for (const auto &klass : _builder->klasses())
@@ -79,7 +79,7 @@ void DataMips::gen_class_obj_tab()
     gen_prototypes();
     gen_dispatch_tabs();
 
-    const AssemblerMarkSection mark(_asm, _runtime.class_obj_tab());
+    const AssemblerMarkSection mark(_asm, *_runtime.symbol_by_id(RuntimeMips::RuntimeMipsSymbols::CLASS_OBJ_TAB));
 
     for (const auto &klass : _builder->klasses())
     {
@@ -111,14 +111,14 @@ void DataMips::gen_dispatch_tabs()
 DataMips::DataMips(const std::shared_ptr<KlassBuilder> &builder, const RuntimeMips &runtime)
     : Data(builder), _asm(_code), _runtime(runtime)
 {
-    const Label int_tag(static_cast<std::string>(RuntimeMips::INT_TAG_NAME));
-    const Label bool_tag(static_cast<std::string>(RuntimeMips::BOOL_TAG_NAME));
-    const Label string_tag(static_cast<std::string>(RuntimeMips::STRING_TAG_NAME));
+    const Label int_tag(_runtime.symbol_name(RuntimeMips::RuntimeMipsSymbols::INT_TAG_NAME));
+    const Label bool_tag(_runtime.symbol_name(RuntimeMips::RuntimeMipsSymbols::BOOL_TAG_NAME));
+    const Label string_tag(_runtime.symbol_name(RuntimeMips::RuntimeMipsSymbols::STRING_TAG_NAME));
 
     __ data_section();
     __ align(2);
 
-    __ global(_runtime.class_name_tab());
+    __ global(*_runtime.symbol_by_id(RuntimeMips::RuntimeMipsSymbols::CLASS_NAME_TAB));
     __ global(Label(Names::prototype(MainClassName)));
     __ global(Label(Names::prototype(BaseClassesNames[BaseClasses::INT])));
     __ global(Label(Names::prototype(BaseClassesNames[BaseClasses::STRING])));
@@ -145,20 +145,22 @@ DataMips::DataMips(const std::shared_ptr<KlassBuilder> &builder, const RuntimeMi
     }
 
     // Generational GC Interface
-    const Label memmrg_init(static_cast<std::string>(RuntimeMips::MEM_MGR_INIT));
+    const Label memmrg_init(_runtime.symbol_name(RuntimeMips::RuntimeMipsSymbols::MEM_MGR_INIT));
     __ global(memmrg_init);
 
-    const Label memmrg_collector(static_cast<std::string>(RuntimeMips::MEM_MGR_COLLECTOR));
+    const Label memmrg_collector(_runtime.symbol_name(RuntimeMips::RuntimeMipsSymbols::MEM_MGR_COLLECTOR));
     {
         const AssemblerMarkSection mark(_asm, memmrg_init);
-        __ word(Label(static_cast<std::string>(RuntimeMips::GEN_GC_INIT), Label::ALLOW_NO_BIND)); // external symbol
+        __ word(Label(_runtime.symbol_name(RuntimeMips::RuntimeMipsSymbols::GEN_GC_INIT),
+                      Label::ALLOW_NO_BIND)); // external symbol
         __ global(memmrg_collector);
     }
 
-    const Label memmrg_test(static_cast<std::string>(RuntimeMips::MEM_MGR_TEST));
+    const Label memmrg_test(_runtime.symbol_name(RuntimeMips::RuntimeMipsSymbols::MEM_MGR_TEST));
     {
         const AssemblerMarkSection mark(_asm, memmrg_collector);
-        __ word(Label(static_cast<std::string>(RuntimeMips::GEN_GC_COLLECT), Label::ALLOW_NO_BIND)); // external symbol
+        __ word(Label(_runtime.symbol_name(RuntimeMips::RuntimeMipsSymbols::GEN_GC_COLLECT),
+                      Label::ALLOW_NO_BIND)); // external symbol
         __ global(memmrg_test);
     }
 
@@ -179,7 +181,7 @@ void DataMips::emit_inner(const std::string &out_file_name)
 {
     std::ofstream out_file(out_file_name);
 
-    const Label heap_start_label(static_cast<std::string>(RuntimeMips::HEAP_START));
+    const Label heap_start_label(_runtime.symbol_name(RuntimeMips::RuntimeMipsSymbols::HEAP_START));
     __ global(heap_start_label);
     AssemblerMarkSection(_asm, heap_start_label);
     __ word(DefaultValue);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "codegen/decls/Runtime.h"
+#include "codegen/arch/llvm/runtime/RuntimeLLVM.h"
 #include "codegen/klass/Klass.h"
 
 namespace codegen

@@ -12,11 +12,6 @@ void *Object_abort(void *receiver)
     return nullptr;
 }
 
-void *gc_alloc_by_tag(int tag)
-{
-    // TODO: dummy
-}
-
 void *gc_alloc(int tag, size_t size, void *disp_tab)
 {
     // TODO: dummy allocation. Should be managed by GC

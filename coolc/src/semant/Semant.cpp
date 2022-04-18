@@ -666,21 +666,23 @@ std::shared_ptr<ast::Type> Semant::infer_unary_type(const ast::UnaryExpression &
     SEMANT_RETURN_IF_FALSE(infer_expression_type(unary._expr, scope), nullptr);
 
     const auto &expr_type = unary._expr->_type;
-    const auto result = std::visit(
-        ast::overloaded{[&](const ast::IsVoidExpression &isvoid) -> std::shared_ptr<ast::Type> { return Bool; },
-                        [&](const ast::NotExpression &) -> std::shared_ptr<ast::Type> {
-                            SEMANT_RETURN_IF_FALSE_WITH_ERROR(
-                                is_bool(expr_type),
-                                "Argument of 'not' has type " + expr_type->_string + " instead of Bool.", -1, nullptr);
-                            return Bool;
-                        },
-                        [&](const ast::NegExpression &neg) -> std::shared_ptr<ast::Type> {
-                            SEMANT_RETURN_IF_FALSE_WITH_ERROR(
-                                is_int(expr_type),
-                                "Argument of '~' has type " + expr_type->_string + " instead of Int.", -1, nullptr);
-                            return Int;
-                        }},
-        unary._base);
+    const auto result =
+        std::visit(ast::overloaded{[&](const ast::IsVoidExpression &isvoid) { return Bool; },
+                                   [&](const ast::NotExpression &) {
+                                       SEMANT_RETURN_IF_FALSE_WITH_ERROR(is_bool(expr_type),
+                                                                         "Argument of 'not' has type " +
+                                                                             expr_type->_string + " instead of Bool.",
+                                                                         -1, (std::shared_ptr<ast::Type>)nullptr);
+                                       return Bool;
+                                   },
+                                   [&](const ast::NegExpression &neg) {
+                                       SEMANT_RETURN_IF_FALSE_WITH_ERROR(is_int(expr_type),
+                                                                         "Argument of '~' has type " +
+                                                                             expr_type->_string + " instead of Int.",
+                                                                         -1, (std::shared_ptr<ast::Type>)nullptr);
+                                       return Int;
+                                   }},
+                   unary._base);
 
     SEMANT_RETURN_IF_FALSE(result, nullptr);
 
