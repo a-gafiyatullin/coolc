@@ -2,13 +2,14 @@
 
 void *Object_abort(void *receiver)
 {
-    /*int tag = ((ObjectLayout *)receiver)->_tag;
-    StringLayout *name = (StringLayout *)(ClassNameTab + tag);
+    int tag = ((ObjectLayout *)receiver)->_tag;
+    StringLayout *name = (StringLayout *)(((void **)&ClassNameTab)[tag]);
 
     fprintf(stderr, "Abort called from class %s", (char *)name->_string);
+
     exit(-1);
 
-    return nullptr;*/
+    return nullptr;
 }
 
 void *gc_alloc_by_tag(int tag)

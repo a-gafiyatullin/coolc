@@ -305,6 +305,22 @@ void DataLLVM::gen_class_obj_tab()
 
 void DataLLVM::gen_class_name_tab()
 {
+    std::vector<llvm::Constant *> names;
+    for (const auto &klass : _builder->klasses())
+    {
+        names.push_back(string_const(klass->name()));
+    }
+
+    auto *const initializer = llvm::ConstantArray::get(
+        llvm::ArrayType::get(class_struct(_builder->klass(BaseClassesNames[BaseClasses::STRING]))->getPointerTo(),
+                             names.size()),
+        names);
+
+    auto *const const_global = (llvm::GlobalVariable *)_module.getOrInsertGlobal(
+        RuntimeStructuresNames[RuntimeStructures::CLASS_NAMES_TABLE], initializer->getType());
+    const_global->setInitializer(initializer);
+    const_global->setConstant(true);
+    const_global->setLinkage(llvm::GlobalValue::ExternalLinkage); // visible for runtime
 }
 
 void DataLLVM::emit_inner(const std::string &out_file)

@@ -6,7 +6,7 @@
 
 extern "C"
 {
-    // extern void **ClassNameTab; // must be defined by coolc
+    extern "C" void *ClassNameTab; // must be defined by coolc. It is the pointer of the first name
     // extern void **ClassObjTab;  // must be defined by coolc
 
     /**
