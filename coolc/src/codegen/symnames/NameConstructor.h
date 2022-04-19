@@ -16,6 +16,7 @@ class Names
         PROTOTYPE,
         INIT_METHOD,
         TYPE,
+
         TRUE_BRANCH,
         FALSE_BRANCH,
         MERGE_BLOCK,
@@ -26,9 +27,11 @@ class Names
         LOAD,
         CAST,
         CHAR_STRING,
+
         CONST_BOOL,
         CONST_INT,
         CONST_STRING,
+
         ENTRY_BLOCK,
         SUB,
         ADD,
@@ -38,6 +41,12 @@ class Names
         CMP_SLE,
         CMP_EQ,
         PHI,
+
+        OBJ_TAG,
+        OBJ_SIZE,
+        OBJ_DISPATCH_TABLE,
+
+        VALUE,
 
         CommentsNumber
     };

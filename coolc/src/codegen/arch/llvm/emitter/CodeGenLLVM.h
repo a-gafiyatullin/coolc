@@ -59,10 +59,10 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     llvm::Value *emit_assign_expr_inner(const ast::AssignExpression &expr) override;
 
     // load/allocate basic values
-    llvm::Value *emit_load_int(const llvm::Value *int_obj);
-    llvm::Value *emit_allocate_int(const llvm::Value *val);
-    llvm::Value *emit_load_bool(const llvm::Value *bool_obj);
-    llvm::Value *emit_allocate_bool(const llvm::Value *val);
+    llvm::Value *emit_load_int(llvm::Value *int_obj);
+    llvm::Value *emit_allocate_int(llvm::Value *val);
+    llvm::Value *emit_load_bool(llvm::Value *bool_obj);
+    llvm::Value *emit_allocate_bool(llvm::Value *val);
 
     // void emit_gc_update(const Register &obj, const int &offset);
 
@@ -71,6 +71,8 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
 
     // helpers
     llvm::Value *emit_new_inner(const std::shared_ptr<ast::Type> &klass);
+    llvm::Value *emit_load(llvm::Value *obj, const std::string &class_name);
+    llvm::Value *emit_allocate(llvm::Value *obj, const std::string &class_name);
 
   public:
     explicit CodeGenLLVM(const std::shared_ptr<semant::ClassNode> &root);

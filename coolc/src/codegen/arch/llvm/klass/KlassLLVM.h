@@ -30,6 +30,17 @@ class KlassLLVM : public Klass
         GUARANTEE_DEBUG(field_num < _fields.size());
         return field_num + HeaderLayout::HeaderLayoutElemets;
     }
+
+    /**
+     * @brief Field type by absolute index
+     *
+     * @param field_idx Absolute index
+     * @return Field type
+     */
+    const std::shared_ptr<ast::Type> &field_type(const int &field_idx) const
+    {
+        return _fields[field_idx - HeaderLayoutSizes::HeaderSize]->_type;
+    }
 };
 
 class KlassBuilderLLVM : public KlassBuilder

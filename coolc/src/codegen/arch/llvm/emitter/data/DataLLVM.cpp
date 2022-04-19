@@ -160,11 +160,14 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
                 args.push_back(class_struct(_builder->klass(formal_type))->getPointerTo());
             }
 
-            const auto &return_type_name = method.second->_type->_string;
-            CODEGEN_VERBOSE_ONLY(LOG("Return type: \"" + return_type_name + "\""));
+            const auto &return_type = method.second->_type;
+            CODEGEN_VERBOSE_ONLY(LOG("Return type: \"" + return_type->_string + "\""));
 
             func = llvm::Function::Create(
-                llvm::FunctionType::get(class_struct(_builder->klass(return_type_name))->getPointerTo(), args, false),
+                llvm::FunctionType::get(
+                    class_struct(_builder->klass(semant::Semant::exact_type(return_type, klass->klass())->_string))
+                        ->getPointerTo(),
+                    args, false),
                 llvm::Function::PrivateLinkage, method_full_name, &_module);
 
             // set names for args
