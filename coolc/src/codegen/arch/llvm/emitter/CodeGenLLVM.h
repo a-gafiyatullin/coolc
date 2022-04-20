@@ -9,6 +9,7 @@
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
+#include <llvm/Support/Host.h>
 
 namespace codegen
 {

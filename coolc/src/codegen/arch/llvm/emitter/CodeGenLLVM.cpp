@@ -44,7 +44,7 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
     _table.push_scope();
     for (auto &arg : func->args())
     {
-        _table.add_symbol(arg.getName(), &arg);
+        _table.add_symbol(static_cast<std::string>(arg.getName()), &arg);
     }
 
     // Create a new basic block to start insertion into.
@@ -286,14 +286,16 @@ llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass
         auto *const tag = llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag());
         auto *const size = llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size());
         auto *const disp_table = _data.class_disp_tab(klass);
-        auto *const raw_table = __ CreateBitCast(disp_table, _runtime.void_type()->getPointerTo(),
-                                                 Names::name(Names::Comment::CAST, disp_table->getName()));
+        auto *const raw_table =
+            __ CreateBitCast(disp_table, _runtime.void_type()->getPointerTo(),
+                             Names::name(Names::Comment::CAST, static_cast<std::string>(disp_table->getName())));
 
         // call allocation and cast to this klass pointer
         auto *const raw_object =
             __ CreateCall(func, {tag, size, raw_table}, Names::name(Names::Comment::CALL, alloc_func_name));
-        auto *const object = __ CreateBitCast(raw_object, klass_struct->getPointerTo(),
-                                              Names::name(Names::Comment::CAST, klass_struct->getName()));
+        auto *const object =
+            __ CreateBitCast(raw_object, klass_struct->getPointerTo(),
+                             Names::name(Names::Comment::CAST, static_cast<std::string>(klass_struct->getName())));
 
         // call init
         const auto init_method = Names::init_method(klass->name());
@@ -334,12 +336,17 @@ llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass
     auto *const class_obj_tab = _module.getNamedGlobal(class_obj_tab_name);
 
     const auto init_method_name = Names::init_method(SelfObject);
-    auto *const init_method_ptr = __ CreateGEP(class_obj_tab, tag, Names::name(Names::Comment::GEP, init_method_name));
+    auto *const init_method_ptr =
+        __ CreateGEP(class_obj_tab->getType(), class_obj_tab, tag, Names::name(Names::Comment::GEP, init_method_name));
 
     // load init method and call
-    auto *const init_method = __ CreateLoad(init_method_ptr, Names::name(Names::Comment::LOAD, init_method_name));
+    // init method has the same type as for Object class
+    auto *const object_init_type =
+        _module.getFunction(Names::init_method(BaseClassesNames[BaseClasses::OBJECT]))->getFunctionType();
+    auto *const init_method =
+        __ CreateLoad(object_init_type, init_method_ptr, Names::name(Names::Comment::LOAD, init_method_name));
 
-    __ CreateCall(init_method, {raw_object}, Names::name(Names::Comment::CALL, init_method_name));
+    __ CreateCall(object_init_type, init_method, {raw_object}, Names::name(Names::Comment::CALL, init_method_name));
 
     return raw_object;
 }
@@ -388,22 +395,28 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
                 const auto disp_table_name = Names::disp_table(klass->name());
 
                 // get pointer on dispatch table pointer
-                auto *const disp_table_ptr_ptr = __ CreateStructGEP(receiver, HeaderLayout::DispatchTable,
-                                                                    Names::name(Names::Comment::GEP, disp_table_name));
+                auto *const disp_table_ptr_ptr =
+                    __ CreateStructGEP(_data.class_struct(klass), receiver, HeaderLayout::DispatchTable,
+                                       Names::name(Names::Comment::GEP, disp_table_name));
 
-                // load dispatch table pointer
-                auto *const disp_table_ptr =
-                    __ CreateLoad(disp_table_ptr_ptr, Names::name(Names::Comment::LOAD, disp_table_name));
+                // load dispatch table
+                auto *const disp_table_ptr = __ CreateLoad(_data.class_disp_tab(klass)->getType(), disp_table_ptr_ptr,
+                                                           Names::name(Names::Comment::LOAD, disp_table_name));
 
                 // get pointer on method address
-                auto *const method_ptr = __ CreateStructGEP(disp_table_ptr, klass->method_index(method_name),
-                                                            Names::name(Names::Comment::GEP, method_name));
+                // method has the same type as in this klass
+                auto *const base_method = _module.getFunction(klass->method_full_name(method_name));
+                auto *const method_ptr =
+                    __ CreateStructGEP(base_method->getType(), disp_table_ptr, klass->method_index(method_name),
+                                       Names::name(Names::Comment::GEP, method_name));
 
-                // load method address
-                auto *const method = __ CreateLoad(method_ptr, Names::name(Names::Comment::LOAD, method_name));
+                // load method
+                auto *const method = __ CreateLoad(base_method->getFunctionType(), method_ptr,
+                                                   Names::name(Names::Comment::LOAD, method_name));
 
                 // call
-                return __ CreateCall(method, args, Names::name(Names::Comment::CALL, method_name));
+                return __ CreateCall(base_method->getFunctionType(), method, args,
+                                     Names::name(Names::Comment::CALL, method_name));
             },
             [&](const ast::StaticDispatchExpression &disp) {
                 auto *const method =

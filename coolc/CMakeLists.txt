@@ -22,6 +22,12 @@ if(ARCH STREQUAL "LLVM")
     execute_process(COMMAND sh -c "llvm-config --libs all" OUTPUT_VARIABLE LIBS)
     string(STRIP ${LIBS} LIBS)
     message(STATUS "LIBS = ${LIBS}")
+
+    execute_process(COMMAND sh -c "llvm-config --libdir" OUTPUT_VARIABLE LIB_DIR)
+    string(STRIP ${LIB_DIR} LIB_DIR)
+    message(STATUS "LIB_DIR = ${LIB_DIR}")
+
+    link_directories(${LIB_DIR})
 endif()
 
 set(CMAKE_CXX_STANDARD 20)
@@ -55,10 +61,14 @@ add_subdirectory(src/utils)
 add_subdirectory(src/ast)
 add_subdirectory(src/decls)
 add_subdirectory(src/codegen)
-add_subdirectory(src/codegen/runtime)
 add_executable(coolc src/coolc.cpp)
 
 target_link_libraries(coolc lexer parser semant utils ast codegen decls ${LIBS})
+
+# Build runtime lib. Allow ClassNameTab to be undefined.
+# TODO: MacOS only???
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-U,_ClassNameTab")
+add_subdirectory(src/codegen/runtime)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     enable_testing()
@@ -73,7 +83,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
         ${EXECUTABLE_OUTPUT_PATH}
         )
     add_executable(lexer_tests tests/src/test.cpp tests/src/lexer/test.cpp)
-    target_link_libraries(lexer_tests ${GTEST_LIBRARIES} pthread -lgtest_main)
+    target_link_libraries(lexer_tests ${GTEST_LIBRARIES} pthread ${GTEST_BOTH_LIBRARIES})
     add_test(LexerTests ${EXECUTABLE_OUTPUT_PATH}/lexer_tests)
 
     add_test(PrepareParserSemantTestsResults
@@ -81,7 +91,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
         ${EXECUTABLE_OUTPUT_PATH}
         )
     add_executable(parser_semant_tests tests/src/test.cpp tests/src/parser-semant/test.cpp)
-    target_link_libraries(parser_semant_tests ${GTEST_LIBRARIES} pthread -lgtest_main)
+    target_link_libraries(parser_semant_tests ${GTEST_LIBRARIES} pthread ${GTEST_BOTH_LIBRARIES})
     add_test(ParserSemantTests ${EXECUTABLE_OUTPUT_PATH}/parser_semant_tests)
 
     if(ARCH STREQUAL "MIPS")
@@ -92,13 +102,15 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
         set(EXTNSN  ".o")
     endif()
 
-    add_test(PrepareCodegenTestsResults
-        ${PROJECT_SOURCE_DIR}/tests/codegen/make_results.sh
-        ${EXECUTABLE_OUTPUT_PATH}
-        ${PROJECT_SOURCE_DIR}/tests/codegen/arch/${RUN_DIR}/run.sh
-        ${EXTNSN}
-        )
-    add_executable(codegen_tests tests/src/test.cpp tests/src/codegen/test.cpp)
-    target_link_libraries(codegen_tests ${GTEST_LIBRARIES} pthread -lgtest_main)
-    add_test(CodegenTests ${EXECUTABLE_OUTPUT_PATH}/codegen_tests)
+    if (NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)") OR NOT(ARCH STREQUAL "MIPS"))
+        add_test(PrepareCodegenTestsResults
+            ${PROJECT_SOURCE_DIR}/tests/codegen/make_results.sh
+            ${EXECUTABLE_OUTPUT_PATH}
+            ${PROJECT_SOURCE_DIR}/tests/codegen/arch/${RUN_DIR}/run.sh
+            ${EXTNSN}
+            )
+        add_executable(codegen_tests tests/src/test.cpp tests/src/codegen/test.cpp)
+        target_link_libraries(codegen_tests ${GTEST_LIBRARIES} pthread ${GTEST_BOTH_LIBRARIES})
+        add_test(CodegenTests ${EXECUTABLE_OUTPUT_PATH}/codegen_tests)
+    endif()
 endif()
