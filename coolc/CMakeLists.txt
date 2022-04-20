@@ -66,8 +66,9 @@ add_executable(coolc src/coolc.cpp)
 target_link_libraries(coolc lexer parser semant utils ast codegen decls ${LIBS})
 
 # Build runtime lib. Allow ClassNameTab to be undefined.
-# TODO: MacOS only???
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-U,_ClassNameTab")
+if(APPLE)
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-U,_ClassNameTab")
+endif()
 add_subdirectory(src/codegen/runtime)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -83,7 +84,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
         ${EXECUTABLE_OUTPUT_PATH}
         )
     add_executable(lexer_tests tests/src/test.cpp tests/src/lexer/test.cpp)
-    target_link_libraries(lexer_tests ${GTEST_LIBRARIES} pthread ${GTEST_BOTH_LIBRARIES})
+    target_link_libraries(lexer_tests ${GTEST_LIBRARIES} pthread ${GTEST_MAIN_LIBRARIES})
     add_test(LexerTests ${EXECUTABLE_OUTPUT_PATH}/lexer_tests)
 
     add_test(PrepareParserSemantTestsResults
@@ -91,7 +92,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
         ${EXECUTABLE_OUTPUT_PATH}
         )
     add_executable(parser_semant_tests tests/src/test.cpp tests/src/parser-semant/test.cpp)
-    target_link_libraries(parser_semant_tests ${GTEST_LIBRARIES} pthread ${GTEST_BOTH_LIBRARIES})
+    target_link_libraries(parser_semant_tests ${GTEST_LIBRARIES} pthread ${GTEST_MAIN_LIBRARIES})
     add_test(ParserSemantTests ${EXECUTABLE_OUTPUT_PATH}/parser_semant_tests)
 
     if(ARCH STREQUAL "MIPS")
@@ -102,7 +103,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
         set(EXTNSN  ".o")
     endif()
 
-    if (NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)") OR NOT(ARCH STREQUAL "MIPS"))
+    if ((CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)" AND ARCH STREQUAL "MIPS") OR ARCH STREQUAL "LLVM")
         add_test(PrepareCodegenTestsResults
             ${PROJECT_SOURCE_DIR}/tests/codegen/make_results.sh
             ${EXECUTABLE_OUTPUT_PATH}
@@ -110,7 +111,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
             ${EXTNSN}
             )
         add_executable(codegen_tests tests/src/test.cpp tests/src/codegen/test.cpp)
-        target_link_libraries(codegen_tests ${GTEST_LIBRARIES} pthread ${GTEST_BOTH_LIBRARIES})
+        target_link_libraries(codegen_tests ${GTEST_LIBRARIES} pthread ${GTEST_MAIN_LIBRARIES})
         add_test(CodegenTests ${EXECUTABLE_OUTPUT_PATH}/codegen_tests)
     endif()
 endif()
