@@ -25,7 +25,7 @@ struct Symbol
      *
      * @param offset Offset from base
      */
-    Symbol(const uint64_t &offset) : _type(SymbolType::FIELD)
+    explicit Symbol(const uint64_t &offset) : _type(SymbolType::FIELD)
     {
         _value._offset = offset;
     }
@@ -35,7 +35,7 @@ struct Symbol
      *
      * @param val Value
      */
-    Symbol(llvm::Value *val) : _type(SymbolType::LOCAL)
+    explicit Symbol(llvm::Value *val) : _type(SymbolType::LOCAL)
     {
         _value._ptr = val;
     }

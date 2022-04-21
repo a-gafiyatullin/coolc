@@ -49,7 +49,7 @@ llvm::GlobalVariable *DataLLVM::make_disp_table(const std::string &name, llvm::S
 
     auto *const disp_table_global = _module.getNamedGlobal(name);
     disp_table_global->setInitializer(llvm::ConstantStruct::get(type, methods));
-    disp_table_global->setLinkage(llvm::GlobalValue::PrivateLinkage);
+    disp_table_global->setLinkage(llvm::GlobalValue::ExternalLinkage);
     disp_table_global->setConstant(true);
 
     // don't need allignment because all fields are pointers
@@ -63,7 +63,7 @@ void DataLLVM::make_init_method(const std::shared_ptr<Klass> &klass)
 
     auto *const init_method = llvm::Function::Create(
         llvm::FunctionType::get(_runtime.void_type(), {class_struct(klass)->getPointerTo()}, false),
-        llvm::Function::PrivateLinkage, init_method_name, &_module);
+        llvm::Function::ExternalLinkage, init_method_name, &_module);
 
     // set receiver name
     init_method->getArg(0)->setName(SelfObject);
@@ -168,7 +168,7 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
                     class_struct(_builder->klass(semant::Semant::exact_type(return_type, klass->klass())->_string))
                         ->getPointerTo(),
                     args, false),
-                llvm::Function::PrivateLinkage, method_full_name, &_module);
+                llvm::Function::ExternalLinkage, method_full_name, &_module);
 
             // set names for args
             func->arg_begin()->setName(SelfObject);
@@ -210,7 +210,7 @@ void DataLLVM::int_const_inner(const int64_t &value)
                                             true)})); // value field
 
     const_global->setConstant(true);
-    const_global->setLinkage(llvm::GlobalValue::PrivateLinkage);
+    const_global->setLinkage(llvm::GlobalValue::ExternalLinkage);
 
     // don't need allignment because all fields are word-sized
     _int_constants.insert({value, const_global});
@@ -238,7 +238,7 @@ llvm::Constant *DataLLVM::make_char_string(const std::string &str)
         Names::name(Names::Comment::CHAR_STRING, str), initializer->getType());
     const_global->setInitializer(initializer);
     const_global->setConstant(true);
-    const_global->setLinkage(llvm::GlobalValue::PrivateLinkage);
+    const_global->setLinkage(llvm::GlobalValue::ExternalLinkage);
 
     // TODO: need this?
     // const_global->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
@@ -263,7 +263,7 @@ void DataLLVM::string_const_inner(const std::string &str)
          make_char_string(str)}));                                                            // string field
 
     const_global->setConstant(true);
-    const_global->setLinkage(llvm::GlobalValue::PrivateLinkage);
+    const_global->setLinkage(llvm::GlobalValue::ExternalLinkage);
 
     // don't need allignment because all fields are word-sized
     _string_constants.insert({str, const_global});
@@ -286,7 +286,7 @@ void DataLLVM::bool_const_inner(const bool &value)
                                              true)})); // value field
 
     const_global->setConstant(true);
-    const_global->setLinkage(llvm::GlobalValue::PrivateLinkage);
+    const_global->setLinkage(llvm::GlobalValue::ExternalLinkage);
 
     // don't need allignment because all fields are word-sized
     _bool_constants.insert({value, const_global});
@@ -316,7 +316,7 @@ void DataLLVM::gen_class_obj_tab()
         _runtime.symbol_name(RuntimeLLVM::RuntimeLLVMSymbols::CLASS_OBJ_TAB), initializer->getType()));
     const_global->setInitializer(initializer);
     const_global->setConstant(true);
-    const_global->setLinkage(llvm::GlobalValue::PrivateLinkage);
+    const_global->setLinkage(llvm::GlobalValue::ExternalLinkage);
 }
 
 void DataLLVM::gen_class_name_tab()
@@ -336,7 +336,7 @@ void DataLLVM::gen_class_name_tab()
         _runtime.symbol_name(RuntimeLLVM::RuntimeLLVMSymbols::CLASS_NAME_TAB), initializer->getType());
     const_global->setInitializer(initializer);
     const_global->setConstant(true);
-    const_global->setLinkage(llvm::GlobalValue::ExternalLinkage); // visible for runtime
+    const_global->setLinkage(llvm::GlobalValue::ExternalLinkage);
 }
 
 void DataLLVM::emit_inner(const std::string &out_file)

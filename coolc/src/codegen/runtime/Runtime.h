@@ -29,6 +29,13 @@ extern "C"
      */
     int equals(void *lo, void *ro);
 
+    /**
+     * @brief Abort on case mismatch
+     *
+     * @param tag Class tag
+     */
+    void case_abort(int tag);
+
     // Basic classes methods
     // ------------------------------ Object ------------------------------
     /**

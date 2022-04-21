@@ -51,29 +51,33 @@ class CodeGenMips : public CodeGen<void, Symbol>
     void emit_class_method_inner(const std::shared_ptr<ast::Feature> &method) override;
     void emit_class_init_method_inner() override;
 
-    void emit_binary_expr_inner(const ast::BinaryExpression &expr) override;
-    void emit_unary_expr_inner(const ast::UnaryExpression &expr) override;
-    void emit_bool_expr(const ast::BoolExpression &expr) override;
-    void emit_int_expr(const ast::IntExpression &expr) override;
-    void emit_string_expr(const ast::StringExpression &expr) override;
-    void emit_object_expr_inner(const ast::ObjectExpression &expr) override;
-    void emit_new_expr_inner(const ast::NewExpression &expr) override;
+    void emit_binary_expr_inner(const ast::BinaryExpression &expr,
+                                const std::shared_ptr<ast::Type> &expr_type) override;
+    void emit_unary_expr_inner(const ast::UnaryExpression &expr, const std::shared_ptr<ast::Type> &expr_type) override;
+    void emit_bool_expr(const ast::BoolExpression &expr, const std::shared_ptr<ast::Type> &expr_type) override;
+    void emit_int_expr(const ast::IntExpression &expr, const std::shared_ptr<ast::Type> &expr_type) override;
+    void emit_string_expr(const ast::StringExpression &expr, const std::shared_ptr<ast::Type> &expr_type) override;
+    void emit_object_expr_inner(const ast::ObjectExpression &expr,
+                                const std::shared_ptr<ast::Type> &expr_type) override;
+    void emit_new_expr_inner(const ast::NewExpression &expr, const std::shared_ptr<ast::Type> &expr_type) override;
 
     // allocate stack slot for object, assign acc value to it, evaluate expression, delete slot after that
     void emit_in_scope(const std::shared_ptr<ast::ObjectExpression> &object,
                        const std::shared_ptr<ast::Type> &object_type, const std::shared_ptr<ast::Expression> &expr,
                        const bool &assign_acc = true);
 
-    void emit_cases_expr_inner(const ast::CaseExpression &expr) override;
-    void emit_let_expr_inner(const ast::LetExpression &expr) override;
+    void emit_cases_expr_inner(const ast::CaseExpression &expr, const std::shared_ptr<ast::Type> &expr_type) override;
+    void emit_let_expr_inner(const ast::LetExpression &expr, const std::shared_ptr<ast::Type> &expr_type) override;
 
     // if bool result in acc is false - branch to label
     void emit_branch_to_label_if_false(const Label &label);
 
-    void emit_loop_expr_inner(const ast::WhileExpression &expr) override;
-    void emit_if_expr_inner(const ast::IfExpression &expr) override;
-    void emit_dispatch_expr_inner(const ast::DispatchExpression &expr) override;
-    void emit_assign_expr_inner(const ast::AssignExpression &expr) override;
+    void emit_loop_expr_inner(const ast::WhileExpression &expr, const std::shared_ptr<ast::Type> &expr_type) override;
+    void emit_if_expr_inner(const ast::IfExpression &expr, const std::shared_ptr<ast::Type> &expr_type) override;
+    void emit_dispatch_expr_inner(const ast::DispatchExpression &expr,
+                                  const std::shared_ptr<ast::Type> &expr_type) override;
+    void emit_assign_expr_inner(const ast::AssignExpression &expr,
+                                const std::shared_ptr<ast::Type> &expr_type) override;
 
     // load/store basic values
     // int

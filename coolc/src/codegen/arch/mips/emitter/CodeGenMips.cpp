@@ -54,7 +54,7 @@ void CodeGenMips::add_fields()
     }
 }
 
-void CodeGenMips::emit_binary_expr_inner(const ast::BinaryExpression &expr)
+void CodeGenMips::emit_binary_expr_inner(const ast::BinaryExpression &expr, const std::shared_ptr<ast::Type> &expr_type)
 {
     emit_expr(expr._lhs);
     // we hope to see the first argument in acc
@@ -153,7 +153,7 @@ void CodeGenMips::emit_binary_expr_inner(const ast::BinaryExpression &expr)
     }
 }
 
-void CodeGenMips::emit_unary_expr_inner(const ast::UnaryExpression &expr)
+void CodeGenMips::emit_unary_expr_inner(const ast::UnaryExpression &expr, const std::shared_ptr<ast::Type> &expr_type)
 {
     emit_expr(expr._expr);
 
@@ -290,22 +290,22 @@ void CodeGenMips::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
     emit_method_epilogue(params_num);
 }
 
-void CodeGenMips::emit_bool_expr(const ast::BoolExpression &expr)
+void CodeGenMips::emit_bool_expr(const ast::BoolExpression &expr, const std::shared_ptr<ast::Type> &expr_type)
 {
     __ la(_a0, _data.bool_const(expr._value));
 }
 
-void CodeGenMips::emit_int_expr(const ast::IntExpression &expr)
+void CodeGenMips::emit_int_expr(const ast::IntExpression &expr, const std::shared_ptr<ast::Type> &expr_type)
 {
     __ la(_a0, _data.int_const(expr._value));
 }
 
-void CodeGenMips::emit_string_expr(const ast::StringExpression &expr)
+void CodeGenMips::emit_string_expr(const ast::StringExpression &expr, const std::shared_ptr<ast::Type> &expr_type)
 {
     __ la(_a0, _data.string_const(expr._string));
 }
 
-void CodeGenMips::emit_object_expr_inner(const ast::ObjectExpression &expr)
+void CodeGenMips::emit_object_expr_inner(const ast::ObjectExpression &expr, const std::shared_ptr<ast::Type> &expr_type)
 {
     if (!semant::Scope::can_assign(expr._object))
     {
@@ -324,7 +324,7 @@ void CodeGenMips::emit_object_expr_inner(const ast::ObjectExpression &expr)
     }
 }
 
-void CodeGenMips::emit_new_expr_inner(const ast::NewExpression &expr)
+void CodeGenMips::emit_new_expr_inner(const ast::NewExpression &expr, const std::shared_ptr<ast::Type> &expr_type)
 {
     // we know the type
     if (!semant::Semant::is_self_type(expr._type))
@@ -386,7 +386,7 @@ void CodeGenMips::emit_in_scope(const std::shared_ptr<ast::ObjectExpression> &ob
     __ pop(); // delete slot
 }
 
-void CodeGenMips::emit_cases_expr_inner(const ast::CaseExpression &expr)
+void CodeGenMips::emit_cases_expr_inner(const ast::CaseExpression &expr, const std::shared_ptr<ast::Type> &expr_type)
 {
     emit_expr(expr._expr);
 
@@ -448,7 +448,7 @@ void CodeGenMips::emit_cases_expr_inner(const ast::CaseExpression &expr)
     const AssemblerMarkSection mark(_asm, continue_label);
 }
 
-void CodeGenMips::emit_let_expr_inner(const ast::LetExpression &expr)
+void CodeGenMips::emit_let_expr_inner(const ast::LetExpression &expr, const std::shared_ptr<ast::Type> &expr_type)
 {
     if (expr._expr)
     {
@@ -464,7 +464,7 @@ void CodeGenMips::emit_branch_to_label_if_false(const Label &label)
     __ beq(_a0, FalseValue, label);
 }
 
-void CodeGenMips::emit_loop_expr_inner(const ast::WhileExpression &expr)
+void CodeGenMips::emit_loop_expr_inner(const ast::WhileExpression &expr, const std::shared_ptr<ast::Type> &expr_type)
 {
     const Label loop_header_label(Names::name(Names::Comment::LOOP_HEADER));
     const Label loop_tail_label(Names::name(Names::Comment::LOOP_TAIL));
@@ -482,7 +482,7 @@ void CodeGenMips::emit_loop_expr_inner(const ast::WhileExpression &expr)
     const AssemblerMarkSection mark(_asm, loop_tail_label); // continue
 }
 
-void CodeGenMips::emit_if_expr_inner(const ast::IfExpression &expr)
+void CodeGenMips::emit_if_expr_inner(const ast::IfExpression &expr, const std::shared_ptr<ast::Type> &expr_type)
 {
     const Label false_branch_label(Names::name(Names::Comment::FALSE_BRANCH));
     const Label continue_label(Names::name(Names::Comment::MERGE_BLOCK));
@@ -503,7 +503,8 @@ void CodeGenMips::emit_if_expr_inner(const ast::IfExpression &expr)
     const AssemblerMarkSection mark(_asm, continue_label);
 }
 
-void CodeGenMips::emit_dispatch_expr_inner(const ast::DispatchExpression &expr)
+void CodeGenMips::emit_dispatch_expr_inner(const ast::DispatchExpression &expr,
+                                           const std::shared_ptr<ast::Type> &expr_type)
 {
     // put all args on stack. Callee have to get rid of them
     const auto args_num = expr._args.size();
@@ -552,7 +553,7 @@ void CodeGenMips::emit_dispatch_expr_inner(const ast::DispatchExpression &expr)
     const AssemblerMarkSection mark(_asm, continue_label);
 }
 
-void CodeGenMips::emit_assign_expr_inner(const ast::AssignExpression &expr)
+void CodeGenMips::emit_assign_expr_inner(const ast::AssignExpression &expr, const std::shared_ptr<ast::Type> &expr_type)
 {
     emit_expr(expr._expr); // result in acc
     const auto &symbol = _table.symbol(expr._object->_object);

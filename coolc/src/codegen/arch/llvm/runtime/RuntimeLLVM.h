@@ -69,6 +69,7 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
         IO_IN_INT,
 
         EQUALS,
+        CASE_ABORT,
         GC_ALLOC,
 
         CLASS_NAME_TAB,
@@ -88,6 +89,7 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
     llvm::Type *_header_layout_types[HeaderLayoutElemets];
 
     const RuntimeMethod _equals;
+    const RuntimeMethod _case_abort;
 
     // Object class methods
     const RuntimeMethod _object_abort;

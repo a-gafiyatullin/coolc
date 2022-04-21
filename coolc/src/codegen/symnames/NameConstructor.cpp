@@ -3,21 +3,19 @@
 using namespace codegen;
 
 const std::pair<std::string, bool> Names::COMMENT_NAMES[CommentsNumber] = {
-    {"_dispTab", true},      {"_protObj", true},      {"_init", true},          {"_type", true},
+    {"_dispTab", true},      {"_protObj", true},     {"_init", true},          {"_type", true},
 
-    {"true_", false},        {"false_", false},       {"merge_", false},        {"loop_header_", false},
-    {"loop_tail_", false},   {"call_", false},        {"gep_", false},          {"load_", false},
-    {"cast_to_", false},     {"_char_str", true},
+    {"entry_block", false},  {"true_block_", false}, {"false_block_", false},  {"merge_block_", false},
+    {"loop_header_", false}, {"loop_tail_", false},
 
-    {"bool_const_", false},  {"int_const_", false},   {"str_const_", false},
+    {"_char_str", true},     {"bool_const_", false}, {"int_const_", false},    {"str_const_", false},
 
-    {"entry_block", false},
+    {"call_", false},        {"local_", false},      {"sub_", false},          {"add_", false},
+    {"mul_", false},         {"div_", false},        {"slt_", false},          {"sgt_", false},
+    {"sle_", false},         {"eq_", false},         {"or_", false},           {"phi_", false},
 
-    {"sub_res_", false},     {"add_res_", false},     {"mul_res_", false},      {"div_res_", false},
-    {"cmp_slt_res_", false}, {"cmp_sle_res_", false}, {"phi_res_", false},
+    {"obj_tag_", false},     {"obj_size_", false},   {"obj_disp_tab_", false},
 
-    {"obj_tag_", false},     {"obj_size_", false},    {"obj_disp_tab_", false},
-
-    {"value_", false}};
+    {"val_", false}};
 
 int Names::CommentNumber[CommentsNumber] = {};

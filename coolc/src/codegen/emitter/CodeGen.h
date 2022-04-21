@@ -38,41 +38,48 @@ template <class Value, class Symbol> class CodeGen
     // emit expressions
     Value emit_expr(const std::shared_ptr<ast::Expression> &expr);
 
-    Value emit_binary_expr(const ast::BinaryExpression &expr);
-    virtual Value emit_binary_expr_inner(const ast::BinaryExpression &expr) = 0;
+    Value emit_binary_expr(const ast::BinaryExpression &expr, const std::shared_ptr<ast::Type> &expr_type);
+    virtual Value emit_binary_expr_inner(const ast::BinaryExpression &expr,
+                                         const std::shared_ptr<ast::Type> &expr_type) = 0;
 
-    Value emit_unary_expr(const ast::UnaryExpression &expr);
-    virtual Value emit_unary_expr_inner(const ast::UnaryExpression &expr) = 0;
+    Value emit_unary_expr(const ast::UnaryExpression &expr, const std::shared_ptr<ast::Type> &expr_type);
+    virtual Value emit_unary_expr_inner(const ast::UnaryExpression &expr,
+                                        const std::shared_ptr<ast::Type> &expr_type) = 0;
 
-    virtual Value emit_bool_expr(const ast::BoolExpression &expr) = 0;
-    virtual Value emit_int_expr(const ast::IntExpression &expr) = 0;
-    virtual Value emit_string_expr(const ast::StringExpression &expr) = 0;
+    virtual Value emit_bool_expr(const ast::BoolExpression &expr, const std::shared_ptr<ast::Type> &expr_type) = 0;
+    virtual Value emit_int_expr(const ast::IntExpression &expr, const std::shared_ptr<ast::Type> &expr_type) = 0;
+    virtual Value emit_string_expr(const ast::StringExpression &expr, const std::shared_ptr<ast::Type> &expr_type) = 0;
 
-    Value emit_object_expr(const ast::ObjectExpression &expr);
-    virtual Value emit_object_expr_inner(const ast::ObjectExpression &expr) = 0;
+    Value emit_object_expr(const ast::ObjectExpression &expr, const std::shared_ptr<ast::Type> &expr_type);
+    virtual Value emit_object_expr_inner(const ast::ObjectExpression &expr,
+                                         const std::shared_ptr<ast::Type> &expr_type) = 0;
 
-    Value emit_new_expr(const ast::NewExpression &expr);
-    virtual Value emit_new_expr_inner(const ast::NewExpression &expr) = 0;
+    Value emit_new_expr(const ast::NewExpression &expr, const std::shared_ptr<ast::Type> &expr_type);
+    virtual Value emit_new_expr_inner(const ast::NewExpression &expr, const std::shared_ptr<ast::Type> &expr_type) = 0;
 
-    Value emit_cases_expr(const ast::CaseExpression &expr);
-    virtual Value emit_cases_expr_inner(const ast::CaseExpression &expr) = 0;
+    Value emit_cases_expr(const ast::CaseExpression &expr, const std::shared_ptr<ast::Type> &expr_type);
+    virtual Value emit_cases_expr_inner(const ast::CaseExpression &expr,
+                                        const std::shared_ptr<ast::Type> &expr_type) = 0;
 
-    Value emit_let_expr(const ast::LetExpression &expr);
-    virtual Value emit_let_expr_inner(const ast::LetExpression &expr) = 0;
+    Value emit_let_expr(const ast::LetExpression &expr, const std::shared_ptr<ast::Type> &expr_type);
+    virtual Value emit_let_expr_inner(const ast::LetExpression &expr, const std::shared_ptr<ast::Type> &expr_type) = 0;
 
-    Value emit_list_expr(const ast::ListExpression &expr);
+    Value emit_list_expr(const ast::ListExpression &expr, const std::shared_ptr<ast::Type> &expr_type);
 
-    Value emit_loop_expr(const ast::WhileExpression &expr);
-    virtual Value emit_loop_expr_inner(const ast::WhileExpression &expr) = 0;
+    Value emit_loop_expr(const ast::WhileExpression &expr, const std::shared_ptr<ast::Type> &expr_type);
+    virtual Value emit_loop_expr_inner(const ast::WhileExpression &expr,
+                                       const std::shared_ptr<ast::Type> &expr_type) = 0;
 
-    Value emit_if_expr(const ast::IfExpression &expr);
-    virtual Value emit_if_expr_inner(const ast::IfExpression &expr) = 0;
+    Value emit_if_expr(const ast::IfExpression &expr, const std::shared_ptr<ast::Type> &expr_type);
+    virtual Value emit_if_expr_inner(const ast::IfExpression &expr, const std::shared_ptr<ast::Type> &expr_type) = 0;
 
-    Value emit_dispatch_expr(const ast::DispatchExpression &expr);
-    virtual Value emit_dispatch_expr_inner(const ast::DispatchExpression &expr) = 0;
+    Value emit_dispatch_expr(const ast::DispatchExpression &expr, const std::shared_ptr<ast::Type> &expr_type);
+    virtual Value emit_dispatch_expr_inner(const ast::DispatchExpression &expr,
+                                           const std::shared_ptr<ast::Type> &expr_type) = 0;
 
-    Value emit_assign_expr(const ast::AssignExpression &expr);
-    virtual Value emit_assign_expr_inner(const ast::AssignExpression &expr) = 0;
+    Value emit_assign_expr(const ast::AssignExpression &expr, const std::shared_ptr<ast::Type> &expr_type);
+    virtual Value emit_assign_expr_inner(const ast::AssignExpression &expr,
+                                         const std::shared_ptr<ast::Type> &expr_type) = 0;
 
   public:
     /**

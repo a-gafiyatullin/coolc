@@ -41,7 +41,8 @@ RuntimeLLVM::RuntimeLLVM(llvm::Module &module)
       _io_in_string(module, SYMBOLS[RuntimeLLVMSymbols::IO_IN_STRING], _void_type->getPointerTo(),
                     {_void_type->getPointerTo()}, *this),
       _io_in_int(module, SYMBOLS[RuntimeLLVMSymbols::IO_IN_INT], _void_type->getPointerTo(),
-                 {_void_type->getPointerTo()}, *this)
+                 {_void_type->getPointerTo()}, *this),
+      _case_abort(module, SYMBOLS[RuntimeLLVMSymbols::CASE_ABORT], _void_type, {_int32_type}, *this)
 {
     _header_layout_types[HeaderLayout::Mark] = llvm::IntegerType::get(module.getContext(), HeaderLayoutSizes::MarkSize);
     _header_layout_types[HeaderLayout::Tag] = llvm::IntegerType::get(module.getContext(), HeaderLayoutSizes::TagSize);
@@ -64,6 +65,7 @@ const std::string RuntimeLLVM::SYMBOLS[RuntimeLLVMSymbolsSize] = {
     FULL_METHOD_NAME(BaseClasses::IO, IOMethodsNames[IOMethods::IN_INT]),
 
     "equals",
+    "case_abort",
     "gc_alloc",
     "ClassNameTab",
     "ClassObjTab"};

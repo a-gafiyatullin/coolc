@@ -44,7 +44,7 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
     _table.push_scope();
     for (auto &arg : func->args())
     {
-        _table.add_symbol(static_cast<std::string>(arg.getName()), &arg);
+        _table.add_symbol(static_cast<std::string>(arg.getName()), Symbol(&arg));
     }
 
     // Create a new basic block to start insertion into.
@@ -93,8 +93,7 @@ void CodeGenLLVM::emit_class_init_method_inner()
             GUARANTEE_DEBUG(this_field._type == Symbol::FIELD); // impossible
 
             const auto &offset = this_field._value._offset;
-            auto *const field_ptr = __ CreateStructGEP(_data.class_struct(klass), func->getArg(0), offset,
-                                                       Names::name(Names::Comment::GEP, name));
+            auto *const field_ptr = __ CreateStructGEP(_data.class_struct(klass), func->getArg(0), offset);
 
             if (feature->_expr)
             {
@@ -148,7 +147,8 @@ void CodeGenLLVM::emit_class_init_method_inner()
 }
 
 // TODO: all temporaries names to constants?
-llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &expr)
+llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &expr,
+                                                 const std::shared_ptr<ast::Type> &expr_type)
 {
     auto *const lhs = emit_expr(expr._lhs);
     auto *const rhs = emit_expr(expr._rhs);
@@ -194,11 +194,9 @@ llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &ex
 
         // do control flow
         auto *const func = __ GetInsertBlock()->getParent();
-        // TODO: maybe Names::name?
+
         auto *const true_bb = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::TRUE_BRANCH), func);
-        // TODO: maybe Names::name?
         auto *const false_bb = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::FALSE_BRANCH));
-        // TODO: maybe Names::name?
         auto *const merge_bb = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::MERGE_BLOCK));
 
         __ CreateCondBr(is_same_ref, true_bb, false_bb);
@@ -231,42 +229,45 @@ llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &ex
     return logical_result ? emit_allocate_bool(op_result) : emit_allocate_int(op_result);
 }
 
-llvm::Value *CodeGenLLVM::emit_unary_expr_inner(const ast::UnaryExpression &expr)
+llvm::Value *CodeGenLLVM::emit_unary_expr_inner(const ast::UnaryExpression &expr,
+                                                const std::shared_ptr<ast::Type> &expr_type)
 {
 }
 
-llvm::Value *CodeGenLLVM::emit_bool_expr(const ast::BoolExpression &expr)
+llvm::Value *CodeGenLLVM::emit_bool_expr(const ast::BoolExpression &expr, const std::shared_ptr<ast::Type> &expr_type)
 {
     return _data.bool_const(expr._value);
 }
 
-llvm::Value *CodeGenLLVM::emit_int_expr(const ast::IntExpression &expr)
+llvm::Value *CodeGenLLVM::emit_int_expr(const ast::IntExpression &expr, const std::shared_ptr<ast::Type> &expr_type)
 {
     return _data.int_const(expr._value);
 }
 
-llvm::Value *CodeGenLLVM::emit_string_expr(const ast::StringExpression &expr)
+llvm::Value *CodeGenLLVM::emit_string_expr(const ast::StringExpression &expr,
+                                           const std::shared_ptr<ast::Type> &expr_type)
 {
     return _data.string_const(expr._string);
 }
 
-llvm::Value *CodeGenLLVM::emit_object_expr_inner(const ast::ObjectExpression &expr)
+llvm::Value *CodeGenLLVM::emit_object_expr_inner(const ast::ObjectExpression &expr,
+                                                 const std::shared_ptr<ast::Type> &expr_type)
 {
     const auto &object = _table.symbol(expr._object);
+
     if (object._type == Symbol::FIELD)
     {
         const auto &klass = _builder->klass(_current_class->_type->_string);
 
         auto *const self_val = _table.symbol(SelfObject)._value._ptr;
-
         const auto &index = object._value._offset;
 
-        auto *const field_ptr = __ CreateStructGEP(_data.class_struct(klass), self_val, index,
-                                                   Names::name(Names::Comment::GEP, expr._object));
+        auto *const field_ptr = __ CreateStructGEP(_data.class_struct(klass), self_val, index);
+
         return __ CreateLoad(
             _data.class_struct(_builder->klass(static_pointer_cast<KlassLLVM>(klass)->field_type(index)->_string))
                 ->getPointerTo(),
-            field_ptr, Names::name(Names::Comment::LOAD, expr._object));
+            field_ptr, expr._object);
     }
 
     return object._value._ptr; // local object defined in let, case, formal parameter
@@ -274,8 +275,9 @@ llvm::Value *CodeGenLLVM::emit_object_expr_inner(const ast::ObjectExpression &ex
 
 llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass_type)
 {
-    auto *const func = _runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::GC_ALLOC)->_func;
-    const auto alloc_func_name = _runtime.symbol_name(RuntimeLLVM::RuntimeLLVMSymbols::GC_ALLOC);
+    const auto &alloc_func_id = RuntimeLLVM::RuntimeLLVMSymbols::GC_ALLOC;
+    auto *const func = _runtime.symbol_by_id(alloc_func_id)->_func;
+    const auto alloc_func_name = _runtime.symbol_name(alloc_func_id);
 
     if (!semant::Semant::is_self_type(klass_type))
     {
@@ -286,16 +288,12 @@ llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass
         auto *const tag = llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag());
         auto *const size = llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size());
         auto *const disp_table = _data.class_disp_tab(klass);
-        auto *const raw_table =
-            __ CreateBitCast(disp_table, _runtime.void_type()->getPointerTo(),
-                             Names::name(Names::Comment::CAST, static_cast<std::string>(disp_table->getName())));
+        auto *const raw_table = __ CreateBitCast(disp_table, _runtime.void_type()->getPointerTo());
 
         // call allocation and cast to this klass pointer
         auto *const raw_object =
             __ CreateCall(func, {tag, size, raw_table}, Names::name(Names::Comment::CALL, alloc_func_name));
-        auto *const object =
-            __ CreateBitCast(raw_object, klass_struct->getPointerTo(),
-                             Names::name(Names::Comment::CAST, static_cast<std::string>(klass_struct->getName())));
+        auto *const object = __ CreateBitCast(raw_object, klass_struct->getPointerTo());
 
         // call init
         const auto init_method = Names::init_method(klass->name());
@@ -305,27 +303,14 @@ llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass
         return object;
     }
 
-    // TODO: maybe instead of self_val->getType() get type of the generated class?
     auto *const self_val = _table.symbol(SelfObject)._value._ptr;
+    const auto &klass = _builder->klass(_current_class->_type->_string);
+    const auto &klass_struct = _data.class_struct(klass);
 
     // get info about this object
-    const auto tag_name = Names::name(Names::Comment::OBJ_TAG, SelfObject);
-    auto *const tag_ptr = __ CreateStructGEP(self_val->getType(), self_val, HeaderLayout::Tag,
-                                             Names::name(Names::Comment::GEP, tag_name));
-    auto *const tag = __ CreateLoad(_runtime.header_elem_type(HeaderLayout::Tag), tag_ptr,
-                                    Names::name(Names::Comment::LOAD, tag_name));
-
-    const auto size_name = Names::name(Names::Comment::OBJ_SIZE, SelfObject);
-    auto *const size_ptr = __ CreateStructGEP(self_val->getType(), self_val, HeaderLayout::Size,
-                                              Names::name(Names::Comment::GEP, size_name));
-    auto *const size = __ CreateLoad(_runtime.header_elem_type(HeaderLayout::Size), size_ptr,
-                                     Names::name(Names::Comment::LOAD, size_name));
-
-    const auto disp_tab_name = Names::name(Names::Comment::OBJ_DISPATCH_TABLE, SelfObject);
-    auto *const dispatch_table_ptr = __ CreateStructGEP(self_val->getType(), self_val, HeaderLayout::DispatchTable,
-                                                        Names::name(Names::Comment::GEP, disp_tab_name));
-    auto *const dispatch_table = __ CreateLoad(_runtime.header_elem_type(HeaderLayout::DispatchTable),
-                                               dispatch_table_ptr, Names::name(Names::Comment::LOAD, disp_tab_name));
+    auto *const tag = emit_load_tag(self_val, klass_struct);
+    auto *const size = emit_load_size(self_val, klass_struct);
+    auto *const dispatch_table = emit_load_dispatch_table(self_val, klass);
 
     // allocate memory
     auto *const raw_object =
@@ -336,43 +321,155 @@ llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass
     auto *const class_obj_tab = _module.getNamedGlobal(class_obj_tab_name);
 
     const auto init_method_name = Names::init_method(SelfObject);
-    auto *const init_method_ptr =
-        __ CreateGEP(class_obj_tab->getType(), class_obj_tab, tag, Names::name(Names::Comment::GEP, init_method_name));
+    auto *const init_method_ptr = __ CreateGEP(class_obj_tab->getValueType(), class_obj_tab,
+                                               {llvm::ConstantInt::get(_runtime.int64_type(), 0), tag});
 
     // load init method and call
     // init method has the same type as for Object class
-    auto *const object_init_type =
-        _module.getFunction(Names::init_method(BaseClassesNames[BaseClasses::OBJECT]))->getFunctionType();
-    auto *const init_method =
-        __ CreateLoad(object_init_type, init_method_ptr, Names::name(Names::Comment::LOAD, init_method_name));
+    auto *const object_init = _module.getFunction(Names::init_method(BaseClassesNames[BaseClasses::OBJECT]));
+    auto *const init_method = __ CreateLoad(object_init->getType(), init_method_ptr, init_method_name);
 
-    __ CreateCall(object_init_type, init_method, {raw_object}, Names::name(Names::Comment::CALL, init_method_name));
+    // call this init method
+    __ CreateCall(object_init->getFunctionType(), init_method, {raw_object},
+                  Names::name(Names::Comment::CALL, init_method_name));
 
     return raw_object;
 }
 
-llvm::Value *CodeGenLLVM::emit_new_expr_inner(const ast::NewExpression &expr)
+llvm::Value *CodeGenLLVM::emit_new_expr_inner(const ast::NewExpression &expr,
+                                              const std::shared_ptr<ast::Type> &expr_type)
 {
     return emit_new_inner(expr._type);
 }
 
-llvm::Value *CodeGenLLVM::emit_cases_expr_inner(const ast::CaseExpression &expr)
+llvm::Value *CodeGenLLVM::emit_load_tag(llvm::Value *obj, llvm::Type *obj_type)
+{
+    auto *const tag_ptr = __ CreateStructGEP(obj_type, obj, HeaderLayout::Tag);
+
+    return __ CreateLoad(_runtime.header_elem_type(HeaderLayout::Tag), tag_ptr,
+                         Names::name(Names::Comment::OBJ_TAG, obj->getName()));
+}
+
+llvm::Value *CodeGenLLVM::emit_load_size(llvm::Value *obj, llvm::Type *obj_type)
+{
+    auto *const size_ptr = __ CreateStructGEP(obj_type, obj, HeaderLayout::Size);
+
+    return __ CreateLoad(_runtime.header_elem_type(HeaderLayout::Size), size_ptr,
+                         Names::name(Names::Comment::OBJ_SIZE, obj->getName()));
+}
+
+llvm::Value *CodeGenLLVM::emit_load_dispatch_table(llvm::Value *obj, const std::shared_ptr<Klass> &klass)
+{
+    auto *const dispatch_table_ptr_ptr =
+        __ CreateStructGEP(_data.class_struct(klass), obj, HeaderLayout::DispatchTable);
+    return __ CreateLoad(_data.class_disp_tab(klass)->getType(), dispatch_table_ptr_ptr,
+                         Names::name(Names::Comment::OBJ_DISP_TAB, obj->getName()));
+}
+
+llvm::Value *CodeGenLLVM::emit_cases_expr_inner(const ast::CaseExpression &expr,
+                                                const std::shared_ptr<ast::Type> &expr_type)
+{
+    auto *const pred = emit_expr(expr._expr);
+
+    // TODO: case abort 2 here
+
+    // we want to generate code for the the most precise cases first, so sort cases by tag
+    auto cases = expr._cases;
+    std::sort(cases.begin(), cases.end(), [&](const auto &case_a, const auto &case_b) {
+        return _builder->tag(case_b->_type->_string) < _builder->tag(case_a->_type->_string);
+    });
+
+    // save results and blocks for phi
+    std::vector<std::pair<llvm::BasicBlock *, llvm::Value *>> results;
+
+    auto *const func = __ GetInsertBlock()->getParent();
+
+    auto *const tag =
+        emit_load_tag(pred, _data.class_struct(_builder->klass(
+                                semant::Semant::exact_type(expr._expr->_type, _current_class->_type)->_string)));
+
+    auto *const merge_bb = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::MERGE_BLOCK));
+
+    auto *const res_ptr_type = _data.class_struct(_builder->klass(expr_type->_string))->getPointerTo();
+
+    // no, it is not void
+    // Last case is a special case: branch to abort
+    for (auto i = 0; i < cases.size(); i++)
+    {
+        const auto &klass = _builder->klass(cases[i]->_type->_string);
+
+        auto *const tag_type = _runtime.header_elem_type(HeaderLayout::Tag);
+        // TODO: signed?
+        // if object tag lower than the lowest tag for this branch, jump to next case
+        auto *const less = __ CreateICmpSLT(tag, llvm::ConstantInt::get(tag_type, klass->tag()),
+                                            Names::comment(Names::Comment::CMP_SLT));
+
+        // TODO: signed?
+        // if object tag higher that the highest tag for this branch, jump to next case
+        auto *const higher = __ CreateICmpSGT(tag, llvm::ConstantInt::get(tag_type, klass->child_max_tag()),
+                                              Names::comment(Names::Comment::CMP_SGT));
+
+        auto *const need_next = __ CreateOr(less, higher, Names::comment(Names::Comment::OR));
+
+        auto *const match_block = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::FALSE_BRANCH));
+        auto *const next_case = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::TRUE_BRANCH));
+
+        // TODO: set weight?
+        __ CreateCondBr(need_next, next_case, match_block);
+
+        func->getBasicBlockList().push_back(match_block);
+        __ SetInsertPoint(match_block);
+
+        // match branch
+        auto *const result = emit_in_scope(cases[i]->_object, cases[i]->_type, cases[i]->_expr, nullptr);
+        auto *const casted_res = __ CreateBitCast(result, res_ptr_type);
+        results.push_back({match_block, casted_res});
+
+        __ CreateBr(merge_bb);
+
+        func->getBasicBlockList().push_back(next_case);
+        __ SetInsertPoint(next_case);
+    }
+
+    // did not find suitable branch
+    const auto &case_abort_id = RuntimeLLVM::RuntimeLLVMSymbols::CASE_ABORT;
+    auto *const case_abort = _runtime.symbol_by_id(case_abort_id);
+    __ CreateCall(case_abort->_func->getFunctionType(), case_abort->_func, {tag},
+                  Names::name(Names::CALL, _runtime.symbol_name(case_abort_id)));
+
+    // do it just for phi
+    results.push_back({__ GetInsertBlock(), llvm::ConstantPointerNull::get(res_ptr_type)});
+    __ CreateBr(merge_bb);
+
+    // return value
+    func->getBasicBlockList().push_back(merge_bb);
+    __ SetInsertPoint(merge_bb);
+
+    auto *const result = __ CreatePHI(res_ptr_type, results.size(), Names::comment(Names::Comment::PHI));
+    for (const auto &res : results)
+    {
+        result->addIncoming(res.second, res.first);
+    }
+
+    return result;
+}
+
+llvm::Value *CodeGenLLVM::emit_let_expr_inner(const ast::LetExpression &expr,
+                                              const std::shared_ptr<ast::Type> &expr_type)
 {
 }
 
-llvm::Value *CodeGenLLVM::emit_let_expr_inner(const ast::LetExpression &expr)
+llvm::Value *CodeGenLLVM::emit_loop_expr_inner(const ast::WhileExpression &expr,
+                                               const std::shared_ptr<ast::Type> &expr_type)
 {
 }
 
-llvm::Value *CodeGenLLVM::emit_loop_expr_inner(const ast::WhileExpression &expr)
+llvm::Value *CodeGenLLVM::emit_if_expr_inner(const ast::IfExpression &expr, const std::shared_ptr<ast::Type> &expr_type)
 {
 }
 
-llvm::Value *CodeGenLLVM::emit_if_expr_inner(const ast::IfExpression &expr)
-{
-}
-
-llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression &expr)
+llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression &expr,
+                                                   const std::shared_ptr<ast::Type> &expr_type)
 {
     // prepare args
     std::vector<llvm::Value *> args;
@@ -392,27 +489,17 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
             [&](const ast::VirtualDispatchExpression &disp) {
                 const auto &klass =
                     _builder->klass(semant::Semant::exact_type(expr._expr->_type, _current_class->_type)->_string);
-                const auto disp_table_name = Names::disp_table(klass->name());
 
-                // get pointer on dispatch table pointer
-                auto *const disp_table_ptr_ptr =
-                    __ CreateStructGEP(_data.class_struct(klass), receiver, HeaderLayout::DispatchTable,
-                                       Names::name(Names::Comment::GEP, disp_table_name));
-
-                // load dispatch table
-                auto *const disp_table_ptr = __ CreateLoad(_data.class_disp_tab(klass)->getType(), disp_table_ptr_ptr,
-                                                           Names::name(Names::Comment::LOAD, disp_table_name));
+                auto *const dispatch_table_ptr = emit_load_dispatch_table(receiver, klass);
 
                 // get pointer on method address
                 // method has the same type as in this klass
                 auto *const base_method = _module.getFunction(klass->method_full_name(method_name));
-                auto *const method_ptr =
-                    __ CreateStructGEP(base_method->getType(), disp_table_ptr, klass->method_index(method_name),
-                                       Names::name(Names::Comment::GEP, method_name));
+                auto *const method_ptr = __ CreateStructGEP(_data.class_disp_tab(klass)->getValueType(),
+                                                            dispatch_table_ptr, klass->method_index(method_name));
 
                 // load method
-                auto *const method = __ CreateLoad(base_method->getFunctionType(), method_ptr,
-                                                   Names::name(Names::Comment::LOAD, method_name));
+                auto *const method = __ CreateLoad(base_method->getType(), method_ptr, method_name);
 
                 // call
                 return __ CreateCall(base_method->getFunctionType(), method, args,
@@ -428,55 +515,83 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
             }},
         expr._base);
 
+    // TODO: abort
+
     return call;
 }
 
-llvm::Value *CodeGenLLVM::emit_assign_expr_inner(const ast::AssignExpression &expr)
+llvm::Value *CodeGenLLVM::emit_assign_expr_inner(const ast::AssignExpression &expr,
+                                                 const std::shared_ptr<ast::Type> &expr_type)
 {
 }
 
 llvm::Value *CodeGenLLVM::emit_load_int(llvm::Value *int_obj)
 {
-    return emit_load(int_obj, BaseClassesNames[BaseClasses::INT]);
+    return emit_load_primitive(int_obj, _data.class_struct(_builder->klass(BaseClassesNames[BaseClasses::INT])));
 }
 
-llvm::Value *CodeGenLLVM::emit_load(llvm::Value *obj, const std::string &class_name)
+llvm::Value *CodeGenLLVM::emit_load_primitive(llvm::Value *obj, llvm::Type *obj_type)
 {
-    const auto &klass = _data.class_struct(_builder->klass(class_name));
+    const auto &value_ptr = __ CreateStructGEP(obj_type, obj, HeaderLayout::DispatchTable + 1);
 
-    const auto value_name = Names::name(Names::Comment::VALUE, class_name);
-    const auto &value_ptr =
-        __ CreateStructGEP(klass, obj, HeaderLayout::DispatchTable + 1, Names::name(Names::Comment::GEP, value_name));
-    return __ CreateLoad(klass->getElementType(HeaderLayout::DispatchTable + 1), value_ptr,
-                         Names::name(Names::Comment::LOAD, value_name));
+    return __ CreateLoad(static_cast<llvm::StructType *>(obj_type)->getElementType(HeaderLayout::DispatchTable + 1),
+                         value_ptr, Names::name(Names::Comment::VALUE, obj->getName()));
 }
 
-llvm::Value *CodeGenLLVM::emit_allocate(llvm::Value *val, const std::string &class_name)
+llvm::Value *CodeGenLLVM::emit_allocate_primitive(llvm::Value *val, const std::shared_ptr<Klass> &klass)
 {
-    const auto &klass = _builder->klass(class_name);
     // allocate
     auto *const obj = emit_new_inner(klass->klass());
 
     // record value
-    auto *const val_ptr =
-        __ CreateStructGEP(_data.class_struct(klass), obj, HeaderLayout::DispatchTable + 1,
-                           Names::name(Names::Comment::GEP, Names::name(Names::Comment::VALUE, class_name)));
+    auto *const val_ptr = __ CreateStructGEP(_data.class_struct(klass), obj, HeaderLayout::DispatchTable + 1,
+                                             Names::name(Names::Comment::VALUE, obj->getName()));
     return __ CreateStore(val, val_ptr);
 }
 
 llvm::Value *CodeGenLLVM::emit_allocate_int(llvm::Value *val)
 {
-    return emit_allocate(val, BaseClassesNames[BaseClasses::INT]);
+    return emit_allocate_primitive(val, _builder->klass(BaseClassesNames[BaseClasses::INT]));
 }
 
 llvm::Value *CodeGenLLVM::emit_load_bool(llvm::Value *bool_obj)
 {
-    return emit_load(bool_obj, BaseClassesNames[BaseClasses::BOOL]);
+    return emit_load_primitive(bool_obj, _data.class_struct(_builder->klass(BaseClassesNames[BaseClasses::BOOL])));
 }
 
 llvm::Value *CodeGenLLVM::emit_allocate_bool(llvm::Value *val)
 {
-    return emit_allocate(val, BaseClassesNames[BaseClasses::BOOL]);
+    return emit_allocate_primitive(val, _builder->klass(BaseClassesNames[BaseClasses::BOOL]));
+}
+
+llvm::Value *CodeGenLLVM::emit_in_scope(const std::shared_ptr<ast::ObjectExpression> &object,
+                                        const std::shared_ptr<ast::Type> &object_type,
+                                        const std::shared_ptr<ast::Expression> &expr, llvm::Value *initializer)
+{
+    _table.push_scope();
+
+    auto *const object_ptr_type = _data.class_struct(_builder->klass(object_type->_string))->getPointerTo();
+
+    // allocate pointer to local variable
+    auto *const local_val =
+        __ CreateAlloca(object_ptr_type, nullptr, Names::name(Names::Comment::ALLOCA, object->_object));
+
+    _table.add_symbol(object->_object, Symbol(local_val));
+
+    if (!initializer)
+    {
+        // initial value for trivial type or null
+        initializer = semant::Semant::is_trivial_type(object_type)
+                          ? static_cast<llvm::Value *>(_data.init_value(object_type))
+                          : static_cast<llvm::Value *>(llvm::ConstantPointerNull::get(object_ptr_type));
+    }
+
+    __ CreateStore(initializer, local_val);
+
+    auto *const result = emit_expr(expr);
+    _table.pop_scope();
+
+    return result;
 }
 
 void CodeGenLLVM::emit_runtime_main()

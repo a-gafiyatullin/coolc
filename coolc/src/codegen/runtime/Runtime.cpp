@@ -66,3 +66,12 @@ void *IO_in_string(void *receiver)
 void *IO_out_int(void *receiver, void *integer)
 {
 }
+
+void case_abort(int tag)
+{
+    StringLayout *name = (StringLayout *)(((void **)&ClassNameTab)[tag]);
+
+    fprintf(stderr, "No match in case statement for Class %s", (char *)name->_string);
+
+    exit(-1);
+}

@@ -51,7 +51,7 @@ unset(UBSAN CACHE)
 
 include_directories(src)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
 add_subdirectory(src/lexer)
@@ -99,7 +99,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
         set(RUN_DIR mips)
         set(EXTNSN  ".s")
     else()
-        set(RUN_DIR arch)
+        set(RUN_DIR llvm)
         set(EXTNSN  ".o")
     endif()
 
