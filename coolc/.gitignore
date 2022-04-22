@@ -12,3 +12,4 @@ lib/
 bin/
 .clangd/
 compile_commands.json
+out/

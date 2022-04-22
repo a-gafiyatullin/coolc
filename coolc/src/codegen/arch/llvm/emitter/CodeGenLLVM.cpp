@@ -312,11 +312,10 @@ llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass
         auto *const tag = llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag());
         auto *const size = llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size());
         auto *const disp_table = _data.class_disp_tab(klass);
-        auto *const raw_table = __ CreateBitCast(disp_table, _runtime.void_type()->getPointerTo());
 
         // call allocation and cast to this klass pointer
         auto *const raw_object =
-            __ CreateCall(func, {tag, size, raw_table}, Names::name(Names::Comment::CALL, alloc_func_name));
+            __ CreateCall(func, {tag, size, disp_table}, Names::name(Names::Comment::CALL, alloc_func_name));
         auto *const object = __ CreateBitCast(raw_object, klass_struct->getPointerTo());
 
         // call init
