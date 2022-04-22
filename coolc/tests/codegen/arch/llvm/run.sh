@@ -1,5 +1,5 @@
 #!/bin/bash
 
-clang++ $1$2 $4/libcool-rt.so -o $1
+clang++ $2/$5.o $1/libcool-rt.so -o $4/$5
 
-LD_LIBRARY_PATH=$4 $1 &> $3
+LD_LIBRARY_PATH=$1 $4/$5 &> $3

@@ -39,7 +39,8 @@ class KlassLLVM : public Klass
      */
     const std::shared_ptr<ast::Type> &field_type(const int &field_idx) const
     {
-        return _fields[field_idx - HeaderLayoutSizes::HeaderSize]->_type;
+        GUARANTEE_DEBUG(field_idx - HeaderLayout::HeaderLayoutElemets < _fields.size());
+        return _fields[field_idx - HeaderLayout::HeaderLayoutElemets]->_type;
     }
 };
 

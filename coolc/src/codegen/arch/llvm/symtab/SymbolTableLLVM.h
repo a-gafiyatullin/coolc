@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ast/AST.h"
 #include "codegen/symtab/SymbolTable.h"
 #include <llvm/IR/Value.h>
 
@@ -14,6 +15,7 @@ struct Symbol
     };
 
     const SymbolType _type;
+    const std::shared_ptr<ast::Type> _value_type;
 
     union {
         uint64_t _offset;
@@ -25,7 +27,8 @@ struct Symbol
      *
      * @param offset Offset from base
      */
-    explicit Symbol(const uint64_t &offset) : _type(SymbolType::FIELD)
+    explicit Symbol(const uint64_t &offset, const std::shared_ptr<ast::Type> &type)
+        : _type(SymbolType::FIELD), _value_type(type)
     {
         _value._offset = offset;
     }
@@ -35,7 +38,8 @@ struct Symbol
      *
      * @param val Value
      */
-    explicit Symbol(llvm::Value *val) : _type(SymbolType::LOCAL)
+    explicit Symbol(llvm::Value *val, const std::shared_ptr<ast::Type> &type)
+        : _type(SymbolType::LOCAL), _value_type(type)
     {
         _value._ptr = val;
     }

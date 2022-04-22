@@ -97,10 +97,8 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 
     if(ARCH STREQUAL "MIPS")
         set(RUN_DIR mips)
-        set(EXTNSN  ".s")
     else()
         set(RUN_DIR llvm)
-        set(EXTNSN  ".o")
     endif()
 
     if ((CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)" AND ARCH STREQUAL "MIPS") OR ARCH STREQUAL "LLVM")
@@ -108,7 +106,6 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
             ${PROJECT_SOURCE_DIR}/tests/codegen/make_results.sh
             ${EXECUTABLE_OUTPUT_PATH}
             ${PROJECT_SOURCE_DIR}/tests/codegen/arch/${RUN_DIR}/run.sh
-            ${EXTNSN}
             )
         add_executable(codegen_tests tests/src/test.cpp tests/src/codegen/test.cpp)
         target_link_libraries(codegen_tests ${GTEST_LIBRARIES} pthread ${GTEST_MAIN_LIBRARIES})

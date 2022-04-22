@@ -6,14 +6,16 @@ TEST_DIR=$(dirname $0)
 cd $TEST_DIR
 
 rm -rf results
+rm -rf out
 mkdir results
+mkdir out
+
 cd tests/
-rm *$3
 
 for file in *.cl; do
     $1/coolc $file
     filename=${file%.*}
-    $2 $TEST_DIR/tests/$filename $3 $TEST_DIR/results/$file.result $1
+    $2 $1 $TEST_DIR/tests/ $TEST_DIR/results/$file.result $TEST_DIR/out/ $filename
 done;
 
 cd $CURR_DIR

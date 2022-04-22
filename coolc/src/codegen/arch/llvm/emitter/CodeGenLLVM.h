@@ -94,6 +94,7 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     llvm::Value *emit_load_tag(llvm::Value *obj, llvm::Type *obj_type);
     llvm::Value *emit_load_size(llvm::Value *objv, llvm::Type *obj_type);
     llvm::Value *emit_load_dispatch_table(llvm::Value *obj, const std::shared_ptr<Klass> &klass);
+    llvm::Value *emit_load_self();
 
   public:
     explicit CodeGenLLVM(const std::shared_ptr<semant::ClassNode> &root);

@@ -23,7 +23,7 @@ void CodeGenLLVM::add_fields()
     for (auto field = this_klass->fields_begin(); field != this_klass->fields_end(); field++)
     {
         const auto &name = (*field)->_object->_object;
-        _table.add_symbol(name, Symbol(this_klass->field_offset(field - this_klass->fields_begin())));
+        _table.add_symbol(name, Symbol(this_klass->field_offset(field - this_klass->fields_begin()), (*field)->_type));
     }
 }
 
@@ -40,16 +40,23 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
 
     GUARANTEE_DEBUG(func);
 
-    // add formals to symbol table
-    _table.push_scope();
-    for (auto &arg : func->args())
-    {
-        _table.add_symbol(static_cast<std::string>(arg.getName()), Symbol(&arg));
-    }
-
     // Create a new basic block to start insertion into.
     auto *entry = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::ENTRY_BLOCK), func);
     __ SetInsertPoint(entry);
+
+    // add formals to symbol table
+    // formals are local variables, so create their copy in this method and initialize by formals
+    _table.push_scope();
+    const auto &formals = std::get<ast::MethodFeature>(method->_base)._formals;
+    for (auto i = 0; i < func->arg_size(); i++)
+    {
+        auto *const arg = func->getArg(i);
+
+        const auto &local = __ CreateAlloca(arg->getType(), nullptr, arg->getName());
+        __ CreateStore(arg, local);
+        _table.add_symbol(static_cast<std::string>(arg->getName()),
+                          Symbol(local, i != 0 ? formals[i - 1]->_type : _current_class->_type));
+    }
 
     __ CreateRet(emit_expr(method->_expr));
 
@@ -111,12 +118,14 @@ void CodeGenLLVM::emit_class_init_method_inner()
             else
             {
                 GUARANTEE_DEBUG(semant::Semant::is_basic_type(_current_class->_type));
+                // TODO: can be SELF_TYPE here?
                 if (semant::Semant::is_native_int(feature->_type))
                 {
                     // TODO: maybe carry out type to class field?
                     // TODO: maybe carry out initial value to class field?
                     initial_val = llvm::ConstantInt::get(llvm::Type::getInt64Ty(_context), 0);
                 }
+                // TODO: can be SELF_TYPE here?
                 else if (semant::Semant::is_native_bool(feature->_type))
                 {
                     // TODO: maybe carry out type to class field?
@@ -124,6 +133,7 @@ void CodeGenLLVM::emit_class_init_method_inner()
                     // TODO: bool is 64 bit int now
                     initial_val = llvm::ConstantInt::get(llvm::Type::getInt64Ty(_context), 0);
                 }
+                // TODO: can be SELF_TYPE here?
                 else if (semant::Semant::is_native_string(feature->_type))
                 {
                     initial_val = _data.make_char_string("");
@@ -183,14 +193,18 @@ llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &ex
                                 logical_result = true;
                                 return __ CreateICmpSLE(lv, rv, Names::comment(Names::Comment::CMP_SLE));
                             },
-                            [&](const ast::EqExpression &le) { return (llvm::Value *)nullptr; }},
+                            [&](const ast::EqExpression &le) { return static_cast<llvm::Value *>(nullptr); }},
             expr._base);
     }
     else
     {
         logical_result = true;
 
-        auto *const is_same_ref = __ CreateICmpEQ(lhs, rhs, Names::comment(Names::Comment::CMP_EQ));
+        // cast to void pointers for compare
+        auto *const raw_lhs = __ CreateBitCast(lhs, _runtime.void_type()->getPointerTo());
+        auto *const raw_rhs = __ CreateBitCast(rhs, _runtime.void_type()->getPointerTo());
+
+        auto *const is_same_ref = __ CreateICmpEQ(raw_lhs, raw_lhs, Names::comment(Names::Comment::CMP_EQ));
 
         // do control flow
         auto *const func = __ GetInsertBlock()->getParent();
@@ -209,12 +223,12 @@ llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &ex
         func->getBasicBlockList().push_back(false_bb);
         __ SetInsertPoint(false_bb);
 
-        GUARANTEE_DEBUG(_runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::EQUALS));
-        auto *equals_func = _runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::EQUALS)->_func;
+        const auto &equals_func_id = RuntimeLLVM::RuntimeLLVMSymbols::EQUALS;
+        GUARANTEE_DEBUG(_runtime.symbol_by_id(equals_func_id));
+        auto *equals_func = _runtime.symbol_by_id(equals_func_id)->_func;
 
         auto *const false_branch_res = __ CreateCall(
-            equals_func, {lhs, rhs},
-            Names::name(Names::Comment::CALL, _runtime.symbol_name(RuntimeLLVM::RuntimeLLVMSymbols::EQUALS)));
+            equals_func, {lhs, rhs}, Names::name(Names::Comment::CALL, _runtime.symbol_name(equals_func_id)));
         __ CreateBr(merge_bb);
 
         // merge results
@@ -222,8 +236,8 @@ llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &ex
         __ SetInsertPoint(merge_bb);
         auto *const res_type = equals_func->getReturnType();
         op_result = __ CreatePHI(res_type, 2, Names::comment(Names::Comment::PHI));
-        ((llvm::PHINode *)op_result)->addIncoming(llvm::ConstantInt::get(res_type, 1, true), true_bb);
-        ((llvm::PHINode *)op_result)->addIncoming(false_branch_res, false_bb);
+        static_cast<llvm::PHINode *>(op_result)->addIncoming(llvm::ConstantInt::get(res_type, 1, true), true_bb);
+        static_cast<llvm::PHINode *>(op_result)->addIncoming(false_branch_res, false_bb);
     }
 
     return logical_result ? emit_allocate_bool(op_result) : emit_allocate_int(op_result);
@@ -255,22 +269,32 @@ llvm::Value *CodeGenLLVM::emit_object_expr_inner(const ast::ObjectExpression &ex
 {
     const auto &object = _table.symbol(expr._object);
 
+    auto *ptr = static_cast<llvm::Value *>(nullptr);
+    auto type = std::shared_ptr<ast::Type>(nullptr);
+
     if (object._type == Symbol::FIELD)
     {
         const auto &klass = _builder->klass(_current_class->_type->_string);
-
-        auto *const self_val = _table.symbol(SelfObject)._value._ptr;
         const auto &index = object._value._offset;
 
-        auto *const field_ptr = __ CreateStructGEP(_data.class_struct(klass), self_val, index);
-
-        return __ CreateLoad(
-            _data.class_struct(_builder->klass(static_pointer_cast<KlassLLVM>(klass)->field_type(index)->_string))
-                ->getPointerTo(),
-            field_ptr, expr._object);
+        ptr = __ CreateStructGEP(_data.class_struct(klass), emit_load_self(), index);
+        type = static_pointer_cast<KlassLLVM>(klass)->field_type(index);
+    }
+    else
+    {
+        ptr = object._value._ptr;
+        type = object._value_type;
     }
 
-    return object._value._ptr; // local object defined in let, case, formal parameter
+    return __ CreateLoad(_data.class_struct(_builder->klass(type->_string))->getPointerTo(), ptr, expr._object);
+}
+
+llvm::Value *CodeGenLLVM::emit_load_self()
+{
+    const auto &self_val = _table.symbol(SelfObject);
+
+    return __ CreateLoad(_data.class_struct(_builder->klass(self_val._value_type->_string))->getPointerTo(),
+                         self_val._value._ptr, SelfObject);
 }
 
 llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass_type)
@@ -303,7 +327,7 @@ llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass
         return object;
     }
 
-    auto *const self_val = _table.symbol(SelfObject)._value._ptr;
+    auto *const self_val = emit_load_self();
     const auto &klass = _builder->klass(_current_class->_type->_string);
     const auto &klass_struct = _data.class_struct(klass);
 
@@ -374,6 +398,7 @@ llvm::Value *CodeGenLLVM::emit_cases_expr_inner(const ast::CaseExpression &expr,
     // TODO: case abort 2 here
 
     // we want to generate code for the the most precise cases first, so sort cases by tag
+    // TODO: can be SELF_TYPE here?
     auto cases = expr._cases;
     std::sort(cases.begin(), cases.end(), [&](const auto &case_a, const auto &case_b) {
         return _builder->tag(case_b->_type->_string) < _builder->tag(case_a->_type->_string);
@@ -390,12 +415,14 @@ llvm::Value *CodeGenLLVM::emit_cases_expr_inner(const ast::CaseExpression &expr,
 
     auto *const merge_bb = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::MERGE_BLOCK));
 
+    // TODO: can be SELF_TYPE here?
     auto *const res_ptr_type = _data.class_struct(_builder->klass(expr_type->_string))->getPointerTo();
 
     // no, it is not void
     // Last case is a special case: branch to abort
     for (auto i = 0; i < cases.size(); i++)
     {
+        // TODO: can be SELF_TYPE here?
         const auto &klass = _builder->klass(cases[i]->_type->_string);
 
         auto *const tag_type = _runtime.header_elem_type(HeaderLayout::Tag);
@@ -457,6 +484,7 @@ llvm::Value *CodeGenLLVM::emit_cases_expr_inner(const ast::CaseExpression &expr,
 llvm::Value *CodeGenLLVM::emit_let_expr_inner(const ast::LetExpression &expr,
                                               const std::shared_ptr<ast::Type> &expr_type)
 {
+    return emit_in_scope(expr._object, expr._type, expr._body_expr, expr._expr ? emit_expr(expr._expr) : nullptr);
 }
 
 llvm::Value *CodeGenLLVM::emit_loop_expr_inner(const ast::WhileExpression &expr,
@@ -506,6 +534,7 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
                                      Names::name(Names::Comment::CALL, method_name));
             },
             [&](const ast::StaticDispatchExpression &disp) {
+                // TODO: can be SELF_TYPE here?
                 auto *const method =
                     _module.getFunction(_builder->klass(disp._type->_string)->method_full_name(method_name));
 
@@ -523,6 +552,17 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
 llvm::Value *CodeGenLLVM::emit_assign_expr_inner(const ast::AssignExpression &expr,
                                                  const std::shared_ptr<ast::Type> &expr_type)
 {
+    auto *const value = emit_expr(expr._expr);
+
+    const auto &symbol = _table.symbol(expr._object->_object);
+
+    __ CreateStore(value, symbol._type == Symbol::FIELD
+                              ? __ CreateStructGEP(_data.class_struct(_builder->klass(_current_class->_type->_string)),
+                                                   emit_load_self(), symbol._value._offset)
+                              : symbol._value._ptr);
+
+    // TODO: is it correct?
+    return value;
 }
 
 llvm::Value *CodeGenLLVM::emit_load_int(llvm::Value *int_obj)
@@ -546,7 +586,9 @@ llvm::Value *CodeGenLLVM::emit_allocate_primitive(llvm::Value *val, const std::s
     // record value
     auto *const val_ptr = __ CreateStructGEP(_data.class_struct(klass), obj, HeaderLayout::DispatchTable + 1,
                                              Names::name(Names::Comment::VALUE, obj->getName()));
-    return __ CreateStore(val, val_ptr);
+    __ CreateStore(val, val_ptr);
+
+    return obj;
 }
 
 llvm::Value *CodeGenLLVM::emit_allocate_int(llvm::Value *val)
@@ -570,13 +612,14 @@ llvm::Value *CodeGenLLVM::emit_in_scope(const std::shared_ptr<ast::ObjectExpress
 {
     _table.push_scope();
 
-    auto *const object_ptr_type = _data.class_struct(_builder->klass(object_type->_string))->getPointerTo();
+    const auto local_type = semant::Semant::exact_type(object_type, _current_class->_type);
+    auto *const object_ptr_type = _data.class_struct(_builder->klass(local_type->_string))->getPointerTo();
 
     // allocate pointer to local variable
     auto *const local_val =
         __ CreateAlloca(object_ptr_type, nullptr, Names::name(Names::Comment::ALLOCA, object->_object));
 
-    _table.add_symbol(object->_object, Symbol(local_val));
+    _table.add_symbol(object->_object, Symbol(local_val, local_type));
 
     if (!initializer)
     {

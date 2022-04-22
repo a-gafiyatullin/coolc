@@ -20,6 +20,19 @@ extern "C"
         DISP_TAB_TYPE _dispatch_table;
     };
 
+    struct IntLayout
+    {
+        ObjectLayout _header;
+        long long int _value;
+    };
+
+    struct StringLayout
+    {
+        ObjectLayout _header;
+        IntLayout *_string_size;
+        char *_string; // null terminated
+    };
+
     /**
      * @brief Check if two objects are equal
      *
@@ -27,7 +40,7 @@ extern "C"
      * @param ro right operand
      * @return TrueVal for true, FalseVal for false
      */
-    int equals(void *lo, void *ro);
+    int equals(ObjectLayout *lo, ObjectLayout *ro);
 
     /**
      * @brief Abort on case mismatch
@@ -44,7 +57,7 @@ extern "C"
      * @param receiver Receiver
      * @return NULL
      */
-    void *Object_abort(void *receiver);
+    ObjectLayout *Object_abort(ObjectLayout *receiver);
 
     /**
      * @brief Get type of the Object
@@ -52,7 +65,7 @@ extern "C"
      * @param receiver Receiver
      * @return Cool String
      */
-    void *Object_type_name(void *receiver);
+    StringLayout *Object_type_name(ObjectLayout *receiver);
 
     /**
      * @brief Get copy of the Object
@@ -60,21 +73,9 @@ extern "C"
      * @param receiver Receiver
      * @return Copy of the Object
      */
-    void *Object_copy(void *receiver);
+    ObjectLayout *Object_copy(ObjectLayout *receiver);
 
-    // ------------------------------ Int ------------------------------
-    struct IntLayout
-    {
-        ObjectLayout _header;
-        long long int _value;
-    };
     // ------------------------------ String ------------------------------
-    struct StringLayout
-    {
-        ObjectLayout _header;
-        IntLayout *_string_size;
-        char *_string; // null terminated
-    };
 
     /**
      * @brief Cool String length
@@ -82,7 +83,7 @@ extern "C"
      * @param receiver Receiver
      * @return Cool Int for length
      */
-    void *String_length(void *receiver);
+    IntLayout *String_length(StringLayout *receiver);
 
     /**
      * @brief Cool String concat
@@ -91,7 +92,7 @@ extern "C"
      * @param str Other Cool String
      * @return New Cool String
      */
-    void *String_concat(void *receiver, void *str);
+    StringLayout *String_concat(StringLayout *receiver, StringLayout *str);
 
     /**
      * @brief Cool String substring
@@ -101,7 +102,7 @@ extern "C"
      * @param len Substring length
      * @return New Cool String
      */
-    void *String_substr(void *receiver, void *index, void *len);
+    StringLayout *String_substr(StringLayout *receiver, IntLayout *index, IntLayout *len);
     // ------------------------------ IO ------------------------------
     /**
      * @brief Print Cool String
@@ -110,7 +111,7 @@ extern "C"
      * @param str Cool string for printing
      * @return Receiver
      */
-    void *IO_out_string(void *receiver, void *str);
+    ObjectLayout *IO_out_string(ObjectLayout *receiver, StringLayout *str);
 
     /**
      * @brief Print Cool Int
@@ -119,7 +120,7 @@ extern "C"
      * @param integer Cool Int for printing
      * @return Receiver
      */
-    void *IO_out_int(void *receiver, void *integer);
+    ObjectLayout *IO_out_int(ObjectLayout *receiver, IntLayout *integer);
 
     /**
      * @brief Read line to Cool String
@@ -127,7 +128,7 @@ extern "C"
      * @param receiver Receiver
      * @return New Cool String
      */
-    void *IO_in_string(void *receiver);
+    StringLayout *IO_in_string(ObjectLayout *receiver);
 
     /**
      * @brief Read line to Cool Int
@@ -135,7 +136,7 @@ extern "C"
      * @param receiver Receiver
      * @return New Cool Int
      */
-    void *IO_in_int(void *receiver);
+    IntLayout *IO_in_int(ObjectLayout *receiver);
 
     // -------------------------------------- GC --------------------------------------
 
@@ -147,5 +148,5 @@ extern "C"
      * @param disp_tab Dispatch table ptr
      * @return Pointer to the newly allocated object
      */
-    void *gc_alloc(int tag, size_t size, void *disp_tab);
+    ObjectLayout *gc_alloc(int tag, size_t size, void *disp_tab);
 }

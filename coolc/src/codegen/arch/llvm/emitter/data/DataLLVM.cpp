@@ -125,6 +125,7 @@ void DataLLVM::class_struct_inner(const std::shared_ptr<Klass> &klass)
     fields.push_back(class_disp_tab(klass)->getType()); // dispatch table
 
     // add fields
+    // TODO: can be SELF_TYPE here?
     std::for_each(klass->fields_begin(), klass->fields_end(), [&fields, klass, this](const auto &field) {
         fields.push_back(class_struct(_builder->klass(field->_type->_string)));
     });
@@ -155,6 +156,7 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
             const auto &method_formals = std::get<ast::MethodFeature>(method.second->_base);
             for (const auto &formal : method_formals._formals)
             {
+                // TODO: can be SELF_TYPE here?
                 const auto &formal_type = formal->_type->_string;
                 CODEGEN_VERBOSE_ONLY(LOG("Formal of type \"" + formal_type + "\""));
                 args.push_back(class_struct(_builder->klass(formal_type))->getPointerTo());
@@ -174,7 +176,7 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
             func->arg_begin()->setName(SelfObject);
             for (auto *arg = func->arg_begin() + 1; arg != func->arg_end(); arg++)
             {
-                arg->setName(method_formals._formals[arg - func->arg_begin() - 1]->_type->_string);
+                arg->setName(method_formals._formals[arg - func->arg_begin() - 1]->_object->_object);
             }
         }
 
