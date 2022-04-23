@@ -2,7 +2,7 @@
 
 ObjectLayout *Object_abort(ObjectLayout *receiver)
 {
-    StringLayout *name = (StringLayout *)(((void **)&ClassNameTab)[receiver->_tag]);
+    auto *const name = reinterpret_cast<StringLayout *>(((void **)&ClassNameTab)[receiver->_tag]);
 
     fprintf(stderr, "Abort called from class %s", (char *)name->_string);
 
@@ -16,7 +16,7 @@ ObjectLayout *gc_alloc(int tag, size_t size, void *disp_tab)
     // TODO: dummy allocation. Should be managed by GC
     void *object = malloc(size);
 
-    ObjectLayout *layout = (ObjectLayout *)object;
+    auto *const layout = reinterpret_cast<ObjectLayout *>(object);
     layout->_mark = MarkWordDefaultValue;
     layout->_tag = tag;
     layout->_size = size;
@@ -34,13 +34,13 @@ ObjectLayout *IO_out_string(ObjectLayout *receiver, StringLayout *str)
 
 StringLayout *Object_type_name(ObjectLayout *receiver)
 {
-    return (StringLayout *)(((void **)&ClassNameTab)[receiver->_tag]);
+    return reinterpret_cast<StringLayout *>(((void **)&ClassNameTab)[receiver->_tag]);
 }
 
 ObjectLayout *Object_copy(ObjectLayout *receiver)
 {
     // TODO: dummy allocation. Should be managed by GC
-    ObjectLayout *object = (ObjectLayout *)malloc(receiver->_size);
+    auto *const object = reinterpret_cast<ObjectLayout *>(malloc(receiver->_size));
     memcpy(object, receiver, receiver->_size);
 
     return object;
@@ -51,12 +51,38 @@ IntLayout *String_length(StringLayout *receiver)
     return receiver->_string_size;
 }
 
+IntLayout *make_int(const int &value, void *int_disp_tab)
+{
+    auto *const int_obj = reinterpret_cast<IntLayout *>(gc_alloc(IntTag, sizeof(IntLayout), int_disp_tab));
+    int_obj->_value = value;
+
+    return int_obj;
+}
+
 StringLayout *String_concat(StringLayout *receiver, StringLayout *str)
 {
+    auto *const new_string = reinterpret_cast<StringLayout *>(Object_copy(reinterpret_cast<ObjectLayout *>(receiver)));
+
+    new_string->_string_size = make_int(str->_string_size->_value + receiver->_string_size->_value,
+                                        receiver->_string_size->_header._dispatch_table);
+    new_string->_string = reinterpret_cast<char *>(malloc(new_string->_string_size->_value + 1));
+    memcpy(new_string->_string, receiver->_string, receiver->_string_size->_value);
+    memcpy(new_string->_string + receiver->_string_size->_value, str->_string, str->_string_size->_value);
+    new_string->_string[new_string->_string_size->_value] = '\0';
+
+    return new_string;
 }
 
 StringLayout *String_substr(StringLayout *receiver, IntLayout *index, IntLayout *len)
 {
+    auto *const new_string = reinterpret_cast<StringLayout *>(Object_copy(reinterpret_cast<ObjectLayout *>(receiver)));
+
+    new_string->_string_size = len;
+    new_string->_string = reinterpret_cast<char *>(malloc(len->_value + 1));
+    memcpy(new_string->_string, receiver->_string + index->_value, len->_value);
+    new_string->_string[new_string->_string_size->_value] = '\0';
+
+    return new_string;
 }
 
 IntLayout *IO_in_int(ObjectLayout *receiver)
@@ -76,8 +102,44 @@ ObjectLayout *IO_out_int(ObjectLayout *receiver, IntLayout *integer)
 
 void case_abort(int tag)
 {
-    StringLayout *name = (StringLayout *)(((void **)&ClassNameTab)[tag]);
+    auto *const name = reinterpret_cast<StringLayout *>(((void **)&ClassNameTab)[tag]);
     fprintf(stderr, "No match in case statement for Class %s", (char *)name->_string);
 
     exit(-1);
+}
+
+int equals(ObjectLayout *lo, ObjectLayout *ro)
+{
+    const auto &lo_tag = lo->_tag;
+    const auto &ro_tag = ro->_tag;
+
+    if (lo_tag != ro_tag)
+    {
+        return FalseValue;
+    }
+
+    if (lo_tag == BoolTag)
+    {
+        return reinterpret_cast<BoolLayout *>(lo)->_value == reinterpret_cast<BoolLayout *>(ro)->_value;
+    }
+
+    if (lo_tag == IntTag)
+    {
+        return reinterpret_cast<IntLayout *>(lo)->_value == reinterpret_cast<IntLayout *>(ro)->_value;
+    }
+
+    if (lo_tag == StringTag)
+    {
+        auto *const str1 = reinterpret_cast<StringLayout *>(lo);
+        auto *const str2 = reinterpret_cast<StringLayout *>(ro);
+
+        if (str1->_string_size->_value != str2->_string_size->_value)
+        {
+            return FalseValue;
+        }
+
+        return !strcmp(str1->_string, str2->_string) ? TrueValue : FalseValue;
+    }
+
+    return FalseValue;
 }

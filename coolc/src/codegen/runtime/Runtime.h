@@ -8,6 +8,9 @@
 extern "C"
 {
     extern "C" void *ClassNameTab; // must be defined by coolc. It is the pointer of the first name
+    extern "C" int IntTag;
+    extern "C" int BoolTag;
+    extern "C" int StringTag;
 
     /**
      * @brief Structure of the Object header
@@ -22,6 +25,12 @@ extern "C"
     };
 
     struct IntLayout
+    {
+        ObjectLayout _header;
+        long long int _value;
+    };
+
+    struct BoolLayout
     {
         ObjectLayout _header;
         long long int _value;

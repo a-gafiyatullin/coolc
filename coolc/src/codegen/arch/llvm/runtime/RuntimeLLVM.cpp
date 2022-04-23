@@ -27,5 +27,5 @@ RuntimeLLVM::RuntimeLLVM(llvm::Module &module)
     _header_layout_types[HeaderLayout::DispatchTable] = _void_type->getPointerTo();
 }
 
-const std::string RuntimeLLVM::SYMBOLS[RuntimeLLVMSymbolsSize] = {"equals", "case_abort", "gc_alloc", "ClassNameTab",
-                                                                  "ClassObjTab"};
+const std::string RuntimeLLVM::SYMBOLS[RuntimeLLVMSymbolsSize] = {
+    "equals", "case_abort", "gc_alloc", "ClassNameTab", "ClassObjTab", "IntTag", "BoolTag", "StringTag"};

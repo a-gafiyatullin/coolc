@@ -62,6 +62,10 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
         CLASS_NAME_TAB,
         CLASS_OBJ_TAB,
 
+        INT_TAG_NAME,
+        BOOL_TAG_NAME,
+        STRING_TAG_NAME,
+
         RuntimeLLVMSymbolsSize
     };
 
@@ -86,6 +90,9 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
      * @brief Construct a new Runtime object
      *
      * @param module llvm::Module for function declarations
+     * @param bool_tag Tag of Bool Class
+     * @param int_tag Tag of Int Class
+     * @param string_tag Tag of String Class
      */
     explicit RuntimeLLVM(llvm::Module &module);
 

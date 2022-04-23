@@ -26,6 +26,22 @@ DataLLVM::DataLLVM(const std::shared_ptr<KlassBuilder> &builder, llvm::Module &m
         {_classes[BaseClassesNames[BaseClasses::INT]]->getPointerTo(), _runtime.int8_type()->getPointerTo()});
 
     make_base_class(_builder->klass(BaseClassesNames[BaseClasses::IO]), {});
+
+    // create constants for basic classes tags
+    const int tags[] = {_builder->tag(BaseClassesNames[BaseClasses::INT]),
+                        _builder->tag(BaseClassesNames[BaseClasses::BOOL]),
+                        _builder->tag(BaseClassesNames[BaseClasses::STRING])};
+    auto *const tag_type = _runtime.header_elem_type(HeaderLayout::Tag);
+    for (int i = RuntimeLLVM::RuntimeLLVMSymbols::INT_TAG_NAME; i <= RuntimeLLVM::RuntimeLLVMSymbols::STRING_TAG_NAME;
+         i++)
+    {
+        auto *tag_global =
+            static_cast<llvm::GlobalVariable *>(module.getOrInsertGlobal(_runtime.symbol_name(i), tag_type));
+        tag_global->setInitializer(
+            llvm::ConstantInt::get(tag_type, tags[i - RuntimeLLVM::RuntimeLLVMSymbols::INT_TAG_NAME]));
+        tag_global->setLinkage(llvm::GlobalValue::ExternalLinkage);
+        tag_global->setConstant(true);
+    }
 }
 
 llvm::GlobalVariable *DataLLVM::make_disp_table(const std::string &name, llvm::StructType *type,
@@ -65,7 +81,7 @@ void DataLLVM::make_base_class(const std::shared_ptr<Klass> &klass, const std::v
 
     // set dispatch table
     auto *const dispatch_table = class_disp_tab(klass);
-    fields.push_back(dispatch_table->getType()->getPointerTo());
+    fields.push_back(dispatch_table->getType());
 
     // add fields
     fields.insert(fields.end(), additional_fields.begin(), additional_fields.end());

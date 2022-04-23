@@ -515,7 +515,7 @@ llvm::Value *CodeGenLLVM::emit_cases_expr_inner(const ast::CaseExpression &expr,
         __ SetInsertPoint(match_block);
 
         // match branch
-        auto *const result = emit_in_scope(cases[i]->_object, cases[i]->_type, cases[i]->_expr, nullptr);
+        auto *const result = emit_in_scope(cases[i]->_object, cases[i]->_type, cases[i]->_expr, pred);
         auto *const casted_res = __ CreateBitCast(result, res_ptr_type);
         results.push_back({match_block, casted_res});
 
