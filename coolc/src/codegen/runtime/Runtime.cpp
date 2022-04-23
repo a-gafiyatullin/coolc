@@ -39,6 +39,11 @@ StringLayout *Object_type_name(ObjectLayout *receiver)
 
 ObjectLayout *Object_copy(ObjectLayout *receiver)
 {
+    // TODO: dummy allocation. Should be managed by GC
+    ObjectLayout *object = (ObjectLayout *)malloc(receiver->_size);
+    memcpy(object, receiver, receiver->_size);
+
+    return object;
 }
 
 IntLayout *String_length(StringLayout *receiver)

@@ -10,8 +10,13 @@ using namespace codegen;
 // TODO: module name to constant?
 CodeGenLLVM::CodeGenLLVM(const std::shared_ptr<semant::ClassNode> &root)
     : CodeGen(std::make_shared<KlassBuilderLLVM>(root)), _ir_builder(_context), _module("MainModule", _context),
-      _runtime(_module), _data(_builder, _module, _runtime)
+      _runtime(_module), _data(_builder, _module, _runtime), _true_obj(_data.bool_const(true)),
+      _false_obj(_data.bool_const(false)), _true_val(llvm::ConstantInt::get(_runtime.int64_type(), TrueValue)),
+      _false_val(llvm::ConstantInt::get(_runtime.int64_type(), FalseValue))
 {
+    GUARANTEE_DEBUG(_true_obj);
+    GUARANTEE_DEBUG(_false_obj);
+
     DEBUG_ONLY(_table.set_printer([](const std::string &name, const Symbol &s) {
         LOG("Added symbol \"" + name + "\": " + static_cast<std::string>(s))
     }));
@@ -68,9 +73,10 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
 
 void CodeGenLLVM::emit_class_init_method_inner()
 {
+    const auto &klass = _builder->klass(_current_class->_type->_string);
+
     // Note, that init method don't init header
-    const auto &current_class_name = _current_class->_type->_string;
-    auto *const func = _module.getFunction(Names::init_method(current_class_name));
+    auto *const func = _module.getFunction(klass->init_method());
 
     GUARANTEE_DEBUG(func);
 
@@ -81,13 +87,12 @@ void CodeGenLLVM::emit_class_init_method_inner()
     // call parent constructor
     if (!semant::Semant::is_empty_type(_current_class->_parent)) // Object moment
     {
-        const auto &parent_init = Names::init_method(_current_class->_parent->_string);
+        const auto parent_init = _builder->klass(_current_class->_parent->_string)->init_method();
         // TODO: maybe better way to pass args?
         __ CreateCall(_module.getFunction(parent_init), {func->getArg(0)},
                       Names::name(Names::Comment::CALL, parent_init));
     }
 
-    const auto &klass = _builder->klass(current_class_name);
     for (const auto &feature : _current_class->_features)
     {
         if (std::holds_alternative<ast::AttrFeature>(feature->_base))
@@ -156,6 +161,35 @@ void CodeGenLLVM::emit_class_init_method_inner()
     // GUARANTEE_DEBUG(!llvm::verifyFunction(*func));
 }
 
+llvm::Value *CodeGenLLVM::emit_ternary_operator(llvm::Value *pred, llvm::Value *true_val, llvm::Value *false_val,
+                                                llvm::Type *type)
+{
+    // do control flow
+    auto *const func = __ GetInsertBlock()->getParent();
+
+    auto *const true_bb = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::TRUE_BRANCH), func);
+    auto *const false_bb = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::FALSE_BRANCH));
+    auto *const merge_bb = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::MERGE_BLOCK));
+
+    __ CreateCondBr(pred, true_bb, false_bb);
+
+    __ SetInsertPoint(true_bb);
+    __ CreateBr(merge_bb);
+
+    func->getBasicBlockList().push_back(false_bb);
+    __ SetInsertPoint(false_bb);
+    __ CreateBr(merge_bb);
+
+    func->getBasicBlockList().push_back(merge_bb);
+    __ SetInsertPoint(merge_bb);
+    auto *const result = __ CreatePHI(type, 2, Names::comment(Names::Comment::PHI));
+
+    result->addIncoming(true_val, true_bb);
+    result->addIncoming(false_val, false_bb);
+
+    return result;
+}
+
 // TODO: all temporaries names to constants?
 llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &expr,
                                                  const std::shared_ptr<ast::Type> &expr_type)
@@ -172,28 +206,31 @@ llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &ex
         auto *const rv = emit_load_int(rhs);
 
         op_result = std::visit(
-            ast::overloaded{[&](const ast::MinusExpression &minus) {
-                                return __ CreateSub(lv, rv, Names::comment(Names::Comment::SUB));
-                            },
-                            [&](const ast::PlusExpression &plus) {
-                                return __ CreateAdd(lv, rv, Names::comment(Names::Comment::ADD));
-                            },
-                            [&](const ast::DivExpression &div) {
-                                return __ CreateSDiv(lv, rv, Names::comment(Names::Comment::DIV)); /* TODO: SDiv? */
-                            },
-                            [&](const ast::MulExpression &mul) {
-                                return __ CreateMul(lv, rv, Names::comment(Names::Comment::MUL));
-                            },
-                            [&](const ast::LTExpression &lt) {
-                                logical_result = true;
-                                return __ CreateICmpSLT(lv, rv, Names::comment(Names::Comment::CMP_SLT));
-                            },
-                            [&](const ast::LEExpression &le) {
-                                // TODO: check this twice!
-                                logical_result = true;
-                                return __ CreateICmpSLE(lv, rv, Names::comment(Names::Comment::CMP_SLE));
-                            },
-                            [&](const ast::EqExpression &le) { return static_cast<llvm::Value *>(nullptr); }},
+            ast::overloaded{
+                [&](const ast::MinusExpression &minus) {
+                    return __ CreateSub(lv, rv, Names::comment(Names::Comment::SUB));
+                },
+                [&](const ast::PlusExpression &plus) {
+                    return __ CreateAdd(lv, rv, Names::comment(Names::Comment::ADD));
+                },
+                [&](const ast::DivExpression &div) {
+                    return __ CreateSDiv(lv, rv, Names::comment(Names::Comment::DIV)); /* TODO: SDiv? */
+                },
+                [&](const ast::MulExpression &mul) {
+                    return __ CreateMul(lv, rv, Names::comment(Names::Comment::MUL));
+                },
+                [&](const ast::LTExpression &lt) {
+                    logical_result = true;
+                    return emit_ternary_operator(__ CreateICmpSLT(lv, rv, Names::comment(Names::Comment::CMP_SLT)),
+                                                 _true_obj, _false_obj, _true_obj->getType());
+                },
+                [&](const ast::LEExpression &le) {
+                    // TODO: check this twice!
+                    logical_result = true;
+                    return emit_ternary_operator(__ CreateICmpSLE(lv, rv, Names::comment(Names::Comment::CMP_SLE)),
+                                                 _true_obj, _false_obj, _true_obj->getType());
+                },
+                [&](const ast::EqExpression &le) { return static_cast<llvm::Value *>(nullptr); }},
             expr._base);
     }
     else
@@ -204,13 +241,13 @@ llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &ex
         auto *const raw_lhs = __ CreateBitCast(lhs, _runtime.void_type()->getPointerTo());
         auto *const raw_rhs = __ CreateBitCast(rhs, _runtime.void_type()->getPointerTo());
 
-        auto *const is_same_ref = __ CreateICmpEQ(raw_lhs, raw_lhs, Names::comment(Names::Comment::CMP_EQ));
+        auto *const is_same_ref = __ CreateICmpEQ(raw_lhs, raw_rhs, Names::comment(Names::Comment::CMP_EQ));
 
         // do control flow
         auto *const func = __ GetInsertBlock()->getParent();
 
         auto *const true_bb = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::TRUE_BRANCH), func);
-        auto *const false_bb = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::FALSE_BRANCH));
+        auto *false_bb = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::FALSE_BRANCH));
         auto *const merge_bb = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::MERGE_BLOCK));
 
         __ CreateCondBr(is_same_ref, true_bb, false_bb);
@@ -227,25 +264,53 @@ llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &ex
         GUARANTEE_DEBUG(_runtime.symbol_by_id(equals_func_id));
         auto *equals_func = _runtime.symbol_by_id(equals_func_id)->_func;
 
-        auto *const false_branch_res = __ CreateCall(
+        auto *const eq_call_res = __ CreateCall(
             equals_func, {lhs, rhs}, Names::name(Names::Comment::CALL, _runtime.symbol_name(equals_func_id)));
+
+        auto *const false_branch_res = emit_ternary_operator(
+            __ CreateICmpEQ(eq_call_res, llvm::ConstantInt::get(equals_func->getReturnType(), TrueValue, true)),
+            _true_obj, _false_obj, _true_obj->getType());
+
+        false_bb = __ GetInsertBlock(); // emit_ternary_operator changed cfg
         __ CreateBr(merge_bb);
 
         // merge results
         func->getBasicBlockList().push_back(merge_bb);
         __ SetInsertPoint(merge_bb);
-        auto *const res_type = equals_func->getReturnType();
-        op_result = __ CreatePHI(res_type, 2, Names::comment(Names::Comment::PHI));
-        static_cast<llvm::PHINode *>(op_result)->addIncoming(llvm::ConstantInt::get(res_type, 1, true), true_bb);
+        op_result = __ CreatePHI(_true_obj->getType(), 2, Names::comment(Names::Comment::PHI));
+        static_cast<llvm::PHINode *>(op_result)->addIncoming(_true_obj, true_bb);
         static_cast<llvm::PHINode *>(op_result)->addIncoming(false_branch_res, false_bb);
     }
 
-    return logical_result ? emit_allocate_bool(op_result) : emit_allocate_int(op_result);
+    return logical_result ? op_result : emit_allocate_int(op_result);
 }
 
 llvm::Value *CodeGenLLVM::emit_unary_expr_inner(const ast::UnaryExpression &expr,
                                                 const std::shared_ptr<ast::Type> &expr_type)
 {
+    auto *const operand = emit_expr(expr._expr);
+
+    return std::visit(
+        ast::overloaded{
+            [&](const ast::IsVoidExpression &isvoid) {
+                return emit_ternary_operator(
+                    __ CreateICmpEQ(
+                        operand, llvm::ConstantPointerNull::get(static_cast<llvm::PointerType *>(operand->getType())),
+                        Names::name(Names::Comment::CMP_EQ)),
+                    _true_obj, _false_obj, _true_obj->getType());
+            },
+            [&](const ast::NotExpression &) {
+                auto *const not_res_val =
+                    __ CreateXor(emit_load_bool(operand), _true_val, Names::name(Names::Comment::XOR));
+
+                return emit_ternary_operator(
+                    __ CreateICmpEQ(not_res_val, _true_val, Names::name(Names::Comment::CMP_EQ)), _true_obj, _false_obj,
+                    _true_obj->getType());
+            },
+            [&](const ast::NegExpression &neg) {
+                return emit_allocate_int(__ CreateNeg(emit_load_int(operand), Names::name(Names::Comment::NEG)));
+            }},
+        expr._base);
 }
 
 llvm::Value *CodeGenLLVM::emit_bool_expr(const ast::BoolExpression &expr, const std::shared_ptr<ast::Type> &expr_type)
@@ -319,7 +384,7 @@ llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass
         auto *const object = __ CreateBitCast(raw_object, klass_struct->getPointerTo());
 
         // call init
-        const auto init_method = Names::init_method(klass->name());
+        const auto init_method = klass->init_method();
         __ CreateCall(_module.getFunction(init_method), {object}, Names::name(Names::Comment::CALL, init_method));
 
         // object is ready
@@ -343,13 +408,14 @@ llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass
     const auto class_obj_tab_name = _runtime.symbol_name(RuntimeLLVM::RuntimeLLVMSymbols::CLASS_OBJ_TAB);
     auto *const class_obj_tab = _module.getNamedGlobal(class_obj_tab_name);
 
-    const auto init_method_name = Names::init_method(SelfObject);
+    // TODO: create constant 64-bit int 0
+    const auto init_method_name = klass->init_method();
     auto *const init_method_ptr = __ CreateGEP(class_obj_tab->getValueType(), class_obj_tab,
                                                {llvm::ConstantInt::get(_runtime.int64_type(), 0), tag});
 
     // load init method and call
     // init method has the same type as for Object class
-    auto *const object_init = _module.getFunction(Names::init_method(BaseClassesNames[BaseClasses::OBJECT]));
+    auto *const object_init = _module.getFunction(init_method_name);
     auto *const init_method = __ CreateLoad(object_init->getType(), init_method_ptr, init_method_name);
 
     // call this init method
@@ -384,7 +450,8 @@ llvm::Value *CodeGenLLVM::emit_load_size(llvm::Value *obj, llvm::Type *obj_type)
 llvm::Value *CodeGenLLVM::emit_load_dispatch_table(llvm::Value *obj, const std::shared_ptr<Klass> &klass)
 {
     auto *const dispatch_table_ptr_ptr =
-        __ CreateStructGEP(_data.class_struct(klass), obj, HeaderLayout::DispatchTable);
+        __ CreateStructGEP(obj->getType()->getPointerElementType(), obj, HeaderLayout::DispatchTable);
+
     return __ CreateLoad(_data.class_disp_tab(klass)->getType(), dispatch_table_ptr_ptr,
                          Names::name(Names::Comment::OBJ_DISP_TAB, obj->getName()));
 }
@@ -414,8 +481,9 @@ llvm::Value *CodeGenLLVM::emit_cases_expr_inner(const ast::CaseExpression &expr,
 
     auto *const merge_bb = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::MERGE_BLOCK));
 
-    // TODO: can be SELF_TYPE here?
-    auto *const res_ptr_type = _data.class_struct(_builder->klass(expr_type->_string))->getPointerTo();
+    auto *const res_ptr_type =
+        _data.class_struct(_builder->klass(semant::Semant::exact_type(expr_type, _current_class->_type)->_string))
+            ->getPointerTo();
 
     // no, it is not void
     // Last case is a special case: branch to abort
@@ -489,10 +557,78 @@ llvm::Value *CodeGenLLVM::emit_let_expr_inner(const ast::LetExpression &expr,
 llvm::Value *CodeGenLLVM::emit_loop_expr_inner(const ast::WhileExpression &expr,
                                                const std::shared_ptr<ast::Type> &expr_type)
 {
+    /*auto *const func = __ GetInsertBlock()->getParent();
+
+    auto *loop_header = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::LOOP_HEADER), func);
+    auto *loop_body = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::LOOP_BODY));
+    auto *loop_tail = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::LOOP_TAIL));
+
+    // TODO: can be SELF_TYPE?
+    auto *const phi_type = _data.class_struct(_builder->klass(expr_type->_string))->getPointerTo();
+
+    __ SetInsertPoint(loop_header);
+    __ CreateCondBr(
+        __ CreateICmpEQ(emit_load_bool(emit_expr(expr._predicate)), _true_val, Names::comment(Names::Comment::CMP_EQ)),
+        loop_body, loop_tail);
+    loop_header = __ GetInsertBlock();
+
+    func->getBasicBlockList().push_back(loop_body);
+    __ SetInsertPoint(loop_body);
+    auto *const body_res = __ CreateBitCast(emit_expr(expr._body_expr), phi_type);
+    __ CreateBr(loop_header);
+    loop_body = __ GetInsertBlock();
+
+    func->getBasicBlockList().push_back(loop_tail);
+    __ SetInsertPoint(loop_tail);
+    auto *const phi = __ CreatePHI(phi_type, 2, Names::comment(Names::Comment::PHI));
+
+    phi->addIncoming(body_res, loop_body);
+    phi->addIncoming(llvm::ConstantPointerNull::get(phi_type), loop_tail);
+
+    return phi;*/
 }
 
 llvm::Value *CodeGenLLVM::emit_if_expr_inner(const ast::IfExpression &expr, const std::shared_ptr<ast::Type> &expr_type)
 {
+    // do control flow
+    auto *const func = __ GetInsertBlock()->getParent();
+
+    auto *true_bb = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::TRUE_BRANCH), func);
+    auto *false_bb = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::FALSE_BRANCH));
+    auto *const merge_bb = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::MERGE_BLOCK));
+
+    // predicate
+    __ CreateCondBr(
+        __ CreateICmpEQ(emit_load_bool(emit_expr(expr._predicate)), _true_val, Names::comment(Names::Comment::CMP_EQ)),
+        true_bb, false_bb);
+
+    auto *const phi_type =
+        _data.class_struct(_builder->klass(semant::Semant::exact_type(expr_type, _current_class->_type)->_string))
+            ->getPointerTo();
+
+    // true
+    __ SetInsertPoint(true_bb);
+    auto *const true_bb_val = __ CreateBitCast(emit_expr(expr._true_path_expr), phi_type);
+    __ CreateBr(merge_bb);
+    true_bb = __ GetInsertBlock(); // emit_expr can change cfg
+
+    // false
+    func->getBasicBlockList().push_back(false_bb);
+    __ SetInsertPoint(false_bb);
+    auto *const false_bb_val = __ CreateBitCast(emit_expr(expr._false_path_expr), phi_type);
+    __ CreateBr(merge_bb);
+    false_bb = __ GetInsertBlock(); // emit_expr can change cfg
+
+    // merge
+    func->getBasicBlockList().push_back(merge_bb);
+    __ SetInsertPoint(merge_bb);
+
+    auto *const phi = __ CreatePHI(phi_type, 2, Names::comment(Names::Comment::PHI));
+
+    phi->addIncoming(true_bb_val, true_bb);
+    phi->addIncoming(false_bb_val, false_bb);
+
+    return phi;
 }
 
 llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression &expr,
@@ -598,11 +734,6 @@ llvm::Value *CodeGenLLVM::emit_allocate_int(llvm::Value *val)
 llvm::Value *CodeGenLLVM::emit_load_bool(llvm::Value *bool_obj)
 {
     return emit_load_primitive(bool_obj, _data.class_struct(_builder->klass(BaseClassesNames[BaseClasses::BOOL])));
-}
-
-llvm::Value *CodeGenLLVM::emit_allocate_bool(llvm::Value *val)
-{
-    return emit_allocate_primitive(val, _builder->klass(BaseClassesNames[BaseClasses::BOOL]));
 }
 
 llvm::Value *CodeGenLLVM::emit_in_scope(const std::shared_ptr<ast::ObjectExpression> &object,

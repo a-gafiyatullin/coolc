@@ -6,40 +6,26 @@ using namespace codegen;
 DataLLVM::DataLLVM(const std::shared_ptr<KlassBuilder> &builder, llvm::Module &module, const RuntimeLLVM &runtime)
     : Data(builder), _module(module), _runtime(runtime)
 {
-    make_base_class(_builder->klass(BaseClassesNames[BaseClasses::OBJECT]), {},
-                    {runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_ABORT)->_func,
-                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_TYPE_NAME)->_func,
-                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_COPY)->_func});
+    // publish basic classes structures
+    for (auto i = static_cast<int>(BaseClasses::OBJECT); i < BaseClasses::SELF_TYPE; i++)
+    {
+        _classes.insert(
+            {BaseClassesNames[i],
+             llvm::StructType::create(_module.getContext(), _builder->klass(BaseClassesNames[i])->prototype())});
+    }
 
-    make_base_class(_builder->klass(BaseClassesNames[BaseClasses::INT]), {_runtime.int64_type()},
-                    {runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_ABORT)->_func,
-                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_TYPE_NAME)->_func,
-                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_COPY)->_func});
+    make_base_class(_builder->klass(BaseClassesNames[BaseClasses::OBJECT]), {});
+
+    make_base_class(_builder->klass(BaseClassesNames[BaseClasses::INT]), {_runtime.int64_type()});
 
     // use 64 bit field for allignment
-    make_base_class(_builder->klass(BaseClassesNames[BaseClasses::BOOL]), {_runtime.int64_type()},
-                    {runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_ABORT)->_func,
-                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_TYPE_NAME)->_func,
-                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_COPY)->_func});
+    make_base_class(_builder->klass(BaseClassesNames[BaseClasses::BOOL]), {_runtime.int64_type()});
 
     make_base_class(
         _builder->klass(BaseClassesNames[BaseClasses::STRING]),
-        {_classes[BaseClassesNames[BaseClasses::INT]]->getPointerTo(), _runtime.int8_type()->getPointerTo()},
-        {runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_ABORT)->_func,
-         runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_TYPE_NAME)->_func,
-         runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_COPY)->_func,
-         runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::STRING_LENGTH)->_func,
-         runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::STRING_CONCAT)->_func,
-         runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::STRING_SUBSTR)->_func});
+        {_classes[BaseClassesNames[BaseClasses::INT]]->getPointerTo(), _runtime.int8_type()->getPointerTo()});
 
-    make_base_class(_builder->klass(BaseClassesNames[BaseClasses::IO]), {},
-                    {runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_ABORT)->_func,
-                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_TYPE_NAME)->_func,
-                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::OBJECT_COPY)->_func,
-                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::IO_OUT_STRING)->_func,
-                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::IO_OUT_INT)->_func,
-                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::IO_IN_STRING)->_func,
-                     runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::IO_IN_INT)->_func});
+    make_base_class(_builder->klass(BaseClassesNames[BaseClasses::IO]), {});
 }
 
 llvm::GlobalVariable *DataLLVM::make_disp_table(const std::string &name, llvm::StructType *type,
@@ -58,7 +44,7 @@ llvm::GlobalVariable *DataLLVM::make_disp_table(const std::string &name, llvm::S
 
 void DataLLVM::make_init_method(const std::shared_ptr<Klass> &klass)
 {
-    const auto init_method_name = Names::init_method(klass->name());
+    const auto init_method_name = klass->init_method();
     CODEGEN_VERBOSE_ONLY(LOG("Declare init method \"" + init_method_name + "\""));
 
     auto *const init_method = llvm::Function::Create(
@@ -69,37 +55,22 @@ void DataLLVM::make_init_method(const std::shared_ptr<Klass> &klass)
     init_method->getArg(0)->setName(SelfObject);
 }
 
-void DataLLVM::make_base_class(const std::shared_ptr<Klass> &klass, const std::vector<llvm::Type *> &additional_fields,
-                               const std::vector<llvm::Constant *> &methods)
+void DataLLVM::make_base_class(const std::shared_ptr<Klass> &klass, const std::vector<llvm::Type *> &additional_fields)
 {
     const auto &class_name = klass->name();
-
-    // dispatch table type entries
-    std::vector<llvm::Type *> method_types;
-    for (const auto &method : methods)
-    {
-        method_types.push_back(static_cast<const llvm::Function *>(method)->getType());
-    }
 
     // header
     std::vector<llvm::Type *> fields;
     make_header(klass, fields);
 
-    const auto &disp_tab_name = Names::disp_table(class_name);
-
     // set dispatch table
-    auto *const dispatch_table_type =
-        llvm::StructType::create(_module.getContext(), method_types, Names::name(Names::Comment::TYPE, disp_tab_name));
-    fields.push_back(dispatch_table_type->getPointerTo());
+    auto *const dispatch_table = class_disp_tab(klass);
+    fields.push_back(dispatch_table->getType()->getPointerTo());
 
     // add fields
     fields.insert(fields.end(), additional_fields.begin(), additional_fields.end());
 
-    // record class structure and its dispatch table
-    _classes.insert({class_name, llvm::StructType::create(_module.getContext(), fields, Names::prototype(class_name))});
-
-    // create global variable for dispatch table
-    _dispatch_tables.insert({class_name, make_disp_table(disp_tab_name, dispatch_table_type, methods)});
+    class_struct(klass)->setBody(fields);
 
     make_init_method(klass);
 }
@@ -113,11 +84,9 @@ void DataLLVM::make_header(const std::shared_ptr<Klass> &klass, std::vector<llvm
 
 void DataLLVM::class_struct_inner(const std::shared_ptr<Klass> &klass)
 {
-    const auto &class_name = klass->name();
-
-    auto *const class_structure = llvm::StructType::create(_module.getContext(), Names::prototype(class_name));
+    auto *const class_structure = llvm::StructType::create(_module.getContext(), klass->prototype());
     // for now we can reference to this structure. Need for recursion
-    _classes.insert({class_name, class_structure});
+    _classes.insert({klass->name(), class_structure});
 
     std::vector<llvm::Type *> fields;
     // add header
@@ -125,9 +94,9 @@ void DataLLVM::class_struct_inner(const std::shared_ptr<Klass> &klass)
     fields.push_back(class_disp_tab(klass)->getType()); // dispatch table
 
     // add fields
-    // TODO: can be SELF_TYPE here?
     std::for_each(klass->fields_begin(), klass->fields_end(), [&fields, klass, this](const auto &field) {
-        fields.push_back(class_struct(_builder->klass(field->_type->_string)));
+        fields.push_back(
+            class_struct(_builder->klass(semant::Semant::exact_type(field->_type, klass->klass())->_string)));
     });
 
     class_structure->setBody(fields);
@@ -144,6 +113,8 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
         const auto method_full_name = klass->method_full_name(method.second->_object->_object);
 
         CODEGEN_VERBOSE_ONLY(LOG_ENTER("DECLARE METHOD \"" + method_full_name + "\""));
+
+        const auto &return_type = method.second->_type;
 
         // maybe already have such a method (from parent)? If so, just get a pointer to it, otherwise create a new one
         auto *func = _module.getFunction(method_full_name);
@@ -162,21 +133,25 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
                 args.push_back(class_struct(_builder->klass(formal_type))->getPointerTo());
             }
 
-            const auto &return_type = method.second->_type;
             CODEGEN_VERBOSE_ONLY(LOG("Return type: \"" + return_type->_string + "\""));
 
-            func = llvm::Function::Create(
-                llvm::FunctionType::get(
-                    class_struct(_builder->klass(semant::Semant::exact_type(return_type, klass->klass())->_string))
-                        ->getPointerTo(),
-                    args, false),
-                llvm::Function::ExternalLinkage, method_full_name, &_module);
+            const auto return_klass_struct =
+                class_struct(_builder->klass(semant::Semant::exact_type(return_type, klass->klass())->_string))
+                    ->getPointerTo();
 
-            // set names for args
-            func->arg_begin()->setName(SelfObject);
-            for (auto *arg = func->arg_begin() + 1; arg != func->arg_end(); arg++)
+            // maybe we already created this method in recursive call of class_struct
+            func = _module.getFunction(method_full_name);
+            if (!func)
             {
-                arg->setName(method_formals._formals[arg - func->arg_begin() - 1]->_object->_object);
+                func = llvm::Function::Create(llvm::FunctionType::get(return_klass_struct, args, false),
+                                              llvm::Function::ExternalLinkage, method_full_name, &_module);
+
+                // set names for args
+                func->arg_begin()->setName(SelfObject);
+                for (auto *arg = func->arg_begin() + 1; arg != func->arg_end(); arg++)
+                {
+                    arg->setName(method_formals._formals[arg - func->arg_begin() - 1]->_object->_object);
+                }
             }
         }
 
@@ -186,13 +161,12 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
         methods.push_back(func);
     });
 
-    const auto &class_name = klass->name();
-    const auto &disp_tab_name = Names::disp_table(class_name);
+    const auto &disp_tab_name = klass->disp_tab();
     _dispatch_tables.insert(
-        {class_name, make_disp_table(disp_tab_name,
-                                     llvm::StructType::create(_module.getContext(), method_types,
-                                                              Names::name(Names::Comment::TYPE, disp_tab_name)),
-                                     methods)});
+        {klass->name(), make_disp_table(disp_tab_name,
+                                        llvm::StructType::create(_module.getContext(), method_types,
+                                                                 Names::name(Names::Comment::TYPE, disp_tab_name)),
+                                        methods)});
 }
 
 void DataLLVM::int_const_inner(const int64_t &value)
@@ -304,7 +278,7 @@ void DataLLVM::gen_class_obj_tab()
     std::vector<llvm::Constant *> init_methods;
     for (const auto &klass : _builder->klasses())
     {
-        auto *const init_method = _module.getFunction(Names::init_method(klass->name()));
+        auto *const init_method = _module.getFunction(klass->init_method());
         GUARANTEE_DEBUG(init_method);
         init_methods.push_back(init_method);
     }

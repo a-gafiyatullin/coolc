@@ -12,9 +12,6 @@ class Names
   public:
     enum Comment
     {
-        DISP_TAB,
-        PROTOTYPE,
-        INIT_METHOD,
         TYPE,
 
         ENTRY_BLOCK,
@@ -22,6 +19,7 @@ class Names
         FALSE_BRANCH,
         MERGE_BLOCK,
         LOOP_HEADER,
+        LOOP_BODY,
         LOOP_TAIL,
 
         CHAR_STRING,
@@ -41,6 +39,8 @@ class Names
         CMP_EQ,
         OR,
         PHI,
+        XOR,
+        NEG,
 
         OBJ_TAG,
         OBJ_SIZE,
@@ -56,39 +56,6 @@ class Names
     static int CommentNumber[CommentsNumber];
 
   public:
-    /**
-     * @brief Get the dispatch table name
-     *
-     * @param klass Class name
-     * @return Dispatch table name
-     */
-    inline static std::string disp_table(const std::string &klass)
-    {
-        return name(DISP_TAB, klass);
-    }
-
-    /**
-     * @brief Get the prototype name
-     *
-     * @param klass Class name
-     * @return Prototype name
-     */
-    inline static std::string prototype(const std::string &klass)
-    {
-        return name(PROTOTYPE, klass);
-    }
-
-    /**
-     * @brief Get the init method name
-     *
-     * @param klass Class name
-     * @return Init method name
-     */
-    inline static std::string init_method(const std::string &klass)
-    {
-        return name(INIT_METHOD, klass);
-    }
-
     /**
      * @brief Construct full method name
      *

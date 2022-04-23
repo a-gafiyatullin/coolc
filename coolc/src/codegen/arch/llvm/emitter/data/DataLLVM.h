@@ -27,8 +27,7 @@ class DataLLVM : public Data<llvm::GlobalVariable *, llvm::StructType *>
 
     // helpers
     void make_header(const std::shared_ptr<Klass> &klass, std::vector<llvm::Type *> &fields);
-    void make_base_class(const std::shared_ptr<Klass> &klass, const std::vector<llvm::Type *> &fields,
-                         const std::vector<llvm::Constant *> &methods);
+    void make_base_class(const std::shared_ptr<Klass> &klass, const std::vector<llvm::Type *> &fields);
     llvm::GlobalVariable *make_disp_table(const std::string &name, llvm::StructType *type,
                                           const std::vector<llvm::Constant *> &methods);
     void make_init_method(const std::shared_ptr<Klass> &klass);

@@ -159,6 +159,30 @@ class Klass
      * @return Full name of the method
      */
     virtual std::string method_full_name(const std::string &method_name) const = 0;
+
+    /**
+     * @brief Get the init method name
+     *
+     * @param klass Class name
+     * @return Init method name
+     */
+    virtual std::string init_method() const = 0;
+
+    /**
+     * @brief Get the prototype name
+     *
+     * @param klass Class name
+     * @return Prototype name
+     */
+    virtual std::string prototype() const = 0;
+
+    /**
+     * @brief Get the dispatch table name
+     *
+     * @param klass Class name
+     * @return Dispatch table name
+     */
+    virtual std::string disp_tab() const = 0;
     // ------------------------------------ TAGS ------------------------------------
 
     /**

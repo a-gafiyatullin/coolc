@@ -2,6 +2,7 @@
 
 #include "codegen/constants/Constants.h"
 #include "codegen/klass/Klass.h"
+#include <string_view>
 
 namespace codegen
 {
@@ -17,6 +18,9 @@ class KlassMips : public Klass
     static constexpr int HEADER_FIELDS = 3;
 
     static constexpr char FULL_METHOD_DELIM = '.';
+    static constexpr std::string_view INIT_METHOD_NAME_SUFFIX = "_init";
+    static constexpr std::string_view PROTOTYPE_NAME_SUFFIX = "_protObj";
+    static constexpr std::string_view DISP_TAB_NAME_SUFFIX = "_dispTab";
 
     KlassMips(const std::shared_ptr<ast::Class> &klass, const KlassBuilder *builder) : Klass(klass, builder)
     {
@@ -56,6 +60,21 @@ class KlassMips : public Klass
      * @return Full name of the method
      */
     std::string method_full_name(const int &n) const;
+
+    std::string init_method() const override
+    {
+        return name() + static_cast<std::string>(INIT_METHOD_NAME_SUFFIX);
+    }
+
+    std::string prototype() const override
+    {
+        return name() + static_cast<std::string>(PROTOTYPE_NAME_SUFFIX);
+    }
+
+    std::string disp_tab() const override
+    {
+        return name() + static_cast<std::string>(DISP_TAB_NAME_SUFFIX);
+    }
 };
 
 class KlassBuilderMips : public KlassBuilder

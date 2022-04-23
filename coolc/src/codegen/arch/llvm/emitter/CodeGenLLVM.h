@@ -27,6 +27,13 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     const RuntimeLLVM _runtime;
     DataLLVM _data;
 
+    // helper values
+    llvm::Value *_true_obj;
+    llvm::Value *_false_obj;
+
+    llvm::Value *_true_val;
+    llvm::Value *_false_val;
+
     void add_fields() override;
 
     void emit_class_method_inner(const std::shared_ptr<ast::Feature> &method) override;
@@ -80,7 +87,6 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     llvm::Value *emit_load_int(llvm::Value *int_obj);
     llvm::Value *emit_allocate_int(llvm::Value *val);
     llvm::Value *emit_load_bool(llvm::Value *bool_obj);
-    llvm::Value *emit_allocate_bool(llvm::Value *val);
 
     // void emit_gc_update(const Register &obj, const int &offset);
 
@@ -89,12 +95,14 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
 
     // helpers
     llvm::Value *emit_new_inner(const std::shared_ptr<ast::Type> &klass);
+    llvm::Value *emit_load_self();
+    llvm::Value *emit_ternary_operator(llvm::Value *pred, llvm::Value *true_val, llvm::Value *false_val,
+                                       llvm::Type *type);
 
     // header helpers
     llvm::Value *emit_load_tag(llvm::Value *obj, llvm::Type *obj_type);
     llvm::Value *emit_load_size(llvm::Value *objv, llvm::Type *obj_type);
     llvm::Value *emit_load_dispatch_table(llvm::Value *obj, const std::shared_ptr<Klass> &klass);
-    llvm::Value *emit_load_self();
 
   public:
     explicit CodeGenLLVM(const std::shared_ptr<semant::ClassNode> &root);

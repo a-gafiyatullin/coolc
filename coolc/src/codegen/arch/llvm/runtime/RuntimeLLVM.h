@@ -55,19 +55,6 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
   public:
     enum RuntimeLLVMSymbols
     {
-        OBJECT_ABORT,
-        OBJECT_TYPE_NAME,
-        OBJECT_COPY,
-
-        STRING_LENGTH,
-        STRING_CONCAT,
-        STRING_SUBSTR,
-
-        IO_OUT_STRING,
-        IO_OUT_INT,
-        IO_IN_STRING,
-        IO_IN_INT,
-
         EQUALS,
         CASE_ABORT,
         GC_ALLOC,
@@ -90,22 +77,6 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
 
     const RuntimeMethod _equals;
     const RuntimeMethod _case_abort;
-
-    // Object class methods
-    const RuntimeMethod _object_abort;
-    const RuntimeMethod _object_type_name;
-    const RuntimeMethod _object_copy;
-
-    // String methods
-    const RuntimeMethod _string_length;
-    const RuntimeMethod _string_concat;
-    const RuntimeMethod _string_substr;
-
-    // IO methods
-    const RuntimeMethod _io_out_string;
-    const RuntimeMethod _io_out_int;
-    const RuntimeMethod _io_in_string;
-    const RuntimeMethod _io_in_int;
 
     // GC
     const RuntimeMethod _gc_alloc;

@@ -19,10 +19,10 @@ CodeGenMips::CodeGenMips(const std::shared_ptr<semant::ClassNode> &root)
     __ text_section();
 
     // we export some structures and method to global
-    __ global(Label(Names::init_method(MainClassName)));
-    __ global(Label(Names::init_method(BaseClassesNames[BaseClasses::INT])));
-    __ global(Label(Names::init_method(BaseClassesNames[BaseClasses::STRING])));
-    __ global(Label(Names::init_method(BaseClassesNames[BaseClasses::BOOL])));
+    __ global(Label(_builder->klass(MainClassName)->init_method()));
+    __ global(Label(_builder->klass(BaseClassesNames[BaseClasses::INT])->init_method()));
+    __ global(Label(_builder->klass(BaseClassesNames[BaseClasses::STRING])->init_method()));
+    __ global(Label(_builder->klass(BaseClassesNames[BaseClasses::BOOL])->init_method()));
     __ global(Label(_builder->klass(MainClassName)->method_full_name(MainMethodName)));
 }
 
@@ -226,14 +226,14 @@ void CodeGenMips::emit_method_epilogue(const int &params_num)
 
 void CodeGenMips::emit_class_init_method_inner()
 {
-    const AssemblerMarkSection mark(_asm, Label(Names::init_method(_current_class->_type->_string)));
+    const AssemblerMarkSection mark(_asm, Label(_builder->klass(_current_class->_type->_string)->init_method()));
 
     emit_method_prologue();
 
     if (!semant::Semant::is_empty_type(_current_class->_parent)) // Object moment
     {
-        __ jal(Label(Names::init_method(
-            _current_class->_parent->_string))); // receiver already is in acc, call parent constructor
+        __ jal(Label(_builder->klass(_current_class->_parent->_string)
+                         ->init_method())); // receiver already is in acc, call parent constructor
     }
 
     for (const auto &feature : _current_class->_features)
@@ -329,11 +329,11 @@ void CodeGenMips::emit_new_expr_inner(const ast::NewExpression &expr, const std:
     // we know the type
     if (!semant::Semant::is_self_type(expr._type))
     {
-        const auto &class_name = _builder->klass(expr._type->_string)->name();
+        const auto &klass = _builder->klass(expr._type->_string);
 
-        __ la(_a0, Label(Names::prototype(class_name)));
+        __ la(_a0, Label(klass->prototype()));
         __ jal(*_runtime.symbol_by_id(RuntimeMips::RuntimeMipsSymbols::OBJECT_COPY)); // result in acc
-        __ jal(Label(Names::init_method(class_name)));                                // result in acc
+        __ jal(Label(klass->init_method()));                                          // result in acc
     }
     else
     {

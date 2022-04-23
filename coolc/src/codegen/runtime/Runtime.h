@@ -2,6 +2,7 @@
 
 #include "codegen/constants/Constants.h"
 #include <cstdlib>
+#include <cstring>
 #include <stdio.h>
 
 extern "C"

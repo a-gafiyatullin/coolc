@@ -9,6 +9,9 @@ class KlassLLVM : public Klass
 {
   public:
     static constexpr char FULL_METHOD_DELIM = '_';
+    static constexpr std::string_view INIT_METHOD_SUFFIX = "-init";
+    static constexpr std::string_view PROTOTYPE_NAME_SUFFIX = "-protObj";
+    static constexpr std::string_view DISP_TAB_NAME_SUFFIX = "-dispTab";
 
     KlassLLVM(const std::shared_ptr<ast::Class> &klass, const KlassBuilder *builder) : Klass(klass, builder)
     {
@@ -41,6 +44,21 @@ class KlassLLVM : public Klass
     {
         GUARANTEE_DEBUG(field_idx - HeaderLayout::HeaderLayoutElemets < _fields.size());
         return _fields[field_idx - HeaderLayout::HeaderLayoutElemets]->_type;
+    }
+
+    std::string init_method() const override
+    {
+        return name() + static_cast<std::string>(INIT_METHOD_SUFFIX);
+    }
+
+    std::string prototype() const override
+    {
+        return name() + static_cast<std::string>(PROTOTYPE_NAME_SUFFIX);
+    }
+
+    std::string disp_tab() const override
+    {
+        return name() + static_cast<std::string>(DISP_TAB_NAME_SUFFIX);
     }
 };
 
