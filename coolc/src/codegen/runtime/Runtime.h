@@ -67,6 +67,14 @@ extern "C"
      */
     void dispatch_abort(StringLayout *filename, int linenumber);
 
+    /**
+     * @brief Abort on match on void
+     *
+     * @param filename File name of the method
+     * @param linenumber Line number of the method
+     */
+    void case_abort_2(StringLayout *filename, int linenumber);
+
     // Basic classes methods
     // ------------------------------ Object ------------------------------
     /**
@@ -163,7 +171,8 @@ extern "C"
      *
      * @param tag Object tag
      * @param size Object size
+     * @param disp_tab Dispatch table
      * @return Pointer to the newly allocated object
      */
-    ObjectLayout *gc_alloc(int tag, size_t size);
+    ObjectLayout *gc_alloc(int tag, size_t size, void *disp_tab);
 }

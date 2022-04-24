@@ -57,6 +57,7 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
     {
         EQUALS,
         CASE_ABORT,
+        CASE_ABORT_2,
         GC_ALLOC,
         DISPATCH_ABORT,
 
@@ -82,6 +83,7 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
 
     const RuntimeMethod _equals;
     const RuntimeMethod _case_abort;
+    const RuntimeMethod _case_abort_2;
     const RuntimeMethod _dispatch_abort;
 
     // GC

@@ -92,20 +92,6 @@ void CodeGenLLVM::emit_class_init_method_inner()
     __ CreateStore(self_formal, local);
     _table.add_symbol(SelfObject, Symbol(local, _current_class->_type));
 
-    // call parent constructor
-    if (!semant::Semant::is_empty_type(_current_class->_parent)) // Object moment
-    {
-        const auto parent_init = _builder->klass(_current_class->_parent->_string)->init_method();
-
-        // TODO: maybe better way to pass args?
-        __ CreateCall(_module.getFunction(parent_init), {func->getArg(0)},
-                      Names::name(Names::Comment::CALL, parent_init));
-    }
-
-    // set new dispatch table
-    __ CreateStore(_data.class_disp_tab(klass),
-                   __ CreateStructGEP(_data.class_struct(klass), func->getArg(0), HeaderLayout::DispatchTable));
-
     // set default value before init for fields of this class
     for (const auto &feature : _current_class->_features)
     {
@@ -162,59 +148,14 @@ void CodeGenLLVM::emit_class_init_method_inner()
         }
     }
 
-    for (const auto &feature : _current_class->_features)
+    // call parent constructor
+    if (!semant::Semant::is_empty_type(_current_class->_parent)) // Object moment
     {
-        if (std::holds_alternative<ast::AttrFeature>(feature->_base))
-        {
-            llvm::Value *initial_val = nullptr;
+        const auto parent_init = _builder->klass(_current_class->_parent->_string)->init_method();
 
-            const auto &this_field = _table.symbol(feature->_object->_object);
-            GUARANTEE_DEBUG(this_field._type == Symbol::FIELD); // impossible
-
-            auto *const field_ptr =
-                __ CreateStructGEP(_data.class_struct(klass), func->getArg(0), this_field._value._offset);
-
-            if (semant::Semant::is_trivial_type(feature->_type))
-            {
-                initial_val = _data.init_value(feature->_type);
-            }
-            else if (!semant::Semant::is_native_type(feature->_type))
-            {
-                GUARANTEE_DEBUG(field_ptr->getType()->isPointerTy());
-                initial_val = llvm::ConstantPointerNull::get(static_cast<llvm::PointerType *>(field_ptr->getType()));
-            }
-            else
-            {
-                GUARANTEE_DEBUG(semant::Semant::is_basic_type(_current_class->_type));
-                // TODO: can be SELF_TYPE here?
-                if (semant::Semant::is_native_int(feature->_type))
-                {
-                    // TODO: maybe carry out type to class field?
-                    // TODO: maybe carry out initial value to class field?
-                    initial_val = llvm::ConstantInt::get(llvm::Type::getInt64Ty(_context), 0);
-                }
-                // TODO: can be SELF_TYPE here?
-                else if (semant::Semant::is_native_bool(feature->_type))
-                {
-                    // TODO: maybe carry out type to class field?
-                    // TODO: maybe carry out initial value to class field?
-                    // TODO: bool is 64 bit int now
-                    initial_val = llvm::ConstantInt::get(llvm::Type::getInt64Ty(_context), 0);
-                }
-                // TODO: can be SELF_TYPE here?
-                else if (semant::Semant::is_native_string(feature->_type))
-                {
-                    initial_val = _data.make_char_string("");
-                }
-                else
-                {
-                    SHOULD_NOT_REACH_HERE();
-                }
-            }
-
-            // TODO: check this inst twice
-            __ CreateStore(initial_val, field_ptr);
-        }
+        // TODO: maybe better way to pass args?
+        __ CreateCall(_module.getFunction(parent_init), {func->getArg(0)},
+                      Names::name(Names::Comment::CALL, parent_init));
     }
 
     // Now initialize
@@ -458,13 +399,15 @@ llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass
     {
         const auto &klass = _builder->klass(klass_type->_string);
         auto *const klass_struct = _data.class_struct(klass);
+        auto *const disp_table = _data.class_disp_tab(klass);
 
         // prepare tag, size and dispatch table
         auto *const tag = llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag());
         auto *const size = llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size());
 
         // call allocation and cast to this klass pointer
-        auto *const raw_object = __ CreateCall(func, {tag, size}, Names::name(Names::Comment::CALL, alloc_func_name));
+        auto *const raw_object =
+            __ CreateCall(func, {tag, size, disp_table}, Names::name(Names::Comment::CALL, alloc_func_name));
         auto *const object = __ CreateBitCast(raw_object, klass_struct->getPointerTo());
 
         // call init
@@ -482,9 +425,11 @@ llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass
     // get info about this object
     auto *const tag = emit_load_tag(self_val, klass_struct);
     auto *const size = emit_load_size(self_val, klass_struct);
+    auto *const dispatch_table = emit_load_dispatch_table(self_val, klass);
 
     // allocate memory
-    auto *const raw_object = __ CreateCall(func, {tag, size}, Names::name(Names::Comment::CALL, alloc_func_name));
+    auto *const raw_object =
+        __ CreateCall(func, {tag, size, dispatch_table}, Names::name(Names::Comment::CALL, alloc_func_name));
 
     // lookup init method
     const auto class_obj_tab_name = _runtime.symbol_name(RuntimeLLVM::RuntimeLLVMSymbols::CLASS_OBJ_TAB);
@@ -543,8 +488,6 @@ llvm::Value *CodeGenLLVM::emit_cases_expr_inner(const ast::CaseExpression &expr,
 {
     auto *const pred = emit_expr(expr._expr);
 
-    // TODO: case abort 2 here
-
     // we want to generate code for the the most precise cases first, so sort cases by tag
     // TODO: can be SELF_TYPE here?
     auto cases = expr._cases;
@@ -557,11 +500,22 @@ llvm::Value *CodeGenLLVM::emit_cases_expr_inner(const ast::CaseExpression &expr,
 
     auto *const func = __ GetInsertBlock()->getParent();
 
+    auto *const true_bb = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::TRUE_BRANCH), func);
+    auto *const false_bb = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::FALSE_BRANCH));
+    auto *const merge_bb = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::MERGE_BLOCK));
+
+    // TODO: CreateIsNotNull
+    auto *const is_null =
+        __ CreateICmpEQ(pred, llvm::ConstantPointerNull::get(static_cast<llvm::PointerType *>(pred->getType())),
+                        Names::comment(Names::Comment::CMP_EQ));
+    auto *const is_not_null = __ CreateNot(is_null, Names::comment(Names::Comment::NEG));
+    __ CreateCondBr(is_not_null, true_bb, false_bb);
+
+    __ SetInsertPoint(true_bb);
+
     auto *const tag =
         emit_load_tag(pred, _data.class_struct(_builder->klass(
                                 semant::Semant::exact_type(expr._expr->_type, _current_class->_type)->_string)));
-
-    auto *const merge_bb = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::MERGE_BLOCK));
 
     auto *const res_ptr_type =
         _data.class_struct(_builder->klass(semant::Semant::exact_type(expr_type, _current_class->_type)->_string))
@@ -617,6 +571,19 @@ llvm::Value *CodeGenLLVM::emit_cases_expr_inner(const ast::CaseExpression &expr,
     // do it just for phi
     results.push_back({__ GetInsertBlock(), llvm::ConstantPointerNull::get(res_ptr_type)});
     __ CreateBr(merge_bb);
+
+    // pred is null
+    func->getBasicBlockList().push_back(false_bb);
+    __ SetInsertPoint(false_bb);
+    const auto &case_abort_2_id = RuntimeLLVM::RuntimeLLVMSymbols::CASE_ABORT_2;
+    auto *const case_abort_2_func = _runtime.symbol_by_id(case_abort_2_id)->_func;
+    const auto case_abort_2_name = _runtime.symbol_name(case_abort_2_id);
+    __ CreateCall(case_abort_2_func,
+                  {_data.string_const(_current_class->_file_name),
+                   llvm::ConstantInt::get(_runtime.int32_type(), expr._expr->_line_number)},
+                  Names::name(Names::Comment::CALL, case_abort_2_name));
+    __ CreateBr(merge_bb);
+    results.push_back({false_bb, llvm::ConstantPointerNull::get(res_ptr_type)});
 
     // return value
     func->getBasicBlockList().push_back(merge_bb);
