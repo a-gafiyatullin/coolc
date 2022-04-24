@@ -4,14 +4,14 @@ ObjectLayout *Object_abort(ObjectLayout *receiver)
 {
     auto *const name = reinterpret_cast<StringLayout *>(((void **)&ClassNameTab)[receiver->_tag]);
 
-    fprintf(stderr, "Abort called from class %s", (char *)name->_string);
+    fprintf(stderr, "Abort called from class %s", name->_string);
 
     exit(-1);
 
     return nullptr;
 }
 
-ObjectLayout *gc_alloc(int tag, size_t size, void *disp_tab)
+ObjectLayout *gc_alloc(int tag, size_t size)
 {
     // TODO: dummy allocation. Should be managed by GC
     void *object = malloc(size);
@@ -20,7 +20,6 @@ ObjectLayout *gc_alloc(int tag, size_t size, void *disp_tab)
     layout->_mark = MarkWordDefaultValue;
     layout->_tag = tag;
     layout->_size = size;
-    layout->_dispatch_table = disp_tab;
 
     return layout;
 }
@@ -53,7 +52,8 @@ IntLayout *String_length(StringLayout *receiver)
 
 IntLayout *make_int(const int &value, void *int_disp_tab)
 {
-    auto *const int_obj = reinterpret_cast<IntLayout *>(gc_alloc(IntTag, sizeof(IntLayout), int_disp_tab));
+    auto *const int_obj = reinterpret_cast<IntLayout *>(gc_alloc(IntTag, sizeof(IntLayout)));
+    int_obj->_header._dispatch_table = int_disp_tab;
     int_obj->_value = value;
 
     return int_obj;
@@ -103,13 +103,18 @@ ObjectLayout *IO_out_int(ObjectLayout *receiver, IntLayout *integer)
 void case_abort(int tag)
 {
     auto *const name = reinterpret_cast<StringLayout *>(((void **)&ClassNameTab)[tag]);
-    fprintf(stderr, "No match in case statement for Class %s", (char *)name->_string);
+    fprintf(stderr, "No match in case statement for Class %s", name->_string);
 
     exit(-1);
 }
 
 int equals(ObjectLayout *lo, ObjectLayout *ro)
 {
+    if (!lo || !ro)
+    {
+        return FalseValue;
+    }
+
     const auto &lo_tag = lo->_tag;
     const auto &ro_tag = ro->_tag;
 
@@ -142,4 +147,11 @@ int equals(ObjectLayout *lo, ObjectLayout *ro)
     }
 
     return FalseValue;
+}
+
+void dispatch_abort(StringLayout *filename, int linenumber)
+{
+    fprintf(stderr, "%s:%d: Dispatch to void.", filename->_string, linenumber);
+
+    exit(-1);
 }

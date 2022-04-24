@@ -112,7 +112,8 @@ void DataLLVM::class_struct_inner(const std::shared_ptr<Klass> &klass)
     // add fields
     std::for_each(klass->fields_begin(), klass->fields_end(), [&fields, klass, this](const auto &field) {
         fields.push_back(
-            class_struct(_builder->klass(semant::Semant::exact_type(field->_type, klass->klass())->_string)));
+            class_struct(_builder->klass(semant::Semant::exact_type(field->_type, klass->klass())->_string))
+                ->getPointerTo());
     });
 
     class_structure->setBody(fields);

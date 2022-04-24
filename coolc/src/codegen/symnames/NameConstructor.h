@@ -41,6 +41,7 @@ class Names
         PHI,
         XOR,
         NEG,
+        NOT,
 
         OBJ_TAG,
         OBJ_SIZE,

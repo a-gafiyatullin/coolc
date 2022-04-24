@@ -120,6 +120,16 @@ class Klass
      * @return Offset
      */
     virtual size_t field_offset(const int &field_num) const = 0;
+
+    /**
+     * @brief Fields number without header
+     *
+     * @return Fields number
+     */
+    int fields_num() const
+    {
+        return _fields.size();
+    }
     // ------------------------------------ METHODS ------------------------------------
 
     /**

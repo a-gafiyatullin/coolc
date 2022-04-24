@@ -58,6 +58,7 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
         EQUALS,
         CASE_ABORT,
         GC_ALLOC,
+        DISPATCH_ABORT,
 
         CLASS_NAME_TAB,
         CLASS_OBJ_TAB,
@@ -81,6 +82,7 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
 
     const RuntimeMethod _equals;
     const RuntimeMethod _case_abort;
+    const RuntimeMethod _dispatch_abort;
 
     // GC
     const RuntimeMethod _gc_alloc;
@@ -90,9 +92,6 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
      * @brief Construct a new Runtime object
      *
      * @param module llvm::Module for function declarations
-     * @param bool_tag Tag of Bool Class
-     * @param int_tag Tag of Int Class
-     * @param string_tag Tag of String Class
      */
     explicit RuntimeLLVM(llvm::Module &module);
 
