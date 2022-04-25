@@ -82,6 +82,8 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
     llvm::Type *_header_layout_types[HeaderLayoutElemets];
 
     const RuntimeMethod _equals;
+
+    // Exceptional situations
     const RuntimeMethod _case_abort;
     const RuntimeMethod _case_abort_2;
     const RuntimeMethod _dispatch_abort;

@@ -1,6 +1,6 @@
 #include "Runtime.h"
 
-ObjectLayout *Object_abort(ObjectLayout *receiver)
+ObjectLayout *Object_abort(ObjectLayout *receiver) // NOLINT
 {
     auto *const name = reinterpret_cast<StringLayout *>(((void **)&ClassNameTab)[receiver->_tag]);
 
@@ -11,7 +11,7 @@ ObjectLayout *Object_abort(ObjectLayout *receiver)
     return nullptr;
 }
 
-ObjectLayout *gc_alloc(int tag, size_t size, void *disp_tab)
+ObjectLayout *gc_alloc(int tag, size_t size, void *disp_tab) // NOLINT
 {
     // TODO: dummy allocation. Should be managed by GC
     void *object = malloc(size);
@@ -25,19 +25,19 @@ ObjectLayout *gc_alloc(int tag, size_t size, void *disp_tab)
     return layout;
 }
 
-ObjectLayout *IO_out_string(ObjectLayout *receiver, StringLayout *str)
+ObjectLayout *IO_out_string(ObjectLayout *receiver, StringLayout *str) // NOLINT
 {
     printf("%s", str->_string);
 
     return receiver;
 }
 
-StringLayout *Object_type_name(ObjectLayout *receiver)
+StringLayout *Object_type_name(ObjectLayout *receiver) // NOLINT
 {
     return reinterpret_cast<StringLayout *>(((void **)&ClassNameTab)[receiver->_tag]);
 }
 
-ObjectLayout *Object_copy(ObjectLayout *receiver)
+ObjectLayout *Object_copy(ObjectLayout *receiver) // NOLINT
 {
     // TODO: dummy allocation. Should be managed by GC
     auto *const object = reinterpret_cast<ObjectLayout *>(malloc(receiver->_size));
@@ -59,7 +59,7 @@ IntLayout *make_int(const int &value, void *int_disp_tab)
     return int_obj;
 }
 
-StringLayout *String_concat(StringLayout *receiver, StringLayout *str)
+StringLayout *String_concat(StringLayout *receiver, StringLayout *str) // NOLINT
 {
     auto *const new_string = reinterpret_cast<StringLayout *>(Object_copy(reinterpret_cast<ObjectLayout *>(receiver)));
 
@@ -73,7 +73,7 @@ StringLayout *String_concat(StringLayout *receiver, StringLayout *str)
     return new_string;
 }
 
-StringLayout *String_substr(StringLayout *receiver, IntLayout *index, IntLayout *len)
+StringLayout *String_substr(StringLayout *receiver, IntLayout *index, IntLayout *len) // NOLINT
 {
     auto *const new_string = reinterpret_cast<StringLayout *>(Object_copy(reinterpret_cast<ObjectLayout *>(receiver)));
 
@@ -85,15 +85,15 @@ StringLayout *String_substr(StringLayout *receiver, IntLayout *index, IntLayout 
     return new_string;
 }
 
-IntLayout *IO_in_int(ObjectLayout *receiver)
+IntLayout *IO_in_int(ObjectLayout *receiver) // NOLINT
 {
 }
 
-StringLayout *IO_in_string(ObjectLayout *receiver)
+StringLayout *IO_in_string(ObjectLayout *receiver) // NOLINT
 {
 }
 
-ObjectLayout *IO_out_int(ObjectLayout *receiver, IntLayout *integer)
+ObjectLayout *IO_out_int(ObjectLayout *receiver, IntLayout *integer) // NOLINT
 {
     printf("%lld", integer->_value);
 
@@ -125,12 +125,14 @@ int equals(ObjectLayout *lo, ObjectLayout *ro)
 
     if (lo_tag == BoolTag)
     {
-        return reinterpret_cast<BoolLayout *>(lo)->_value == reinterpret_cast<BoolLayout *>(ro)->_value;
+        return reinterpret_cast<BoolLayout *>(lo)->_value == reinterpret_cast<BoolLayout *>(ro)->_value ? TrueValue
+                                                                                                        : FalseValue;
     }
 
     if (lo_tag == IntTag)
     {
-        return reinterpret_cast<IntLayout *>(lo)->_value == reinterpret_cast<IntLayout *>(ro)->_value;
+        return reinterpret_cast<IntLayout *>(lo)->_value == reinterpret_cast<IntLayout *>(ro)->_value ? TrueValue
+                                                                                                      : FalseValue;
     }
 
     if (lo_tag == StringTag)

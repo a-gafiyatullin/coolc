@@ -28,6 +28,7 @@ DataLLVM::DataLLVM(const std::shared_ptr<KlassBuilder> &builder, llvm::Module &m
     make_base_class(_builder->klass(BaseClassesNames[BaseClasses::IO]), {});
 
     // create constants for basic classes tags
+    // order in tags synchronized with RuntimeLLVM::RuntimeLLVMSymbols
     const int tags[] = {_builder->tag(BaseClassesNames[BaseClasses::INT]),
                         _builder->tag(BaseClassesNames[BaseClasses::BOOL]),
                         _builder->tag(BaseClassesNames[BaseClasses::STRING])};
@@ -35,27 +36,49 @@ DataLLVM::DataLLVM(const std::shared_ptr<KlassBuilder> &builder, llvm::Module &m
     for (int i = RuntimeLLVM::RuntimeLLVMSymbols::INT_TAG_NAME; i <= RuntimeLLVM::RuntimeLLVMSymbols::STRING_TAG_NAME;
          i++)
     {
-        auto *tag_global =
-            static_cast<llvm::GlobalVariable *>(module.getOrInsertGlobal(_runtime.symbol_name(i), tag_type));
-        tag_global->setInitializer(
-            llvm::ConstantInt::get(tag_type, tags[i - RuntimeLLVM::RuntimeLLVMSymbols::INT_TAG_NAME]));
-        tag_global->setLinkage(llvm::GlobalValue::ExternalLinkage);
-        tag_global->setConstant(true);
+        make_constant(_runtime.symbol_name(i), tag_type,
+                      llvm::ConstantInt::get(tag_type, tags[i - RuntimeLLVM::RuntimeLLVMSymbols::INT_TAG_NAME]));
     }
 }
 
-llvm::GlobalVariable *DataLLVM::make_disp_table(const std::string &name, llvm::StructType *type,
-                                                const std::vector<llvm::Constant *> &methods)
+llvm::GlobalVariable *DataLLVM::make_constant_struct(const std::string &name, llvm::StructType *type,
+                                                     const std::vector<llvm::Constant *> &elements)
 {
-    _module.getOrInsertGlobal(name, type);
 
-    auto *const disp_table_global = _module.getNamedGlobal(name);
-    disp_table_global->setInitializer(llvm::ConstantStruct::get(type, methods));
-    disp_table_global->setLinkage(llvm::GlobalValue::ExternalLinkage);
-    disp_table_global->setConstant(true);
+    auto *const constant = static_cast<llvm::GlobalVariable *>(_module.getOrInsertGlobal(name, type));
+    constant->setInitializer(llvm::ConstantStruct::get(type, elements));
+    constant->setLinkage(llvm::GlobalValue::ExternalLinkage);
+    constant->setConstant(true);
 
-    // don't need allignment because all fields are pointers
-    return disp_table_global;
+    // TODO: need allignment?
+    return constant;
+}
+
+llvm::GlobalVariable *DataLLVM::make_constant(const std::string &name, llvm::Type *type, llvm::Constant *element)
+{
+    auto *const constant = static_cast<llvm::GlobalVariable *>(_module.getOrInsertGlobal(name, type));
+    GUARANTEE_DEBUG(constant);
+
+    constant->setInitializer(element);
+    constant->setLinkage(llvm::GlobalValue::ExternalLinkage);
+    constant->setConstant(true);
+
+    // TODO: need allignment?
+    return constant;
+}
+
+llvm::GlobalVariable *DataLLVM::make_constant_array(const std::string &name, llvm::ArrayType *type,
+                                                    const std::vector<llvm::Constant *> &elements)
+{
+    auto *const constant = static_cast<llvm::GlobalVariable *>(_module.getOrInsertGlobal(name, type));
+    GUARANTEE_DEBUG(constant);
+
+    constant->setInitializer(llvm::ConstantArray::get(type, elements));
+    constant->setLinkage(llvm::GlobalValue::ExternalLinkage);
+    constant->setConstant(true);
+
+    // TODO: need allignment?
+    return constant;
 }
 
 void DataLLVM::make_init_method(const std::shared_ptr<Klass> &klass)
@@ -73,8 +96,6 @@ void DataLLVM::make_init_method(const std::shared_ptr<Klass> &klass)
 
 void DataLLVM::make_base_class(const std::shared_ptr<Klass> &klass, const std::vector<llvm::Type *> &additional_fields)
 {
-    const auto &class_name = klass->name();
-
     // header
     std::vector<llvm::Type *> fields;
     make_header(klass, fields);
@@ -180,109 +201,88 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
 
     const auto &disp_tab_name = klass->disp_tab();
     _dispatch_tables.insert(
-        {klass->name(), make_disp_table(disp_tab_name,
-                                        llvm::StructType::create(_module.getContext(), method_types,
-                                                                 Names::name(Names::Comment::TYPE, disp_tab_name)),
-                                        methods)});
+        {klass->name(), make_constant_struct(disp_tab_name,
+                                             llvm::StructType::create(_module.getContext(), method_types,
+                                                                      Names::name(Names::Comment::TYPE, disp_tab_name)),
+                                             methods)});
 }
 
 void DataLLVM::int_const_inner(const int64_t &value)
 {
-    const auto &klass = _builder->klass(BaseClassesNames[BaseClasses::INT]);
-    auto *const int_struct = _classes.at(BaseClassesNames[BaseClasses::INT]);
+    const auto &klass_name = BaseClassesNames[BaseClasses::INT];
 
-    const auto const_name = Names::int_constant();
+    const auto &klass = _builder->klass(klass_name);
+    auto *const int_struct = _classes.at(klass_name);
 
-    auto *const const_global = static_cast<llvm::GlobalVariable *>(_module.getOrInsertGlobal(const_name, int_struct));
-    const_global->setInitializer(llvm::ConstantStruct::get(
-        int_struct, {llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordDefaultValue, true),
-                     llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag(), true),
-                     llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size() / WORD_SIZE),
-                     _dispatch_tables.at(BaseClassesNames[BaseClasses::INT]),
-                     llvm::ConstantInt::get(int_struct->getElementType(HeaderLayout::DispatchTable + 1), value,
-                                            true)})); // value field
+    auto *const constant_int = make_constant_struct(
+        Names::int_constant(), int_struct,
+        {llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordDefaultValue, true),
+         llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag(), true),
+         llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size),
+                                klass->size() / WORD_SIZE), // TODO: is it correct?
+         _dispatch_tables.at(klass_name),
+         llvm::ConstantInt::get(int_struct->getElementType(HeaderLayout::DispatchTable + 1), value,
+                                true)}); // value field
 
-    const_global->setConstant(true);
-    const_global->setLinkage(llvm::GlobalValue::ExternalLinkage);
-
-    // don't need allignment because all fields are word-sized
-    _int_constants.insert({value, const_global});
+    _int_constants.insert({value, constant_int});
 }
 
 llvm::Constant *DataLLVM::make_char_string(const std::string &str)
 {
     auto *const char_type = _runtime.int8_type();
 
-    // 1. Initialize chars vector
-    std::vector<llvm::Constant *> chars(str.length());
+    std::vector<llvm::Constant *> chars;
     for (auto i = 0; i < str.size(); i++)
     {
-        chars[i] = llvm::ConstantInt::get(char_type, str[i]);
+        chars.push_back(llvm::ConstantInt::get(char_type, str[i]));
     }
 
-    // 1b. add a zero terminator too
     chars.push_back(llvm::ConstantInt::get(char_type, 0));
 
-    // 2. Initialize the string from the characters
-    auto *const initializer = llvm::ConstantArray::get(llvm::ArrayType::get(char_type, chars.size()), chars);
-
-    // 3. Create the declaration statement
-    auto *const const_global = (llvm::GlobalVariable *)_module.getOrInsertGlobal(
-        Names::name(Names::Comment::CHAR_STRING, str), initializer->getType());
-    const_global->setInitializer(initializer);
-    const_global->setConstant(true);
-    const_global->setLinkage(llvm::GlobalValue::ExternalLinkage);
+    auto *const const_char_str = make_constant_array(Names::name(Names::Comment::CHAR_STRING, str),
+                                                     llvm::ArrayType::get(char_type, chars.size()), chars);
 
     // TODO: need this?
     // const_global->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
-    return const_global;
+    return const_char_str;
 }
 
 void DataLLVM::string_const_inner(const std::string &str)
 {
-    const auto &klass = _builder->klass(BaseClassesNames[BaseClasses::STRING]);
-    auto *const str_struct = _classes.at(BaseClassesNames[BaseClasses::STRING]);
+    const auto &klass_name = BaseClassesNames[BaseClasses::STRING];
+    const auto &klass = _builder->klass(klass_name);
 
-    const auto const_name = Names::string_constant();
-
-    auto *const const_global = static_cast<llvm::GlobalVariable *>(_module.getOrInsertGlobal(const_name, str_struct));
-    const_global->setInitializer(llvm::ConstantStruct::get(
-        str_struct,
+    auto *const constant_str = make_constant_struct(
+        Names::string_constant(), _classes.at(klass_name),
         {llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordDefaultValue, true),
          llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag(), true),
-         llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size() / WORD_SIZE),
-         _dispatch_tables.at(BaseClassesNames[BaseClasses::STRING]), int_const(str.length()), // length field
-         make_char_string(str)}));                                                            // string field
+         llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size),
+                                klass->size() / WORD_SIZE),        // TODO: is it correct?
+         _dispatch_tables.at(klass_name), int_const(str.length()), // length field
+         make_char_string(str)});                                  // string field
 
-    const_global->setConstant(true);
-    const_global->setLinkage(llvm::GlobalValue::ExternalLinkage);
-
-    // don't need allignment because all fields are word-sized
-    _string_constants.insert({str, const_global});
+    _string_constants.insert({str, constant_str});
 }
 
 void DataLLVM::bool_const_inner(const bool &value)
 {
-    const auto &klass = _builder->klass(BaseClassesNames[BaseClasses::BOOL]);
-    auto *const bool_struct = _classes.at(BaseClassesNames[BaseClasses::BOOL]);
+    const auto &klass_name = BaseClassesNames[BaseClasses::BOOL];
 
-    const auto const_name = Names::bool_constant();
+    const auto &klass = _builder->klass(klass_name);
+    auto *const bool_struct = _classes.at(klass_name);
 
-    auto *const const_global = static_cast<llvm::GlobalVariable *>(_module.getOrInsertGlobal(const_name, bool_struct));
-    const_global->setInitializer(llvm::ConstantStruct::get(
-        bool_struct, {llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordDefaultValue, true),
-                      llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag(), true),
-                      llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size() / WORD_SIZE),
-                      _dispatch_tables.at(BaseClassesNames[BaseClasses::BOOL]),
-                      llvm::ConstantInt::get(bool_struct->getElementType(HeaderLayout::DispatchTable + 1), value,
-                                             true)})); // value field
+    auto *const constant_bool = make_constant_struct(
+        Names::bool_constant(), bool_struct,
+        {llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordDefaultValue, true),
+         llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag(), true),
+         llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size),
+                                klass->size() / WORD_SIZE), // TODO: is it correct?
+         _dispatch_tables.at(klass_name),
+         llvm::ConstantInt::get(bool_struct->getElementType(HeaderLayout::DispatchTable + 1), value,
+                                true)}); // value field
 
-    const_global->setConstant(true);
-    const_global->setLinkage(llvm::GlobalValue::ExternalLinkage);
-
-    // don't need allignment because all fields are word-sized
-    _bool_constants.insert({value, const_global});
+    _bool_constants.insert({value, constant_bool});
 }
 
 void DataLLVM::gen_class_obj_tab()
@@ -293,6 +293,7 @@ void DataLLVM::gen_class_obj_tab()
     }
 
     std::vector<llvm::Constant *> init_methods;
+
     for (const auto &klass : _builder->klasses())
     {
         auto *const init_method = _module.getFunction(klass->init_method());
@@ -300,36 +301,26 @@ void DataLLVM::gen_class_obj_tab()
         init_methods.push_back(init_method);
     }
 
-    // array of init methods
     GUARANTEE_DEBUG(init_methods.size());
-    auto *const initializer =
-        llvm::ConstantArray::get(llvm::ArrayType::get(init_methods[0]->getType(), init_methods.size()), init_methods);
-
-    auto *const const_global = static_cast<llvm::GlobalVariable *>(_module.getOrInsertGlobal(
-        _runtime.symbol_name(RuntimeLLVM::RuntimeLLVMSymbols::CLASS_OBJ_TAB), initializer->getType()));
-    const_global->setInitializer(initializer);
-    const_global->setConstant(true);
-    const_global->setLinkage(llvm::GlobalValue::ExternalLinkage);
+    make_constant_array(_runtime.symbol_name(RuntimeLLVM::RuntimeLLVMSymbols::CLASS_OBJ_TAB),
+                        llvm::ArrayType::get(init_methods[0]->getType(), init_methods.size()), init_methods);
 }
 
 void DataLLVM::gen_class_name_tab()
 {
     std::vector<llvm::Constant *> names;
+
     for (const auto &klass : _builder->klasses())
     {
         names.push_back(string_const(klass->name()));
     }
 
-    auto *const initializer = llvm::ConstantArray::get(
+    GUARANTEE_DEBUG(names.size());
+    make_constant_array(
+        _runtime.symbol_name(RuntimeLLVM::RuntimeLLVMSymbols::CLASS_NAME_TAB),
         llvm::ArrayType::get(class_struct(_builder->klass(BaseClassesNames[BaseClasses::STRING]))->getPointerTo(),
                              names.size()),
         names);
-
-    auto *const const_global = (llvm::GlobalVariable *)_module.getOrInsertGlobal(
-        _runtime.symbol_name(RuntimeLLVM::RuntimeLLVMSymbols::CLASS_NAME_TAB), initializer->getType());
-    const_global->setInitializer(initializer);
-    const_global->setConstant(true);
-    const_global->setLinkage(llvm::GlobalValue::ExternalLinkage);
 }
 
 void DataLLVM::emit_inner(const std::string &out_file)

@@ -122,7 +122,6 @@ class Names
      * @brief Get new name of the specified type
      *
      * @param type Name type
-     * @param next Do next
      * @return Name of the specified type
      */
     inline static std::string name(const Comment &type)
