@@ -463,7 +463,7 @@ llvm::Value *CodeGenLLVM::emit_load_tag(llvm::Value *obj, llvm::Type *obj_type)
     auto *const tag_ptr = __ CreateStructGEP(obj_type, obj, HeaderLayout::Tag);
 
     return __ CreateLoad(_runtime.header_elem_type(HeaderLayout::Tag), tag_ptr,
-                         Names::name(Names::Comment::OBJ_TAG, obj->getName()));
+                         Names::name(Names::Comment::OBJ_TAG, static_cast<std::string>(obj->getName())));
 }
 
 llvm::Value *CodeGenLLVM::emit_load_size(llvm::Value *obj, llvm::Type *obj_type)
@@ -471,7 +471,7 @@ llvm::Value *CodeGenLLVM::emit_load_size(llvm::Value *obj, llvm::Type *obj_type)
     auto *const size_ptr = __ CreateStructGEP(obj_type, obj, HeaderLayout::Size);
 
     return __ CreateLoad(_runtime.header_elem_type(HeaderLayout::Size), size_ptr,
-                         Names::name(Names::Comment::OBJ_SIZE, obj->getName()));
+                         Names::name(Names::Comment::OBJ_SIZE, static_cast<std::string>(obj->getName())));
 }
 
 llvm::Value *CodeGenLLVM::emit_load_dispatch_table(llvm::Value *obj, const std::shared_ptr<Klass> &klass)
@@ -480,7 +480,7 @@ llvm::Value *CodeGenLLVM::emit_load_dispatch_table(llvm::Value *obj, const std::
         __ CreateStructGEP(obj->getType()->getPointerElementType(), obj, HeaderLayout::DispatchTable);
 
     return __ CreateLoad(_data.class_disp_tab(klass)->getType(), dispatch_table_ptr_ptr,
-                         Names::name(Names::Comment::OBJ_DISP_TAB, obj->getName()));
+                         Names::name(Names::Comment::OBJ_DISP_TAB, static_cast<std::string>(obj->getName())));
 }
 
 llvm::Value *CodeGenLLVM::emit_cases_expr_inner(const ast::CaseExpression &expr,
@@ -802,7 +802,7 @@ llvm::Value *CodeGenLLVM::emit_load_primitive(llvm::Value *obj, llvm::Type *obj_
     const auto &value_ptr = __ CreateStructGEP(obj_type, obj, HeaderLayout::DispatchTable + 1);
 
     return __ CreateLoad(static_cast<llvm::StructType *>(obj_type)->getElementType(HeaderLayout::DispatchTable + 1),
-                         value_ptr, Names::name(Names::Comment::VALUE, obj->getName()));
+                         value_ptr, Names::name(Names::Comment::VALUE, static_cast<std::string>(obj->getName())));
 }
 
 llvm::Value *CodeGenLLVM::emit_allocate_primitive(llvm::Value *val, const std::shared_ptr<Klass> &klass)
@@ -811,8 +811,9 @@ llvm::Value *CodeGenLLVM::emit_allocate_primitive(llvm::Value *val, const std::s
     auto *const obj = emit_new_inner(klass->klass());
 
     // record value
-    auto *const val_ptr = __ CreateStructGEP(_data.class_struct(klass), obj, HeaderLayout::DispatchTable + 1,
-                                             Names::name(Names::Comment::VALUE, obj->getName()));
+    auto *const val_ptr =
+        __ CreateStructGEP(_data.class_struct(klass), obj, HeaderLayout::DispatchTable + 1,
+                           Names::name(Names::Comment::VALUE, static_cast<std::string>(obj->getName())));
     __ CreateStore(val, val_ptr);
 
     return obj;

@@ -67,7 +67,8 @@ target_link_libraries(coolc lexer parser semant utils ast codegen decls ${LIBS})
 
 # Build runtime lib. Allow ClassNameTab to be undefined.
 if(APPLE)
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-U,_ClassNameTab")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-U,_ClassNameTab, -Wl,-U,_BoolTag, -Wl,-U,_IntTag, -Wl,-U,_StringTag")
+    set(CMAKE_SHARED_LIBRARY_SUFFIX .so)
 endif()
 add_subdirectory(src/codegen/runtime)
 

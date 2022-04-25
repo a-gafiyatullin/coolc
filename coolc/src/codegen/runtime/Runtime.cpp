@@ -42,6 +42,7 @@ ObjectLayout *Object_copy(ObjectLayout *receiver) // NOLINT
     // TODO: dummy allocation. Should be managed by GC
     auto *const object = reinterpret_cast<ObjectLayout *>(malloc(receiver->_size));
     memcpy(object, receiver, receiver->_size);
+    object->_mark = MarkWordDefaultValue;
 
     return object;
 }

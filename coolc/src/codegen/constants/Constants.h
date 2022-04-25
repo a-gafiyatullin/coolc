@@ -19,3 +19,4 @@
 #define FalseValue 0
 #define DefaultValue 0
 #define MarkWordDefaultValue -1
+#define MarkWordSetValue 1

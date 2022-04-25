@@ -216,10 +216,9 @@ void DataLLVM::int_const_inner(const int64_t &value)
 
     auto *const constant_int = make_constant_struct(
         Names::int_constant(), int_struct,
-        {llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordDefaultValue, true),
+        {llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordSetValue, true),
          llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag(), true),
-         llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size),
-                                klass->size() / WORD_SIZE), // TODO: is it correct?
+         llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size()),
          _dispatch_tables.at(klass_name),
          llvm::ConstantInt::get(int_struct->getElementType(HeaderLayout::DispatchTable + 1), value,
                                 true)}); // value field
@@ -255,10 +254,9 @@ void DataLLVM::string_const_inner(const std::string &str)
 
     auto *const constant_str = make_constant_struct(
         Names::string_constant(), _classes.at(klass_name),
-        {llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordDefaultValue, true),
+        {llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordSetValue, true),
          llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag(), true),
-         llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size),
-                                klass->size() / WORD_SIZE),        // TODO: is it correct?
+         llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size()),
          _dispatch_tables.at(klass_name), int_const(str.length()), // length field
          make_char_string(str)});                                  // string field
 
@@ -274,10 +272,9 @@ void DataLLVM::bool_const_inner(const bool &value)
 
     auto *const constant_bool = make_constant_struct(
         Names::bool_constant(), bool_struct,
-        {llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordDefaultValue, true),
+        {llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordSetValue, true),
          llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag(), true),
-         llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size),
-                                klass->size() / WORD_SIZE), // TODO: is it correct?
+         llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size()),
          _dispatch_tables.at(klass_name),
          llvm::ConstantInt::get(bool_struct->getElementType(HeaderLayout::DispatchTable + 1), value,
                                 true)}); // value field
