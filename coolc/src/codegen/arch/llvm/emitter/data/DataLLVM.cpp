@@ -16,10 +16,10 @@ DataLLVM::DataLLVM(const std::shared_ptr<KlassBuilder> &builder, llvm::Module &m
 
     make_base_class(_builder->klass(BaseClassesNames[BaseClasses::OBJECT]), {});
 
-    make_base_class(_builder->klass(BaseClassesNames[BaseClasses::INT]), {_runtime.int64_type()});
+    make_base_class(_builder->klass(BaseClassesNames[BaseClasses::INT]), {_runtime.default_int()});
 
     // use 64 bit field for allignment
-    make_base_class(_builder->klass(BaseClassesNames[BaseClasses::BOOL]), {_runtime.int64_type()});
+    make_base_class(_builder->klass(BaseClassesNames[BaseClasses::BOOL]), {_runtime.default_int()});
 
     make_base_class(
         _builder->klass(BaseClassesNames[BaseClasses::STRING]),

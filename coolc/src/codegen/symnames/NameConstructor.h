@@ -42,6 +42,7 @@ class Names
         XOR,
         NEG,
         NOT,
+        NOT_NULL,
 
         OBJ_TAG,
         OBJ_SIZE,

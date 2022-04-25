@@ -77,6 +77,7 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
     llvm::Type *const _int8_type;
     llvm::Type *const _int32_type;
     llvm::Type *const _int64_type;
+    llvm::Type *const _default_int;
     llvm::Type *const _void_type;
 
     llvm::Type *_header_layout_types[HeaderLayoutElemets];
@@ -148,6 +149,16 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
     inline llvm::Type *int8_type() const
     {
         return _int8_type;
+    }
+
+    /**
+     * @brief Get default int type
+     *
+     * @return Type for default int
+     */
+    inline llvm::Type *default_int() const
+    {
+        return _default_int;
     }
 
     std::string symbol_name(const int &id) const override

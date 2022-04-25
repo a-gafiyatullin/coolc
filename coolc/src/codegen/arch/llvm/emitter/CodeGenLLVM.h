@@ -5,6 +5,7 @@
 #include <iostream>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LegacyPassManager.h>
+//#include <llvm/IR/Verifier.h>
 #include <llvm/Support/Host.h>
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>
@@ -28,11 +29,14 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     DataLLVM _data;
 
     // helper values
-    llvm::Value *_true_obj;
-    llvm::Value *_false_obj;
+    llvm::Value *const _true_obj;
+    llvm::Value *const _false_obj;
 
-    llvm::Value *_true_val;
-    llvm::Value *_false_val;
+    llvm::Value *const _true_val;
+    llvm::Value *const _false_val;
+
+    llvm::Value *const _int0_64;
+    llvm::Value *const _int0_32;
 
     void add_fields() override;
 
@@ -98,6 +102,8 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     llvm::Value *emit_load_self();
     llvm::Value *emit_ternary_operator(llvm::Value *pred, llvm::Value *true_val, llvm::Value *false_val,
                                        llvm::Type *type);
+    void make_control_flow(llvm::Value *pred, llvm::BasicBlock *&true_block, llvm::BasicBlock *&false_block,
+                           llvm::BasicBlock *&merge_block);
 
     // header helpers
     llvm::Value *emit_load_tag(llvm::Value *obj, llvm::Type *obj_type);

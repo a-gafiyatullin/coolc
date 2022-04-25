@@ -14,7 +14,7 @@ RuntimeMethod::RuntimeMethod(llvm::Module &module, const std::string &name, llvm
 RuntimeLLVM::RuntimeLLVM(llvm::Module &module)
     : _int32_type(llvm::Type::getInt32Ty(module.getContext())),
       _int64_type(llvm::Type::getInt64Ty(module.getContext())), _void_type(llvm::Type::getVoidTy(module.getContext())),
-      _int8_type(llvm::Type::getInt8Ty(module.getContext())),
+      _int8_type(llvm::Type::getInt8Ty(module.getContext())), _default_int(_int64_type),
       _equals(module, SYMBOLS[RuntimeLLVMSymbols::EQUALS], _int32_type,
               {_void_type->getPointerTo(), _void_type->getPointerTo()}, *this),
       _gc_alloc(module, SYMBOLS[RuntimeLLVMSymbols::GC_ALLOC], _void_type->getPointerTo(),
