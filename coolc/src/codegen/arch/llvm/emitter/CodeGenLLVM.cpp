@@ -840,11 +840,18 @@ void CodeGenLLVM::emit_runtime_main()
     const auto main_method = main_klass->method_full_name(MainMethodName);
     __ CreateCall(_module.getFunction(main_method), {main_object}, Names::name(Names::Comment::CALL, main_method));
 
-    __ CreateRet(llvm::ConstantInt::get(llvm::Type::getInt32Ty(_context), 0));
+    __ CreateRet(_int0_32);
 
     // TODO: verifier don't compile
     // GUARANTEE_DEBUG(!llvm::verifyFunction(*runtime_main));
 }
+
+#define EXIT_ON_ERROR(cond, error)                                                                                     \
+    if (!cond)                                                                                                         \
+    {                                                                                                                  \
+        std::cerr << error << std::endl;                                                                               \
+        exit(-1);                                                                                                      \
+    }
 
 void CodeGenLLVM::emit(const std::string &out_file)
 {
@@ -860,7 +867,30 @@ void CodeGenLLVM::emit(const std::string &out_file)
     const auto target_triple = llvm::sys::getDefaultTargetTriple();
     CODEGEN_VERBOSE_ONLY(LOG("Target arch: " + target_triple));
 
-    // TODO: what we really need?
+#ifdef NATIVE
+    const auto cpu = static_cast<std::string>(llvm::sys::getHostCPUName());
+    // find best possible vector extension
+    auto feature = std::string("");
+    llvm::StringMap<bool> features;
+    llvm::sys::getHostCPUFeatures(features);
+    // TODO: architecture specific
+    const auto vec_ext_list = {"avx512f", "avx512vl", "avx2", "avx", "sse4.2", "sse4.1", "sse3", "sse2", "sse"};
+    for (const auto &ext : vec_ext_list)
+    {
+        const auto elem = features.find(ext);
+        if (elem->getValue())
+        {
+            feature = elem->getKey();
+            break;
+        }
+    }
+#else
+    const auto cpu = std::string("generic");
+    auto feature = std::string("");
+#endif // NATIVE
+    CODEGEN_VERBOSE_ONLY(LOG("Target CPU: " + cpu));
+    CODEGEN_VERBOSE_ONLY(LOG("Target Features: " + feature));
+
     llvm::InitializeAllTargetInfos();
     llvm::InitializeAllTargets();
     llvm::InitializeAllTargetMCs();
@@ -871,44 +901,27 @@ void CodeGenLLVM::emit(const std::string &out_file)
 
     std::string error;
     const auto *const target = llvm::TargetRegistry::lookupTarget(target_triple, error);
-    // TODO: better way for error handling
-    if (!target)
-    {
-        std::cerr << error << std::endl;
-        exit(-1);
-    }
+    EXIT_ON_ERROR(target, error);
 
     CODEGEN_VERBOSE_ONLY(LOG("Found target: " + std::string(target->getName())));
 
-    // TODO: opportunity to select options
-    // TODO: can be null?
-    auto *const target_machine = target->createTargetMachine(target_triple, "generic", "", llvm::TargetOptions(),
+    auto *const target_machine = target->createTargetMachine(target_triple, cpu, feature, llvm::TargetOptions(),
                                                              llvm::Optional<llvm::Reloc::Model>());
+    EXIT_ON_ERROR(target_machine, "Can't create target machine!");
 
-    // TODO: any settings?
     _module.setDataLayout(target_machine->createDataLayout());
     _module.setTargetTriple(target_triple);
 
     CODEGEN_VERBOSE_ONLY(LOG("Initialized target machine."));
 
+    // open object file
     std::error_code ec;
     llvm::raw_fd_ostream dest(obj_file, ec);
-    // TODO: better way for error handling
-    if (ec)
-    {
-        std::cerr << "Could not open file: " << ec.message() << std::endl;
-        exit(-1);
-    }
+    EXIT_ON_ERROR(!ec, "Could not open file: " + ec.message());
 
-    // TODO: legacy is bad?
     llvm::legacy::PassManager pass;
-    // TODO: better way for error handling
-    // TODO: opportunity to select options
-    if (target_machine->addPassesToEmitFile(pass, dest, nullptr, llvm::CGFT_ObjectFile))
-    {
-        std::cerr << "TargetMachine can't emit a file of this type!" << std::endl;
-        exit(-1);
-    }
+    EXIT_ON_ERROR(!target_machine->addPassesToEmitFile(pass, dest, nullptr, llvm::CGFT_ObjectFile),
+                  "TargetMachine can't emit a file of this type!");
 
     CODEGEN_VERBOSE_ONLY(LOG("Run llvm emitter."));
 

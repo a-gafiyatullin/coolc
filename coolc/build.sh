@@ -51,6 +51,10 @@ do
         result_args+=" -DARCH:STRING=LLVM"
         shift
     ;;
+    -native)
+        result_args+=" -DNATIVE=ON"
+        shift
+    ;;
     -*|--*)
         echo "Unknown option $var"
         exit 1

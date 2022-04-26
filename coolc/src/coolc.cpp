@@ -1,13 +1,7 @@
+#include "coolc.h"
 #include "lexer/Lexer.h"
 #include "parser/Parser.h"
 #include <numeric>
-
-// TODO: maybe more convinient way?
-#ifdef MIPS
-#include "codegen/arch/mips/emitter/CodeGenMips.h"
-#else
-#include "codegen/arch/llvm/emitter/CodeGenLLVM.h"
-#endif // ARCH
 
 /**
  * @brief Parse
@@ -36,14 +30,7 @@ void do_codegen(const std::shared_ptr<semant::ClassNode> &program, const std::st
 
 int main(int argc, char *argv[])
 {
-    std::vector<int> files;
-
-#ifdef DEBUG
-    files = process_args(argv, argc);
-#else
-    files.resize(argc - 1);
-    std::iota(files.begin(), files.end(), 1);
-#endif // DEBUG
+    const auto files = process_args(argv, argc);
 
     const auto parsed_program = do_parse(files, argv);
     const auto analysed_program = do_semant(parsed_program);
@@ -106,15 +93,8 @@ std::shared_ptr<semant::ClassNode> do_semant(const std::vector<std::shared_ptr<a
     return result.first;
 }
 
-// TODO: maybe more convinient way?
 void do_codegen(const std::shared_ptr<semant::ClassNode> &program, const std::string &out_file)
 {
-#ifdef MIPS
-    codegen::CodeGenMips
-#else
-    codegen::CodeGenLLVM
-#endif // ARCH
-        codegen(program);
-
+    CODEGEN codegen(program);
     codegen.emit(out_file);
 }
