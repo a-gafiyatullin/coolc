@@ -26,9 +26,9 @@ struct Symbol
      * @brief Construct a new Symbol
      *
      * @param offset Offset from base
+     * @param type Value type
      */
-    explicit Symbol(const uint64_t &offset, const std::shared_ptr<ast::Type> &type)
-        : _type(SymbolType::FIELD), _value_type(type)
+    Symbol(const uint64_t &offset, const std::shared_ptr<ast::Type> &type) : _type(SymbolType::FIELD), _value_type(type)
     {
         _value._offset = offset;
     }
@@ -37,9 +37,9 @@ struct Symbol
      * @brief Construct a new Symbol
      *
      * @param val Value
+     * @param type Value type
      */
-    explicit Symbol(llvm::Value *val, const std::shared_ptr<ast::Type> &type)
-        : _type(SymbolType::LOCAL), _value_type(type)
+    Symbol(llvm::Value *val, const std::shared_ptr<ast::Type> &type) : _type(SymbolType::LOCAL), _value_type(type)
     {
         _value._ptr = val;
     }
