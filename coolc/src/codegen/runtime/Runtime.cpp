@@ -47,7 +47,7 @@ ObjectLayout *Object_copy(ObjectLayout *receiver) // NOLINT
     return object;
 }
 
-IntLayout *String_length(StringLayout *receiver)
+IntLayout *String_length(StringLayout *receiver) // NOLINT
 {
     return receiver->_string_size;
 }

@@ -362,7 +362,8 @@ llvm::Value *CodeGenLLVM::emit_object_expr_inner(const ast::ObjectExpression &ex
         const auto &index = object._value._offset;
 
         ptr = __ CreateStructGEP(_data.class_struct(klass), emit_load_self(), index);
-        type = static_pointer_cast<KlassLLVM>(klass)->field_type(index);
+        type =
+            semant::Semant::exact_type(static_pointer_cast<KlassLLVM>(klass)->field_type(index), _current_class->_type);
     }
     else
     {
