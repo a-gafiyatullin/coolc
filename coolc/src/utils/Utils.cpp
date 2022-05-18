@@ -67,7 +67,7 @@ bool maybe_set(const char *arg, const char *flag_name, bool &flag)
     return false;
 }
 
-std::vector<int> process_args(char *const args[], const int &args_num)
+std::pair<std::vector<int>, std::string> process_args(char *const args[], const int &args_num)
 {
     TraceLexer = false;
     PrintFinalAST = false;
@@ -75,6 +75,9 @@ std::vector<int> process_args(char *const args[], const int &args_num)
     TraceSemant = false;
     TraceCodeGen = false;
     TokensOnly = false;
+
+    std::string out_file_name;
+    bool found_out_file_name = false;
 
     std::vector<int> positions;
     for (int i = 1; i < args_num; i++)
@@ -105,6 +108,15 @@ std::vector<int> process_args(char *const args[], const int &args_num)
             {
                 continue;
             }
+            // output file name
+            if (!strcmp(args[i], "-o"))
+            {
+                if (i + 1 < args_num)
+                {
+                    found_out_file_name = true;
+                    out_file_name = args[++i];
+                }
+            }
         }
         else
         {
@@ -112,5 +124,11 @@ std::vector<int> process_args(char *const args[], const int &args_num)
         }
     }
 
-    return positions;
+    if (!found_out_file_name)
+    {
+        out_file_name = args[positions[0]];
+        out_file_name = out_file_name.substr(0, out_file_name.find_last_of("."));
+    }
+
+    return {positions, out_file_name};
 }

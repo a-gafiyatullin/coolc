@@ -6,7 +6,11 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LegacyPassManager.h>
 //#include <llvm/IR/Verifier.h>
+#include <boost/dll/runtime_symbol_info.hpp>
+#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <llvm/Support/Host.h>
+#include <llvm/Support/Program.h>
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Target/TargetMachine.h>
@@ -19,6 +23,8 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
   private:
     static constexpr std::string_view RUNTIME_MAIN_FUNC = "main";
     static constexpr std::string_view EXT = ".o";
+    static constexpr std::string_view RUNTIME_LIB_NAME = "libcool-rt.so";
+    static constexpr std::string_view CLANG_EXE_NAME = "clang++";
 
     // llvm related stuff
     llvm::LLVMContext _context;
@@ -109,6 +115,8 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     llvm::Value *emit_load_tag(llvm::Value *obj, llvm::Type *obj_type);
     llvm::Value *emit_load_size(llvm::Value *objv, llvm::Type *obj_type);
     llvm::Value *emit_load_dispatch_table(llvm::Value *obj, const std::shared_ptr<Klass> &klass);
+
+    void execute_linker(const std::string &object_file_name, const std::string &out_file_name);
 
   public:
     explicit CodeGenLLVM(const std::shared_ptr<semant::ClassNode> &root);

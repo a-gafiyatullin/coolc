@@ -7,10 +7,12 @@ cd $TEST_DIR
 
 rm -rf results
 mkdir results
+rm -rf out
+mkdir out
 cd tests/
 
 for file in *.test; do
-    $1/coolc +PrintFinalAST $file &> $TEST_DIR/results/$file.result
+    $1/coolc +PrintFinalAST $file -o $TEST_DIR/out/$file.out &> $TEST_DIR/results/$file.result
 done;
 
 cd $CURR_DIR

@@ -854,6 +854,33 @@ void CodeGenLLVM::emit_runtime_main()
         exit(-1);                                                                                                      \
     }
 
+void CodeGenLLVM::execute_linker(const std::string &object_file_name, const std::string &out_file_name)
+{
+    CODEGEN_VERBOSE_ONLY(LOG("Run linker for " + object_file_name + "."));
+
+    const auto coolc_path = boost::dll::program_location().parent_path().string();
+    const auto rt_lib_path =
+        coolc_path + boost::filesystem::path::preferred_separator + static_cast<std::string>(RUNTIME_LIB_NAME);
+    CODEGEN_VERBOSE_ONLY(LOG("Runtime library path: " + rt_lib_path));
+
+    const auto clang_path = llvm::sys::findProgramByName(static_cast<std::string>(CLANG_EXE_NAME));
+    EXIT_ON_ERROR(clang_path, "Can't find " + static_cast<std::string>(CLANG_EXE_NAME));
+    CODEGEN_VERBOSE_ONLY(LOG(static_cast<std::string>(CLANG_EXE_NAME) + " library path: " + clang_path.get()));
+
+    std::string error;
+    // create executable
+    EXIT_ON_ERROR((llvm::sys::ExecuteAndWait(
+                       clang_path.get(),
+                       {clang_path.get(), object_file_name, rt_lib_path, "-o", out_file_name}, // first arg is file name
+                       llvm::None, {}, 0, 0, &error) == 0),
+                  error);
+
+    // delete object file
+    std::filesystem::remove(object_file_name);
+
+    CODEGEN_VERBOSE_ONLY(LOG("Finish linker for " + out_file_name + "."));
+}
+
 void CodeGenLLVM::emit(const std::string &out_file)
 {
     const std::string obj_file = out_file + static_cast<std::string>(EXT);
@@ -928,6 +955,9 @@ void CodeGenLLVM::emit(const std::string &out_file)
 
     pass.run(_module);
     dest.flush();
+    dest.close();
 
     CODEGEN_VERBOSE_ONLY(LOG("Finished llvm emitter."));
+
+    execute_linker(obj_file, out_file);
 }

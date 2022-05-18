@@ -22,9 +22,9 @@ extern bool TraceCodeGen;
  *
  * @param args All command line arguments
  * @param args_num Number of command line arguments
- * @return Positions of the all non-flag command line argument
+ * @return Positions of the all non-flag command line argument and output file name
  */
-std::vector<int> process_args(char *const args[], const int &args_num);
+std::pair<std::vector<int>, std::string> process_args(char *const args[], const int &args_num);
 
 /**
  * @brief Get the printable string object

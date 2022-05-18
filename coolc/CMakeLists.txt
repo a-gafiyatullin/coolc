@@ -63,6 +63,9 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
+find_package(Boost 1.61 COMPONENTS filesystem REQUIRED)
+include_directories(${Boost_INCLUDE_DIR})
+
 add_subdirectory(src/lexer)
 add_subdirectory(src/parser)
 add_subdirectory(src/semant)
@@ -72,7 +75,7 @@ add_subdirectory(src/decls)
 add_subdirectory(src/codegen)
 add_executable(coolc src/coolc.cpp)
 
-target_link_libraries(coolc lexer parser semant utils ast codegen decls ${LIBS})
+target_link_libraries(coolc lexer parser semant utils ast codegen decls ${LIBS} ${Boost_LIBRARIES} -ldl)
 
 # Build runtime lib. Allow ClassNameTab to be undefined.
 if(APPLE)
