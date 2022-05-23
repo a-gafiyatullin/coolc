@@ -4,7 +4,6 @@ project(coolc)
 option(ASAN "Build with AddressSanitizer" OFF)
 option(UBSAN "Build with UndefinedBehaviorSanitizer" OFF)
 set(ARCH "MIPS" CACHE STRING "Target architecture")
-set(ARCH "NATIVE" CACHE STRING "Build for Host cpu and Host features")
 
 execute_process (
     COMMAND sh -c "rm -rf ${PROJECT_SOURCE_DIR}/bin"
@@ -44,19 +43,11 @@ if(UBSAN)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=undefined -fno-omit-frame-pointer")
 endif()
 
-if(NATIVE)
-    message(STATUS "Build in NATIVE mode!")
-
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNATIVE")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DNATIVE")
-endif()
-
 message(STATUS "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
 message(STATUS "CMAKE_CXX_FLAGS_DEBUG = ${CMAKE_CXX_FLAGS_DEBUG}")
 
 unset(ASAN CACHE)
 unset(UBSAN CACHE)
-unset(NATIVE CACHE)
 
 include_directories(src)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)

@@ -16,6 +16,7 @@ extern bool PrintFinalAST;
 extern bool TraceParser;
 extern bool TraceSemant;
 extern bool TraceCodeGen;
+extern bool UseArchSpecFeatures;
 
 /**
  * @brief Process command line arguments

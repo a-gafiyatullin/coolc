@@ -22,4 +22,3 @@ assistance with **coolc**.
         - `-test` --- run tests after building (Debug only).
         - `-mips` --- build for SPIM emulator.
         - `-llvm` --- build with **LLVM** for host architecture.
-        - `-native` --- build with architecture specific features (**x86** only now).

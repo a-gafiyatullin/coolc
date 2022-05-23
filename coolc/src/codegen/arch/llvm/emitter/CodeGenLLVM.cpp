@@ -881,6 +881,39 @@ void CodeGenLLVM::execute_linker(const std::string &object_file_name, const std:
     CODEGEN_VERBOSE_ONLY(LOG("Finish linker for " + out_file_name + "."));
 }
 
+std::pair<std::string, std::string> CodeGenLLVM::find_best_vec_ext()
+{
+    if (!UseArchSpecFeatures)
+    {
+        return {"", "generic"};
+    }
+
+    const auto cpu = static_cast<std::string>(llvm::sys::getHostCPUName());
+
+    llvm::StringMap<bool> features;
+    llvm::sys::getHostCPUFeatures(features);
+
+    const auto vec_ext_list =
+#ifdef __x86_64__
+        {"avx512f", "avx512vl", "avx2", "avx", "sse4.2", "sse4.1", "sse3", "sse2", "sse"};
+#elif __aarch64__
+        {""};
+#else
+        {""};
+#endif
+
+    for (const auto &ext : vec_ext_list)
+    {
+        const auto elem = features.find(ext);
+        if (elem != features.end() && elem->getValue())
+        {
+            return {static_cast<std::string>(elem->getKey()), cpu};
+        }
+    }
+    
+    return {"", cpu};
+}
+
 void CodeGenLLVM::emit(const std::string &out_file)
 {
     const std::string obj_file = out_file + static_cast<std::string>(EXT);
@@ -895,29 +928,10 @@ void CodeGenLLVM::emit(const std::string &out_file)
     const auto target_triple = llvm::sys::getDefaultTargetTriple();
     CODEGEN_VERBOSE_ONLY(LOG("Target arch: " + target_triple));
 
-#ifdef NATIVE
-    const auto cpu = static_cast<std::string>(llvm::sys::getHostCPUName());
-    // find best possible vector extension
-    auto feature = std::string("");
-    llvm::StringMap<bool> features;
-    llvm::sys::getHostCPUFeatures(features);
-    // TODO: architecture specific
-    const auto vec_ext_list = {"avx512f", "avx512vl", "avx2", "avx", "sse4.2", "sse4.1", "sse3", "sse2", "sse"};
-    for (const auto &ext : vec_ext_list)
-    {
-        const auto elem = features.find(ext);
-        if (elem->getValue())
-        {
-            feature = elem->getKey();
-            break;
-        }
-    }
-#else
-    const auto cpu = std::string("generic");
-    auto feature = std::string("");
-#endif // NATIVE
-    CODEGEN_VERBOSE_ONLY(LOG("Target CPU: " + cpu));
-    CODEGEN_VERBOSE_ONLY(LOG("Target Features: " + feature));
+    const auto arch_spec = find_best_vec_ext();
+
+    CODEGEN_VERBOSE_ONLY(LOG("Target CPU: " + arch_spec.second));
+    CODEGEN_VERBOSE_ONLY(LOG("Target Features: " + arch_spec.first));
 
     llvm::InitializeAllTargetInfos();
     llvm::InitializeAllTargets();
@@ -933,8 +947,8 @@ void CodeGenLLVM::emit(const std::string &out_file)
 
     CODEGEN_VERBOSE_ONLY(LOG("Found target: " + std::string(target->getName())));
 
-    auto *const target_machine = target->createTargetMachine(target_triple, cpu, feature, llvm::TargetOptions(),
-                                                             llvm::Optional<llvm::Reloc::Model>());
+    auto *const target_machine = target->createTargetMachine(
+        target_triple, arch_spec.second, arch_spec.first, llvm::TargetOptions(), llvm::Optional<llvm::Reloc::Model>());
     EXIT_ON_ERROR(target_machine, "Can't create target machine!");
 
     _module.setDataLayout(target_machine->createDataLayout());

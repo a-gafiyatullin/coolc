@@ -52,6 +52,7 @@ bool PrintFinalAST;
 bool TraceParser;
 bool TraceSemant;
 bool TraceCodeGen;
+bool UseArchSpecFeatures;
 
 bool maybe_set(const char *arg, const char *flag_name, bool &flag)
 {
@@ -67,6 +68,12 @@ bool maybe_set(const char *arg, const char *flag_name, bool &flag)
     return false;
 }
 
+#define check_flag(flag)                                                                                               \
+    if (maybe_set(args[i], #flag, flag))                                                                  \
+    {                                                                                                                  \
+        continue;                                                                                                      \
+    }
+
 std::pair<std::vector<int>, std::string> process_args(char *const args[], const int &args_num)
 {
     TraceLexer = false;
@@ -75,6 +82,7 @@ std::pair<std::vector<int>, std::string> process_args(char *const args[], const 
     TraceSemant = false;
     TraceCodeGen = false;
     TokensOnly = false;
+    UseArchSpecFeatures = true;
 
     std::string out_file_name;
     bool found_out_file_name = false;
@@ -84,30 +92,14 @@ std::pair<std::vector<int>, std::string> process_args(char *const args[], const 
     {
         if (args[i][0] == '-' || args[i][0] == '+')
         {
-            if (maybe_set(args[i], "TraceLexer", TraceLexer))
-            {
-                continue;
-            }
-            if (maybe_set(args[i], "PrintFinalAST", PrintFinalAST))
-            {
-                continue;
-            }
-            if (maybe_set(args[i], "TraceParser", TraceParser))
-            {
-                continue;
-            }
-            if (maybe_set(args[i], "TraceSemant", TraceSemant))
-            {
-                continue;
-            }
-            if (maybe_set(args[i], "TraceCodeGen", TraceCodeGen))
-            {
-                continue;
-            }
-            if (maybe_set(args[i], "TokensOnly", TokensOnly))
-            {
-                continue;
-            }
+            check_flag(TraceLexer);
+            check_flag(PrintFinalAST);
+            check_flag(TraceParser);
+            check_flag(TraceSemant);
+            check_flag(TokensOnly);
+            check_flag(TraceCodeGen);
+            check_flag(UseArchSpecFeatures);
+
             // output file name
             if (!strcmp(args[i], "-o"))
             {

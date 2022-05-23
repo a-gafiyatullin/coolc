@@ -2,7 +2,6 @@
 #include "codegen/arch/llvm/klass/KlassLLVM.h"
 #include "codegen/arch/llvm/symtab/SymbolTableLLVM.h"
 #include "codegen/emitter/CodeGen.h"
-#include <iostream>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LegacyPassManager.h>
 //#include <llvm/IR/Verifier.h>
@@ -117,6 +116,7 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     llvm::Value *emit_load_dispatch_table(llvm::Value *obj, const std::shared_ptr<Klass> &klass);
 
     void execute_linker(const std::string &object_file_name, const std::string &out_file_name);
+    std::pair<std::string, std::string> find_best_vec_ext();
 
   public:
     explicit CodeGenLLVM(const std::shared_ptr<semant::ClassNode> &root);
