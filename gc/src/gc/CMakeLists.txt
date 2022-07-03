@@ -1,0 +1,1 @@
+add_library(gc STATIC gc-impl/gc-common.cpp)
