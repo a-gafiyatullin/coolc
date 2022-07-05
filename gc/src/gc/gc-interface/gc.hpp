@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <stack>
 #include <vector>
 
 namespace gc
@@ -82,6 +83,7 @@ class GC
     }
 };
 
+// --------------------------------------- ZeroGC ---------------------------------------
 class ZeroGC : public GC
 {
   protected:
@@ -104,7 +106,13 @@ class ZeroGC : public GC
     {
         return *((T *)(base + offset));
     }
+
+    void collect()
+    {
+    }
 };
+
+// --------------------------------------- StackRecord ---------------------------------------
 
 /**
  * @brief StackRecord tracks root objects
@@ -133,7 +141,7 @@ class StackRecord
      * @param gc Assosiated GC
      * @param parent Parent scope
      */
-    StackRecord(GC *gc, StackRecord *parent);
+    StackRecord(StackRecord *parent);
 
     /**
      * @brief Destroy the StackRecord and adjust GC state
@@ -144,11 +152,94 @@ class StackRecord
     /**
      * @brief Add a new root
      *
+     * @return Index of the local
      */
-    __attribute__((always_inline)) void reg_root(address obj)
+    __attribute__((always_inline)) int reg_root(address obj)
     {
         _objects.push_back(obj);
+        return _objects.size() - 1;
+    }
+
+    /**
+     * @brief Get root by the index
+     *
+     * @return Address of the object
+     */
+    __attribute__((always_inline)) address root(const int &i) const
+    {
+        assert(i < _objects.size());
+        return _objects[i];
+    }
+
+    /**
+     * @brief Get vector of the roots
+     *
+     * @return Vector of the roots
+     */
+    inline std::vector<address> &roots_unsafe()
+    {
+        return _objects;
+    }
+
+    /**
+     * @brief Parental Stack Record
+     *
+     * @return StackRecord
+     */
+    inline StackRecord *parent() const
+    {
+        return _parent;
     }
 };
 
+/**
+ * @brief Marker marks live objects
+ *
+ */
+class Marker
+{
+  private:
+    /* "For a single-threaded collector, the work list could be implemented as a stack. This leads to a depthfirst
+     * traversal of the graph. If mark bits are co-located with objects, it has the advantage that the
+     * elements that are processed next are those that have been marked most recently, and hence are likely
+     * to still be in the hardware cache." (c) The Garbage Collection Handbook, Richard Jones, p. 47
+     */
+    std::stack<objects::ObjectHeader *> _worklist; // TODO: maybe smth better?
+
+    void mark();
+
+  public:
+    /**
+     * @brief Mark live objects from root
+     *
+     * @param sr Current StackRecord
+     */
+    void mark_from_roots(StackRecord *sr);
+};
+
+// --------------------------------------- Mark-Sweep ---------------------------------------
+// The Garbage Collection Handbook, Richard Jones: 2.1 The mark-sweep algorithm
+class MarkSweepGC : public ZeroGC
+{
+  protected:
+    address _heap_end;
+
+    Marker _mrkr;
+
+    void sweep();
+
+    // helpers for collection
+    void free(address obj);
+    address next_object(address obj);
+
+    // helper for allocation
+    address find_free_chunk(const size_t &size);
+
+  public:
+    MarkSweepGC(const size_t &heap_size);
+
+    address allocate(objects::Klass *klass);
+
+    void collect();
+};
 }; // namespace gc
