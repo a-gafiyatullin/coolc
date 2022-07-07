@@ -24,7 +24,10 @@ void gc::MarkSweepGC::free(address obj)
 
     objects::ObjectHeader *hdr = (objects::ObjectHeader *)obj;
     hdr->unset_marked();
-    memset(obj + sizeof(objects::ObjectHeader), 0, hdr->_size - sizeof(objects::ObjectHeader));
+    if (_need_zeroing)
+    {
+        memset(obj + sizeof(objects::ObjectHeader), 0, hdr->_size - sizeof(objects::ObjectHeader));
+    }
     hdr->_tag = 0;
     // save size for allocation
     assert(hdr->_size != 0);
@@ -45,14 +48,15 @@ address gc::MarkSweepGC::next_object(address obj)
     return (address)possible_object;
 }
 
-gc::MarkSweepGC::MarkSweepGC(const size_t &heap_size) : ZeroGC(heap_size), _heap_end(_heap_start + _heap_size)
+gc::MarkSweepGC::MarkSweepGC(size_t heap_size, bool need_zeroing)
+    : ZeroGC(heap_size, need_zeroing), _heap_end(_heap_start + _heap_size)
 {
     // create an artificial object with tag 0 and size heap_size
     objects::ObjectHeader *aobj = (objects::ObjectHeader *)_heap_start;
     aobj->set_unused(heap_size);
 }
 
-address gc::MarkSweepGC::find_free_chunk(const size_t &size)
+address gc::MarkSweepGC::find_free_chunk(size_t size)
 {
     // try to find suitable chunk of the memeory
     // compact chunks by the way
@@ -109,7 +113,10 @@ address gc::MarkSweepGC::allocate(objects::Klass *klass)
         collect();
     }
     possible_chunk = (objects::ObjectHeader *)find_free_chunk(obj_size);
-    guarantee(possible_chunk != NULL, "out of memory!");
+    if (possible_chunk == NULL)
+    {
+        throw std::bad_alloc();
+    }
 
     size_t current_chunk_size = possible_chunk->_size;
 
@@ -124,7 +131,11 @@ address gc::MarkSweepGC::allocate(objects::Klass *klass)
     obj_header->_mark = 0;
     obj_header->_size = obj_size;
     obj_header->_tag = klass->type();
-    memset(object + sizeof(objects::ObjectHeader), 0, obj_size);
+
+    if (_need_zeroing)
+    {
+        memset(object + sizeof(objects::ObjectHeader), 0, obj_size);
+    }
 
     // adjust next chunk
     // at least have memory for the header

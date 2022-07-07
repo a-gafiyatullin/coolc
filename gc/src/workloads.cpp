@@ -2,7 +2,7 @@
 
 int main()
 {
-    sanity_workloads();
+    sanity_workload();
 
     return 0;
 }

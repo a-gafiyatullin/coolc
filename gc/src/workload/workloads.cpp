@@ -1,11 +1,11 @@
 #include "workloads.hpp"
 
-int sanity_workloads()
+DECLARE_TEST(sanity)
 {
-    sanity_workload_trivial<gc::ZeroGC, VERY_SMALL_HEAP>();
-    sanity_workload_trivial<gc::MarkSweepGC, VERY_SMALL_HEAP>();
+    RUN_TEST((sanity_trivial_workload<gc::ZeroGC, VERY_SMALL_HEAP>));
+    RUN_TEST((sanity_trivial_workload<gc::MarkSweepGC, VERY_SMALL_HEAP>));
 
-    sanity_workload_trivial_collect<gc::MarkSweepGC, VERY_SMALL_HEAP>();
+    RUN_TEST((sanity_trivial_collect_workload<gc::MarkSweepGC, VERY_SMALL_HEAP>));
 
     return 0;
 }

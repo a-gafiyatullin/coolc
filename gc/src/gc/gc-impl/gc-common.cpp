@@ -17,17 +17,23 @@ gc::StackRecord::StackRecord(StackRecord *parent) : StackRecord(parent->_gc)
 }
 
 // --------------------------------------- ZeroGC ---------------------------------------
-gc::ZeroGC::ZeroGC(const size_t &heap_size) : _heap_size(heap_size)
+gc::ZeroGC::ZeroGC(size_t heap_size, bool need_zeroing) : _heap_size(heap_size), _need_zeroing(need_zeroing)
 {
     _heap_start = (address)malloc(heap_size);
-    guarantee(_heap_start != NULL, "can't allocate memotry!");
+    if (_heap_start == NULL)
+    {
+        throw std::bad_alloc();
+    }
     _heap_pos = _heap_start;
 }
 
 address gc::ZeroGC::allocate(objects::Klass *klass)
 {
     size_t obj_size = klass->size();
-    guarantee(_heap_pos + obj_size < _heap_start + _heap_size, "out of memory!");
+    if (_heap_pos + obj_size >= _heap_start + _heap_size)
+    {
+        throw std::bad_alloc(); // for ZeroGC just throw an exception
+    }
 
     address object = _heap_pos;
     _heap_pos += obj_size;
@@ -35,8 +41,12 @@ address gc::ZeroGC::allocate(objects::Klass *klass)
     objects::ObjectHeader *obj_header = (objects::ObjectHeader *)object;
     obj_header->_mark = 0;
     obj_header->_size = obj_size;
-    obj_header->_tag = 1;
-    memset(object + sizeof(objects::ObjectHeader), 0, obj_size);
+    obj_header->_tag = klass->type();
+
+    if (_need_zeroing)
+    {
+        memset(object + sizeof(objects::ObjectHeader), 0, obj_size);
+    }
 
     return object;
 }

@@ -1,50 +1,50 @@
 #include "gc/gc-interface/gc.hpp"
+#include "tests-support.hpp"
 
-template <class GCType, int heap_size> int sanity_workload_trivial()
+DECLARE_TEMPLATE_TEST(sanity_trivial)
 {
-    objects::Klass integer(1, objects::INTEGER);
-    size_t i_field = integer.offset(0);
+    size_t i_field = INTOBJ.offset(0);
 
-    GCType gc(heap_size);
+    GCType gc(heap_size, true);
 
     {
         gc::StackRecord sr(&gc);
 
-        address ia = gc.allocate(&integer);
-        guarantee(ia != NULL, "allocation failed!");
-
-        gc.collect();
+        address ia = ALLOCATE(INTOBJ);
+        guarantee_ne(ia, NULL);
 
         int slot = sr.reg_root(ia);
+
+        COLLECT();
+
+        guarantee_eq(ia, sr.root(slot));
         ia = sr.root(slot);
 
-        gc.write(ia, i_field, 0xDEAD);
-        guarantee(gc.template read<doubleword>(ia, i_field) == 0xDEAD, "wrong value!");
+        WRITE(ia, i_field, 0xDEAD);
+        guarantee_eq(READ_DW(ia, i_field), 0xDEAD);
     }
 
     return 0;
 }
 
-template <class GCType, int heap_size> int sanity_workload_trivial_collect()
+DECLARE_TEMPLATE_TEST(sanity_trivial_collect)
 {
-    objects::Klass linked_list_node(2, objects::OTHER);
-    size_t dataf = linked_list_node.offset(0);
-    size_t nextf = linked_list_node.offset(1);
+    size_t dataf = LLNODE.offset(0);
+    size_t nextf = LLNODE.offset(1);
 
-    objects::Klass integer(1, objects::INTEGER);
-    size_t intf = integer.offset(0);
+    size_t intf = INTOBJ.offset(0);
 
-    GCType gc(heap_size);
+    GCType gc(heap_size, true);
     gc::StackRecord sr(&gc);
 
     // create linked list of the integers:
-    address root_node = gc.allocate(&linked_list_node);
-    address second_node = gc.allocate(&linked_list_node);
-    address third_node = gc.allocate(&linked_list_node);
+    address root_node = ALLOCATE(LLNODE);
+    address second_node = ALLOCATE(LLNODE);
+    address third_node = ALLOCATE(LLNODE);
 
-    gc.write(root_node, nextf, second_node);
-    gc.write(second_node, nextf, third_node);
-    gc.write(third_node, nextf, NULL);
+    WRITE(root_node, nextf, second_node);
+    WRITE(second_node, nextf, third_node);
+    WRITE(third_node, nextf, NULL);
 
     int root_idx = sr.reg_root(root_node);
 
@@ -52,51 +52,51 @@ template <class GCType, int heap_size> int sanity_workload_trivial_collect()
     {
         gc::StackRecord sr1(&sr);
 
-        address root_i = gc.allocate(&integer);
-        address second_i = gc.allocate(&integer);
-        address third_i = gc.allocate(&integer);
+        address root_i = ALLOCATE(INTOBJ);
+        address second_i = ALLOCATE(INTOBJ);
+        address third_i = ALLOCATE(INTOBJ);
 
-        gc.write(root_node, dataf, root_i);
-        gc.write(second_node, dataf, second_i);
-        gc.write(third_node, dataf, third_i);
+        WRITE(root_node, dataf, root_i);
+        WRITE(second_node, dataf, second_i);
+        WRITE(third_node, dataf, third_i);
 
-        gc.write(root_i, intf, 0);
-        gc.write(second_i, intf, 1);
-        gc.write(third_i, intf, 2);
+        WRITE(root_i, intf, 0);
+        WRITE(second_i, intf, 1);
+        WRITE(third_i, intf, 2);
 
-        dead_obj = gc.allocate(&integer);
-        gc.write(dead_obj, intf, 0xDEAD);
+        dead_obj = ALLOCATE(INTOBJ);
+        WRITE(dead_obj, intf, 0xDEAD);
         int dead_obj_idx = sr1.reg_root(dead_obj);
 
-        gc.collect();
+        COLLECT();
 
         dead_obj = sr1.root(dead_obj_idx);
     }
 
-    guarantee(gc.template read<doubleword>(dead_obj, intf) == 0xDEAD, "wrong collection!");
+    guarantee_eq(READ_DW(dead_obj, intf), 0xDEAD);
 
-    gc.collect();
+    COLLECT();
 
     // for mark and sweep we know that objects are not relocated
     if (std::is_same<GCType, gc::MarkSweepGC>::value)
     {
-        guarantee(gc.template read<doubleword>(dead_obj, intf) == 0, "wrong collection!");
+        guarantee_eq(READ_DW(dead_obj, intf), 0);
     }
 
     // check the third node integer:
     root_node = sr.root(root_idx);
 
-    second_node = gc.template read<address>(root_node, nextf);
-    guarantee(second_node != NULL, "wrong collection!");
+    second_node = READ_ADDRESS(root_node, nextf);
+    guarantee_ne(second_node, NULL);
 
-    third_node = gc.template read<address>(second_node, nextf);
-    guarantee(third_node != NULL, "wrong collection!");
+    third_node = READ_ADDRESS(second_node, nextf);
+    guarantee_ne(third_node, NULL);
 
-    address third_i = gc.template read<address>(third_node, dataf);
-    guarantee(third_i != NULL, "wrong collection!");
+    address third_i = READ_ADDRESS(third_node, dataf);
+    guarantee_ne(third_i, NULL);
 
-    doubleword value = gc.template read<doubleword>(third_i, intf);
-    guarantee(value != 3, "wrong collection!");
+    doubleword value = READ_DW(third_i, intf);
+    guarantee_ne(value, 3);
 
     return 0;
 }

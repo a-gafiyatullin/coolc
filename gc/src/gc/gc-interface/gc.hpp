@@ -5,22 +5,42 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <new>
 #include <stack>
 #include <vector>
 
-namespace gc
-{
+// some common macro for convience
+#define ALLOCATE(type) gc.allocate(&type)
+#define COLLECT() gc.collect()
 
+#define READ(base, offset, type) gc.template read<type>(base, offset)
+#define READ_B(base, offset) READ(base, offset, byte)
+#define READ_HW(base, offset) READ(base, offset, halfword)
+#define READ_W(base, offset) READ(base, offset, word)
+#define READ_DW(base, offset) READ(base, offset, doubleword)
+#define READ_ADDRESS(base, offset) READ(base, offset, address)
+
+#define WRITE(base, address, value) gc.write(base, address, value)
+
+// some macro for testing
 #define guarantee(cond, msg)                                                                                           \
     if (!(cond))                                                                                                       \
     {                                                                                                                  \
-        std::cerr << "Condition " #cond " failed: " msg << std::endl;                                                  \
+        std::cerr << __FILE__ ":" << __LINE__ << ": condition (" #cond ") failed: " msg << std::endl;                  \
         abort();                                                                                                       \
     }
 
+#define guarantee_eq(lv, rv) guarantee(lv == rv, #lv " and " #rv " are not equal!")
+
+#define guarantee_ne(lv, rv) guarantee(lv != rv, #lv " and " #rv " are equal!")
+
+// other macro
 #define UNIMPEMENTED(method)                                                                                           \
     std::cerr << "Unimplemented method: " method << std::endl;                                                         \
     abort();
+
+namespace gc
+{
 
 class StackRecord;
 
@@ -88,12 +108,13 @@ class ZeroGC : public GC
 {
   protected:
     const size_t _heap_size;
+    const bool _need_zeroing;
 
     address _heap_start;
     address _heap_pos;
 
   public:
-    ZeroGC(const size_t &heap_size);
+    ZeroGC(size_t heap_size, bool need_zeroing);
 
     address allocate(objects::Klass *klass);
 
@@ -165,7 +186,7 @@ class StackRecord
      *
      * @return Address of the object
      */
-    __attribute__((always_inline)) address root(const int &i) const
+    __attribute__((always_inline)) address root(int i) const
     {
         assert(i < _objects.size());
         return _objects[i];
@@ -233,10 +254,10 @@ class MarkSweepGC : public ZeroGC
     address next_object(address obj);
 
     // helper for allocation
-    address find_free_chunk(const size_t &size);
+    address find_free_chunk(size_t size);
 
   public:
-    MarkSweepGC(const size_t &heap_size);
+    MarkSweepGC(size_t heap_size, bool need_zeroing);
 
     address allocate(objects::Klass *klass);
 

@@ -12,6 +12,10 @@ using halfword = uint16_t;
 using word = uint32_t;
 using doubleword = uint64_t;
 
+// will see it further
+#define INTOBJ objects::Klass::Integer
+#define LLNODE objects::Klass::LinkedListNode
+
 namespace objects
 {
 
@@ -68,7 +72,7 @@ struct ObjectHeader
      *
      * @param size Size of the object
      */
-    inline void set_unused(const size_t &size)
+    inline void set_unused(size_t size)
     {
         _size = size;
         _mark = 0;
@@ -118,13 +122,17 @@ class Klass
     const ObjectType _type;
 
   public:
+    // some common prebuild types
+    static Klass Integer;
+    static Klass LinkedListNode;
+
     /**
      * @brief Construct a Klass
      *
      * @param fields_count Number of the pointer-sized fields
      * @param type Object Type
      */
-    explicit Klass(const int &fields_count, const ObjectType &type) : _fields_count(fields_count), _type(type)
+    explicit Klass(int fields_count, ObjectType type) : _fields_count(fields_count), _type(type)
     {
     }
 
@@ -134,7 +142,7 @@ class Klass
      * @param field_num Number of the field
      * @return offset to the field
      */
-    __attribute__((always_inline)) size_t offset(const int &field_num) const
+    __attribute__((always_inline)) size_t offset(int field_num) const
     {
         assert(field_num < _fields_count);
         return sizeof(ObjectHeader) + field_num * sizeof(address); // all fields are pointers or pointer-sized for now
