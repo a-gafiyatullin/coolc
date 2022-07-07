@@ -11,7 +11,7 @@ DECLARE_TEMPLATE_TEST(sanity_trivial)
         gc::StackRecord sr(&gc);
 
         address ia = ALLOCATE(INTOBJ);
-        guarantee_ne(ia, NULL);
+        guarantee_not_null(ia);
 
         int slot = sr.reg_root(ia);
 
@@ -23,8 +23,6 @@ DECLARE_TEMPLATE_TEST(sanity_trivial)
         WRITE(ia, i_field, 0xDEAD);
         guarantee_eq(READ_DW(ia, i_field), 0xDEAD);
     }
-
-    return 0;
 }
 
 DECLARE_TEMPLATE_TEST(sanity_trivial_collect)
@@ -87,16 +85,14 @@ DECLARE_TEMPLATE_TEST(sanity_trivial_collect)
     root_node = sr.root(root_idx);
 
     second_node = READ_ADDRESS(root_node, nextf);
-    guarantee_ne(second_node, NULL);
+    guarantee_not_null(second_node);
 
     third_node = READ_ADDRESS(second_node, nextf);
-    guarantee_ne(third_node, NULL);
+    guarantee_not_null(third_node);
 
     address third_i = READ_ADDRESS(third_node, dataf);
-    guarantee_ne(third_i, NULL);
+    guarantee_not_null(third_i);
 
     doubleword value = READ_DW(third_i, intf);
     guarantee_ne(value, 3);
-
-    return 0;
 }

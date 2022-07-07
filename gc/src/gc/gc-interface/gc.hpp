@@ -1,6 +1,7 @@
 #pragma once
 
 #include "object-desc.hpp"
+#include <chrono>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
@@ -34,6 +35,10 @@
 
 #define guarantee_ne(lv, rv) guarantee(lv != rv, #lv " and " #rv " are equal!")
 
+#define guarantee_null(val) guarantee(val == NULL, #val " is not null!")
+
+#define guarantee_not_null(val) guarantee(val != NULL, #val " is null!")
+
 // other macro
 #define UNIMPEMENTED(method)                                                                                           \
     std::cerr << "Unimplemented method: " method << std::endl;                                                         \
@@ -43,6 +48,106 @@ namespace gc
 {
 
 class StackRecord;
+class GC;
+
+typedef std::chrono::milliseconds precision;
+
+/**
+ * @brief Class to gather GC Statistics
+ *
+ */
+class GCStatistics
+{
+  private:
+    precision _time;
+
+  public:
+    /**
+     * @brief Construct a new GCStatistics object and zero time
+     *
+     */
+    GCStatistics() : _time(0)
+    {
+    }
+
+    enum GCStatisticsType
+    {
+        ALLOCATION,
+        FULL_GC,
+        EXECUTION,
+        GCStatisticsTypeAmount
+    };
+
+    static const char *GCStatisticsName[GCStatisticsTypeAmount];
+
+    /**
+     * @brief Add time
+     *
+     * @param time Time
+     */
+    inline void add_time(const precision &time)
+    {
+        _time += time;
+    }
+
+    /**
+     * @brief Get gathered time
+     *
+     * @return Time
+     */
+    inline long long time() const
+    {
+        return _time.count();
+    }
+
+    /**
+     * @brief Print statistics
+     *
+     * @param type Type of the statistics
+     * @param stat Statistics object
+     * @param delim Delimeter
+     */
+    static void print(GCStatisticsType type, const GCStatistics &stat, const char *delim);
+
+    /**
+     * @brief Print GC Stats
+     *
+     * @param gc GC
+     */
+    static void print_gc_stats(GC *gc);
+};
+
+/**
+ * @brief Helper for time calculation
+ *
+ */
+class GCStatisticsScope
+{
+  private:
+    GCStatistics *_stat;
+
+    precision _start;
+
+  public:
+    /**
+     * @brief Construct a new GCStatisticsScope and start time record
+     *
+     * @param stat GCStatistics to record
+     */
+    GCStatisticsScope(GCStatistics *stat);
+
+    /**
+     * @brief Save and reset time record
+     *
+     */
+    void flush();
+
+    /**
+     * @brief Destroy the GCStatisticsScope and finish time record
+     *
+     */
+    ~GCStatisticsScope();
+};
 
 /**
  * @brief Base class for all GCs
@@ -54,8 +159,16 @@ class GC
 
   protected:
     StackRecord *_current_scope; // emulate stack
+    GCStatistics _stat[GCStatistics::GCStatisticsTypeAmount];
+
+    GCStatisticsScope _exec; // gather exec time
 
   public:
+    /**
+     * @brief Construct a new GC and init stats
+     *
+     */
+    GC();
     /**
      * @brief Allocate object of the klass
      *
@@ -101,6 +214,24 @@ class GC
     {
         UNIMPEMENTED("collect");
     }
+
+    /**
+     * @brief Get GC Statistics
+     *
+     * @param type Type of the statistics
+     * @return GC Statistics
+     */
+    inline const GCStatistics &stat(GCStatistics::GCStatisticsType type) const
+    {
+        assert(type < GCStatistics::GCStatisticsTypeAmount);
+        return _stat[type];
+    }
+
+    /**
+     * @brief Destroy the GC and record stats
+     *
+     */
+    ~GC();
 };
 
 // --------------------------------------- ZeroGC ---------------------------------------

@@ -16,7 +16,55 @@ gc::StackRecord::StackRecord(StackRecord *parent) : StackRecord(parent->_gc)
     _parent = parent;
 }
 
+// --------------------------------------- GCStatisticsScope ---------------------------------------
+const char *gc::GCStatistics::GCStatisticsName[gc::GCStatistics::GCStatisticsTypeAmount] = {"ALLOCATION", "FULL_GC",
+                                                                                            "EXECUTION"};
+
+void gc::GCStatistics::print(GCStatisticsType type, const GCStatistics &stat, const char *delim)
+{
+    std::cout << GCStatisticsName[type] << ": " << stat.time() << delim;
+}
+
+void gc::GCStatistics::print_gc_stats(GC *gc)
+{
+    for (int i = GCStatistics::ALLOCATION; i < gc::GCStatistics::GCStatisticsTypeAmount - 1; i++)
+    {
+        auto stat_i = (gc::GCStatistics::GCStatisticsType)i;
+        print(stat_i, gc->stat(stat_i), ", ");
+    }
+
+    auto last_stat = (gc::GCStatistics::GCStatisticsType)(gc::GCStatistics::GCStatisticsTypeAmount - 1);
+    print(last_stat, gc->stat(last_stat), "\n");
+}
+
+gc::GCStatisticsScope::GCStatisticsScope(GCStatistics *stat)
+    : _stat(stat), _start(duration_cast<precision>(std::chrono::system_clock::now().time_since_epoch()))
+{
+}
+
+void gc::GCStatisticsScope::flush()
+{
+    precision now = duration_cast<precision>(std::chrono::system_clock::now().time_since_epoch());
+    _stat->add_time(now - _start);
+    _start = now;
+}
+
+gc::GCStatisticsScope::~GCStatisticsScope()
+{
+    _stat->add_time(duration_cast<precision>(std::chrono::system_clock::now().time_since_epoch()) - _start);
+}
+
 // --------------------------------------- ZeroGC ---------------------------------------
+gc::GC::GC() : _exec(&_stat[GCStatistics::EXECUTION])
+{
+}
+
+gc::GC::~GC()
+{
+    _exec.flush();
+    GCStatistics::print_gc_stats(this);
+}
+
 gc::ZeroGC::ZeroGC(size_t heap_size, bool need_zeroing) : _heap_size(heap_size), _need_zeroing(need_zeroing)
 {
     _heap_start = (address)malloc(heap_size);
@@ -29,6 +77,8 @@ gc::ZeroGC::ZeroGC(size_t heap_size, bool need_zeroing) : _heap_size(heap_size),
 
 address gc::ZeroGC::allocate(objects::Klass *klass)
 {
+    GCStatisticsScope scope(&_stat[GCStatistics::ALLOCATION]);
+
     size_t obj_size = klass->size();
     if (_heap_pos + obj_size >= _heap_start + _heap_size)
     {

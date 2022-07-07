@@ -105,6 +105,8 @@ address gc::MarkSweepGC::find_free_chunk(size_t size)
 
 address gc::MarkSweepGC::allocate(objects::Klass *klass)
 {
+    GCStatisticsScope scope(&_stat[GCStatistics::ALLOCATION]);
+
     size_t obj_size = klass->size();
 
     objects::ObjectHeader *possible_chunk = (objects::ObjectHeader *)find_free_chunk(obj_size);
@@ -150,6 +152,8 @@ address gc::MarkSweepGC::allocate(objects::Klass *klass)
 
 void gc::MarkSweepGC::collect()
 {
+    GCStatisticsScope scope(&_stat[GCStatistics::FULL_GC]);
+
     _mrkr.mark_from_roots(_current_scope);
     sweep();
 }
