@@ -4,7 +4,6 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdlib>
-#include <cstring>
 #include <iostream>
 #include <new>
 #include <stack>
@@ -43,6 +42,28 @@
 #define UNIMPEMENTED(method)                                                                                           \
     std::cerr << "Unimplemented method: " method << std::endl;                                                         \
     abort();
+
+// logging macros
+#ifdef DEBUG
+#define LOG_ALLOC(base, size)                                                                                          \
+    std::cerr << "Allocate object " << std::hex << (uint64_t)base << " of size " << std::dec << size << std::endl;     \
+    _allocated_size += size;
+
+#define LOG_MARK_ROOT(base) std::cerr << "Mark root object " << std::hex << (uint64_t)base << std::endl;
+#define LOG_MARK(base) std::cerr << "Mark object " << std::hex << (uint64_t)base << std::endl;
+
+#define LOG_SWEEP(base, size)                                                                                          \
+    std::cerr << "Sweep object " << std::hex << (uint64_t)base << " of size " << std::dec << size << std::endl;        \
+    _freed_size += size;
+
+#define LOG_COLLECT() std::cerr << "Collected dead objects!\n" << std::endl;
+#else
+#define LOG_ALLOC(base, size)
+#define LOG_MARK_ROOT(base)
+#define LOG_MARK(base)
+#define LOG_SWEEP(base, size)
+#define LOG_COLLECT()
+#endif // DEBUG
 
 namespace gc
 {
@@ -161,7 +182,13 @@ class GC
     StackRecord *_current_scope; // emulate stack
     GCStatistics _stat[GCStatistics::GCStatisticsTypeAmount];
 
-    GCStatisticsScope _exec; // gather exec time
+    GCStatisticsScope _exec; // collect exec time
+
+#ifdef DEBUG
+    uint64_t _allocated_size; // collect allocated size
+    uint64_t _freed_size;     // collect size of the freed objects
+
+#endif // DEBUG
 
   public:
     /**
@@ -261,6 +288,11 @@ class ZeroGC : public GC
 
     void collect()
     {
+    }
+
+    ~ZeroGC()
+    {
+        free(_heap_start);
     }
 };
 

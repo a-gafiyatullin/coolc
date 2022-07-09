@@ -2,8 +2,7 @@
 
 #include <iomanip>
 
-// TODO: some problems with very small heaps?
-#define VERY_SMALL_HEAP 1024
+#define VERY_SMALL_HEAP 256
 
 // test support
 #define DECLARE_TEST(name) void name##_workload()
@@ -15,7 +14,8 @@
 
 #define RUN_TEST(test)                                                                                                 \
     {                                                                                                                  \
-        std::cout << "Test: " << CYAN_COLOUR << #test << NO_COLOUR << " STARTED!" << std::endl;                        \
+        std::cout << GREEN_COLOUR << "Test: " << CYAN_COLOUR << #test << NO_COLOUR << " STARTED!" << std::endl;        \
         test();                                                                                                        \
-        std::cout << "Test: " << CYAN_COLOUR << #test << NO_COLOUR << " PASSED." << std::endl << std::endl;            \
+        std::cout << GREEN_COLOUR << "Test: " << CYAN_COLOUR << #test << NO_COLOUR << " PASSED." << std::endl          \
+                  << std::endl;                                                                                        \
     }

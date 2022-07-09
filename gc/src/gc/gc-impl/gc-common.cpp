@@ -55,7 +55,12 @@ gc::GCStatisticsScope::~GCStatisticsScope()
 }
 
 // --------------------------------------- ZeroGC ---------------------------------------
-gc::GC::GC() : _exec(&_stat[GCStatistics::EXECUTION])
+gc::GC::GC()
+    : _exec(&_stat[GCStatistics::EXECUTION])
+#ifdef DEBUG
+      ,
+      _allocated_size(0), _freed_size(0)
+#endif // DEBUG
 {
 }
 
@@ -63,6 +68,11 @@ gc::GC::~GC()
 {
     _exec.flush();
     GCStatistics::print_gc_stats(this);
+
+#ifdef DEBUG
+    std::cout << "Allocated bytes: " << _allocated_size << std::endl;
+    std::cout << "Freed bytes: " << _freed_size << std::endl;
+#endif // DEBUG
 }
 
 gc::ZeroGC::ZeroGC(size_t heap_size, bool need_zeroing) : _heap_size(heap_size), _need_zeroing(need_zeroing)
@@ -95,8 +105,10 @@ address gc::ZeroGC::allocate(objects::Klass *klass)
 
     if (_need_zeroing)
     {
-        memset(object + sizeof(objects::ObjectHeader), 0, obj_size);
+        obj_header->zero_fields();
     }
+
+    LOG_ALLOC(object, obj_header->_size);
 
     return object;
 }
@@ -114,6 +126,7 @@ void gc::Marker::mark_from_roots(StackRecord *sr)
             if (hdr && !hdr->is_marked())
             {
                 hdr->set_marked();
+                LOG_MARK_ROOT(obj);
                 _worklist.push(hdr);
                 mark();
             }
@@ -144,6 +157,7 @@ void gc::Marker::mark()
             if (child && !child->is_marked())
             {
                 child->set_marked();
+                LOG_MARK(child);
                 _worklist.push(child);
             }
         }

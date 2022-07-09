@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 
 using address = char *;
 using address_fld = address *;
@@ -15,6 +16,9 @@ using doubleword = uint64_t;
 // will see it further
 #define INTOBJ objects::Klass::Integer
 #define LLNODE objects::Klass::LinkedListNode
+
+#define FIELD_SIZE sizeof(address)
+#define HEADER_SIZE sizeof(objects::ObjectHeader)
 
 namespace objects
 {
@@ -86,7 +90,7 @@ struct ObjectHeader
      */
     inline int field_cnt() const
     {
-        return (_size - sizeof(objects::ObjectHeader)) / sizeof(address);
+        return (_size - HEADER_SIZE) / FIELD_SIZE;
     }
 
     /**
@@ -96,7 +100,7 @@ struct ObjectHeader
      */
     inline address_fld fields_base() const
     {
-        return (address_fld)((address)this + sizeof(objects::ObjectHeader));
+        return (address_fld)((address)this + HEADER_SIZE);
     }
 
     /**
@@ -109,6 +113,12 @@ struct ObjectHeader
     {
         return _tag < OTHER;
     }
+
+    /**
+     * @brief Fill fields with zero
+     *
+     */
+    void zero_fields();
 };
 
 /**
@@ -145,7 +155,7 @@ class Klass
     __attribute__((always_inline)) size_t offset(int field_num) const
     {
         assert(field_num < _fields_count);
-        return sizeof(ObjectHeader) + field_num * sizeof(address); // all fields are pointers or pointer-sized for now
+        return HEADER_SIZE + field_num * FIELD_SIZE; // all fields are pointers or pointer-sized for now
     }
 
     /**
@@ -155,7 +165,7 @@ class Klass
      */
     inline size_t size() const
     {
-        return sizeof(ObjectHeader) + _fields_count * sizeof(address);
+        return HEADER_SIZE + _fields_count * FIELD_SIZE;
     }
 
     /**

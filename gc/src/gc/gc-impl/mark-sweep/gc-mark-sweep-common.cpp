@@ -12,6 +12,7 @@ void gc::MarkSweepGC::sweep()
         }
         else
         {
+            LOG_SWEEP(scan, obj->_size);
             free(scan);
         }
         scan = next_object(scan);
@@ -26,7 +27,7 @@ void gc::MarkSweepGC::free(address obj)
     hdr->unset_marked();
     if (_need_zeroing)
     {
-        memset(obj + sizeof(objects::ObjectHeader), 0, hdr->_size - sizeof(objects::ObjectHeader));
+        hdr->zero_fields();
     }
     hdr->_tag = 0;
     // save size for allocation
@@ -39,7 +40,7 @@ address gc::MarkSweepGC::next_object(address obj)
     objects::ObjectHeader *possible_object = (objects::ObjectHeader *)(obj + hdr->_size);
 
     // search for the first object with non-zero tag
-    while (possible_object->_tag == 0 && (address)possible_object < _heap_end)
+    while ((address)possible_object < _heap_end && possible_object->_tag == 0)
     {
         // assuming size is correct for dead objects
         possible_object = (objects::ObjectHeader *)((address)possible_object + possible_object->_size);
@@ -100,6 +101,11 @@ address gc::MarkSweepGC::find_free_chunk(size_t size)
         current_chunk = (objects::ObjectHeader *)((address)current_chunk + current_chunk->_size);
     }
 
+    if (possible_chunk && possible_chunk->_size < size)
+    {
+        return NULL;
+    }
+
     return (address)possible_chunk;
 }
 
@@ -110,7 +116,7 @@ address gc::MarkSweepGC::allocate(objects::Klass *klass)
     size_t obj_size = klass->size();
 
     objects::ObjectHeader *possible_chunk = (objects::ObjectHeader *)find_free_chunk(obj_size);
-    if (!possible_chunk)
+    if (possible_chunk == NULL)
     {
         collect();
     }
@@ -123,7 +129,7 @@ address gc::MarkSweepGC::allocate(objects::Klass *klass)
     size_t current_chunk_size = possible_chunk->_size;
 
     address object = (address)possible_chunk;
-    if (current_chunk_size - obj_size < sizeof(objects::ObjectHeader))
+    if (current_chunk_size - obj_size < HEADER_SIZE)
     {
         obj_size = current_chunk_size; // allign allocation for correct heap interation
         // this headen fields always will be zero, so will not affeсt gc
@@ -136,16 +142,18 @@ address gc::MarkSweepGC::allocate(objects::Klass *klass)
 
     if (_need_zeroing)
     {
-        memset(object + sizeof(objects::ObjectHeader), 0, obj_size);
+        obj_header->zero_fields();
     }
 
     // adjust next chunk
     // at least have memory for the header
-    if (current_chunk_size - obj_size >= sizeof(objects::ObjectHeader))
+    if (current_chunk_size - obj_size >= HEADER_SIZE)
     {
         objects::ObjectHeader *next_free = (objects::ObjectHeader *)((address)possible_chunk + obj_size);
         next_free->set_unused(current_chunk_size - obj_size);
     }
+
+    LOG_ALLOC(object, obj_header->_size);
 
     return object;
 }
@@ -156,4 +164,6 @@ void gc::MarkSweepGC::collect()
 
     _mrkr.mark_from_roots(_current_scope);
     sweep();
+
+    LOG_COLLECT();
 }
