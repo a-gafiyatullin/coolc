@@ -123,6 +123,7 @@ address gc::MarkSweepGC::allocate(objects::Klass *klass)
     possible_chunk = (objects::ObjectHeader *)find_free_chunk(obj_size);
     if (possible_chunk == NULL)
     {
+        GCStatistics::print_gc_stats(this);
         throw std::bad_alloc();
     }
 

@@ -35,6 +35,11 @@ void gc::GCStatistics::print_gc_stats(GC *gc)
 
     auto last_stat = (gc::GCStatistics::GCStatisticsType)(gc::GCStatistics::GCStatisticsTypeAmount - 1);
     print(last_stat, gc->stat(last_stat), "\n");
+
+#ifdef DEBUG
+    std::cout << "Allocated bytes: " << gc->_allocated_size << std::endl;
+    std::cout << "Freed bytes: " << gc->_freed_size << std::endl;
+#endif // DEBUG
 }
 
 gc::GCStatisticsScope::GCStatisticsScope(GCStatistics *stat)
@@ -68,11 +73,6 @@ gc::GC::~GC()
 {
     _exec.flush();
     GCStatistics::print_gc_stats(this);
-
-#ifdef DEBUG
-    std::cout << "Allocated bytes: " << _allocated_size << std::endl;
-    std::cout << "Freed bytes: " << _freed_size << std::endl;
-#endif // DEBUG
 }
 
 gc::ZeroGC::ZeroGC(size_t heap_size, bool need_zeroing) : _heap_size(heap_size), _need_zeroing(need_zeroing)
@@ -80,6 +80,7 @@ gc::ZeroGC::ZeroGC(size_t heap_size, bool need_zeroing) : _heap_size(heap_size),
     _heap_start = (address)malloc(heap_size);
     if (_heap_start == NULL)
     {
+        GCStatistics::print_gc_stats(this);
         throw std::bad_alloc();
     }
     _heap_pos = _heap_start;
@@ -92,6 +93,7 @@ address gc::ZeroGC::allocate(objects::Klass *klass)
     size_t obj_size = klass->size();
     if (_heap_pos + obj_size >= _heap_start + _heap_size)
     {
+        GCStatistics::print_gc_stats(this);
         throw std::bad_alloc(); // for ZeroGC just throw an exception
     }
 
@@ -120,9 +122,9 @@ void gc::Marker::mark_from_roots(StackRecord *sr)
 
     while (sr)
     {
-        for (address obj : sr->roots_unsafe())
+        for (address *obj : sr->roots_unsafe())
         {
-            objects::ObjectHeader *hdr = (objects::ObjectHeader *)obj;
+            objects::ObjectHeader *hdr = (objects::ObjectHeader *)(*obj);
             if (hdr && !hdr->is_marked())
             {
                 hdr->set_marked();

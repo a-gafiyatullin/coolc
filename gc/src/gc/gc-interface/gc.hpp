@@ -1,6 +1,7 @@
 #pragma once
 
 #include "object-desc.hpp"
+#include <cassert>
 #include <chrono>
 #include <cstddef>
 #include <cstdlib>
@@ -177,6 +178,7 @@ class GCStatisticsScope
 class GC
 {
     friend class StackRecord;
+    friend class GCStatistics;
 
   protected:
     StackRecord *_current_scope; // emulate stack
@@ -307,7 +309,7 @@ class StackRecord
   private:
     StackRecord *_parent;
 
-    std::vector<address> _objects;
+    std::vector<address *> _objects;
 
     GC *_gc;
 
@@ -336,23 +338,10 @@ class StackRecord
     /**
      * @brief Add a new root
      *
-     * @return Index of the local
      */
-    __attribute__((always_inline)) int reg_root(address obj)
+    __attribute__((always_inline)) void reg_root(address *obj)
     {
         _objects.push_back(obj);
-        return _objects.size() - 1;
-    }
-
-    /**
-     * @brief Get root by the index
-     *
-     * @return Address of the object
-     */
-    __attribute__((always_inline)) address root(int i) const
-    {
-        assert(i < _objects.size());
-        return _objects[i];
     }
 
     /**
@@ -360,7 +349,7 @@ class StackRecord
      *
      * @return Vector of the roots
      */
-    inline std::vector<address> &roots_unsafe()
+    inline std::vector<address *> &roots_unsafe()
     {
         return _objects;
     }

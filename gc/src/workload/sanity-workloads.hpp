@@ -1,7 +1,6 @@
-#include "gc/gc-interface/gc.hpp"
 #include "tests-support.hpp"
 
-DECLARE_TEMPLATE_TEST(sanity_trivial)
+template <class GCType, int heap_size> DECLARE_TEST(sanity_trivial)
 {
     size_t i_field = INTOBJ.offset(0);
 
@@ -13,19 +12,16 @@ DECLARE_TEMPLATE_TEST(sanity_trivial)
         address ia = ALLOCATE(INTOBJ);
         guarantee_not_null(ia);
 
-        int slot = sr.reg_root(ia);
+        sr.reg_root(&ia);
 
         COLLECT();
-
-        guarantee_eq(ia, sr.root(slot));
-        ia = sr.root(slot);
 
         WRITE(ia, i_field, 0xDEAD);
         guarantee_eq(READ_DW(ia, i_field), 0xDEAD);
     }
 }
 
-DECLARE_TEMPLATE_TEST(sanity_trivial_collect)
+template <class GCType, int heap_size> DECLARE_TEST(sanity_trivial_collect)
 {
     size_t dataf = LLNODE.offset(0);
     size_t nextf = LLNODE.offset(1);
@@ -44,7 +40,7 @@ DECLARE_TEMPLATE_TEST(sanity_trivial_collect)
     WRITE(second_node, nextf, third_node);
     WRITE(third_node, nextf, NULL);
 
-    int root_idx = sr.reg_root(root_node);
+    sr.reg_root(&root_node);
 
     address dead_obj = NULL;
     {
@@ -64,11 +60,9 @@ DECLARE_TEMPLATE_TEST(sanity_trivial_collect)
 
         dead_obj = ALLOCATE(INTOBJ);
         WRITE(dead_obj, intf, 0xDEAD);
-        int dead_obj_idx = sr1.reg_root(dead_obj);
+        sr1.reg_root(&dead_obj);
 
         COLLECT();
-
-        dead_obj = sr1.root(dead_obj_idx);
     }
 
     guarantee_eq(READ_DW(dead_obj, intf), 0xDEAD);
@@ -80,9 +74,6 @@ DECLARE_TEMPLATE_TEST(sanity_trivial_collect)
     {
         guarantee_eq(READ_DW(dead_obj, intf), 0);
     }
-
-    // check the third node integer:
-    root_node = sr.root(root_idx);
 
     second_node = READ_ADDRESS(root_node, nextf);
     guarantee_not_null(second_node);
