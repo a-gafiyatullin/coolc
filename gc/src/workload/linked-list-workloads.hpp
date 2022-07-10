@@ -1,8 +1,8 @@
 #include "tests-support.hpp"
 
-#define SMALL_LINKED_LIST 13000
+#define SMALL_LINKED_LIST 15700
+#define MEDIUM_LINKED_LIST 8038400
 
-// high level of the fragmentation is on this test
 template <class GCType, int heap_size, int nodes> DECLARE_TEST(linked_list_allocation)
 {
     size_t dataf = LLNODE.offset(0);
@@ -42,6 +42,11 @@ template <class GCType, int heap_size, int nodes> DECLARE_TEST(linked_list_alloc
         int cur_val = 1;
         for (int i = 0; i < nodes; i++)
         {
+            if (i % 10000 == 0)
+            {
+                std::cout << "Iteration: " << i << std::endl;
+            }
+
             gc::StackRecord sr1(&sr);
 
             // some slots for locals...
@@ -55,6 +60,7 @@ template <class GCType, int heap_size, int nodes> DECLARE_TEST(linked_list_alloc
             // allocate necessary nodes
             new_node = ALLOCATE(LLNODE);
             new_int = ALLOCATE(INTOBJ);
+            check_val = ALLOCATE(INTOBJ); // rubbish
             check_val = ALLOCATE(INTOBJ);
 
             // calculate a new value

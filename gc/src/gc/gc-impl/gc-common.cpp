@@ -128,7 +128,7 @@ void gc::Marker::mark_from_roots(StackRecord *sr)
             if (hdr && !hdr->is_marked())
             {
                 hdr->set_marked();
-                LOG_MARK_ROOT(obj);
+                LOG_MARK_ROOT(hdr);
                 _worklist.push(hdr);
                 mark();
             }

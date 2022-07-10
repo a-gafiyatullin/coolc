@@ -5,6 +5,7 @@
 
 #define VERY_SMALL_HEAP 192
 #define SMALL_HEAP 1024 * 1024
+#define MEDIUM_HEAP 512 * 1024 * 1024
 
 // test support
 #define DECLARE_TEST(name) void name##_workload()
