@@ -3,9 +3,10 @@
 #include "gc/gc-interface/gc.hpp"
 #include <iomanip>
 
-#define VERY_SMALL_HEAP 192
-#define SMALL_HEAP 1024 * 1024
-#define MEDIUM_HEAP 512 * 1024 * 1024
+#define VERY_SMALL_HEAP 192           // bytes
+#define SMALL_HEAP 1024 * 1024        // 1Mb
+#define MEDIUM_HEAP 512 * 1024 * 1024 // 512Mb
+#define BIG_HEAP 1024 * 1024 * 1024   // 1Gb
 
 // test support
 #define DECLARE_TEST(name) void name##_workload()

@@ -2,6 +2,7 @@
 
 DECLARE_TEST(sanity)
 {
+    // last-update: 7/10/2022
     // WSL 2.0, Intel(R) Core(TM) i7-9700F CPU @ 3.00GHz, 16GB (WSL) DDR4 3200MHz (XMP):
     // clang version 10.0.0-4ubuntu1
     // ALLOCATION: 0, FULL_GC: 0, EXECUTION: 0
@@ -19,9 +20,17 @@ DECLARE_TEST(sanity)
 
 DECLARE_TEST(linked_list)
 {
+    // last-update: 7/10/2022
     // WSL 2.0, Intel(R) Core(TM) i7-9700F CPU @ 3.00GHz, 16GB (WSL) DDR4 3200MHz (XMP):
     // clang version 10.0.0-4ubuntu1
-    // ALLOCATION: 4485, FULL_GC: 0, EXECUTION: 4488
-    RUN_TEST((linked_list_allocation_workload<gc::MarkSweepGC, SMALL_HEAP, SMALL_LINKED_LIST>));
-    RUN_TEST((linked_list_allocation_workload<gc::MarkSweepGC, MEDIUM_HEAP, MEDIUM_LINKED_LIST>));
+    // ALLOCATION: 2, FULL_GC: 0, EXECUTION: 5
+    RUN_TEST((linked_list_allocation_workload<gc::MarkSweepGC, SMALL_HEAP, SMALL_LINKED_LIST, false, 0>));
+    // WSL 2.0, Intel(R) Core(TM) i7-9700F CPU @ 3.00GHz, 16GB (WSL) DDR4 3200MHz (XMP):
+    // clang version 10.0.0-4ubuntu1
+    // ALLOCATION: 1631, FULL_GC: 504, EXECUTION: 2569
+    RUN_TEST((linked_list_allocation_workload<gc::MarkSweepGC, MEDIUM_HEAP, MEDIUM_LINKED_LIST, false, 0>));
+    // WSL 2.0, Intel(R) Core(TM) i7-9700F CPU @ 3.00GHz, 16GB (WSL) DDR4 3200MHz (XMP):
+    // clang version 10.0.0-4ubuntu1
+    // ALLOCATION: 3340, FULL_GC: 1048, EXECUTION: 5297
+    RUN_TEST((linked_list_allocation_workload<gc::MarkSweepGC, BIG_HEAP, BIG_LINKED_LIST, false, 0>));
 }

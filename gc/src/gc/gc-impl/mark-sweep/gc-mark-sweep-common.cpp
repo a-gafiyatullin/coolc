@@ -1,4 +1,5 @@
 #include "gc/gc-interface/gc.hpp"
+#include "gc/gc-interface/object-desc.hpp"
 
 void gc::MarkSweepGC::sweep()
 {
@@ -62,7 +63,8 @@ address gc::MarkSweepGC::find_free_chunk(size_t size)
     // try to find suitable chunk of the memeory
     // compact chunks by the way
     objects::ObjectHeader *possible_chunk = NULL;
-    objects::ObjectHeader *current_chunk = (objects::ObjectHeader *)_heap_start;
+    // assume that we allocate memory consequently between collections
+    objects::ObjectHeader *current_chunk = (objects::ObjectHeader *)(_heap_pos ? _heap_pos : _heap_start);
     size_t current_chunk_size = 0;
     while ((address)current_chunk < _heap_end)
     {
@@ -79,12 +81,22 @@ address gc::MarkSweepGC::find_free_chunk(size_t size)
         }
         else if (current_chunk->_tag == 0 && possible_chunk == NULL)
         {
+            // remember the first free chunk
+            if (_heap_pos == NULL)
+            {
+                _heap_pos = (address)current_chunk;
+            }
             // first free chunk
             possible_chunk = current_chunk;
             current_chunk_size = current_chunk->_size;
         }
         else if (current_chunk->_tag == 0)
         {
+            // remember the first free chunk
+            if (_heap_pos == NULL)
+            {
+                _heap_pos = (address)current_chunk;
+            }
             // not the first free contiguous chunk
             // merge previous chunks
             current_chunk_size += current_chunk->_size;
@@ -152,6 +164,7 @@ address gc::MarkSweepGC::allocate(objects::Klass *klass)
     {
         objects::ObjectHeader *next_free = (objects::ObjectHeader *)((address)possible_chunk + obj_size);
         next_free->set_unused(current_chunk_size - obj_size);
+        _heap_pos = (address)next_free;
     }
 
     LOG_ALLOC(object, obj_header->_size);
@@ -163,6 +176,7 @@ void gc::MarkSweepGC::collect()
 {
     GCStatisticsScope scope(&_stat[GCStatistics::FULL_GC]);
 
+    _heap_pos = NULL; // forget last free chunk
     _mrkr.mark_from_roots(_current_scope);
     sweep();
 

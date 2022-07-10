@@ -2,8 +2,9 @@
 
 #define SMALL_LINKED_LIST 15700
 #define MEDIUM_LINKED_LIST 8038400
+#define BIG_LINKED_LIST 16076800
 
-template <class GCType, int heap_size, int nodes> DECLARE_TEST(linked_list_allocation)
+template <class GCType, int heap_size, int nodes, bool verbose, int verbose_iter> DECLARE_TEST(linked_list_allocation)
 {
     size_t dataf = LLNODE.offset(0);
     size_t nextf = LLNODE.offset(1);
@@ -40,11 +41,14 @@ template <class GCType, int heap_size, int nodes> DECLARE_TEST(linked_list_alloc
         // 2. Allocate other nodes
         int prev_val = 0;
         int cur_val = 1;
-        for (int i = 0; i < nodes; i++)
+        for (size_t i = 0; i < nodes; i++)
         {
-            if (i % 10000 == 0)
+            if constexpr (verbose)
             {
-                std::cout << "Iteration: " << i << std::endl;
+                if (i % verbose_iter == 0)
+                {
+                    std::cout << "Iteration: " << i << std::endl;
+                }
             }
 
             gc::StackRecord sr1(&sr);
