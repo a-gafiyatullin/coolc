@@ -11,7 +11,7 @@ template <class GCType, int heap_size, int nodes, bool verbose, int verbose_iter
 
     size_t intf = INTOBJ.offset(0);
 
-    GCType gc(heap_size, true);
+    GCType gc(heap_size);
 
     {
         gc::StackRecord sr(&gc);
@@ -31,16 +31,16 @@ template <class GCType, int heap_size, int nodes, bool verbose, int verbose_iter
         // link root and the int 0
         address root_i = ALLOCATE(INTOBJ);
         WRITE(root, dataf, root_i);
-        WRITE(root_i, intf, 0);
+        WRITE(root_i, intf, (doubleword)0);
 
         // link current_node and the int 1
         address curr_i = ALLOCATE(INTOBJ);
         WRITE(curr, dataf, curr_i);
-        WRITE(curr_i, intf, 1);
+        WRITE(curr_i, intf, (doubleword)1);
 
         // 2. Allocate other nodes
-        int prev_val = 0;
-        int cur_val = 1;
+        doubleword prev_val = 0;
+        doubleword cur_val = 1;
         for (size_t i = 0; i < nodes; i++)
         {
             if constexpr (verbose)
@@ -68,7 +68,7 @@ template <class GCType, int heap_size, int nodes, bool verbose, int verbose_iter
             check_val = ALLOCATE(INTOBJ);
 
             // calculate a new value
-            int next_val = READ_DW(READ_ADDRESS(prev, dataf), intf);
+            doubleword next_val = READ_DW(READ_ADDRESS(prev, dataf), intf);
             next_val += READ_DW(READ_ADDRESS(curr, dataf), intf);
 
             // write new value to the new int
@@ -78,7 +78,7 @@ template <class GCType, int heap_size, int nodes, bool verbose, int verbose_iter
             WRITE(new_node, dataf, new_int);
 
             // allocate some rubbish
-            int good_next_val = prev_val + cur_val;
+            doubleword good_next_val = prev_val + cur_val;
             prev_val = cur_val;
             cur_val = good_next_val;
             WRITE(check_val, intf, cur_val);

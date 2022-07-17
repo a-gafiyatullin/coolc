@@ -10,6 +10,9 @@
 #include <stack>
 #include <vector>
 
+extern bool LOGGING;
+extern bool ZEROING;
+
 // some common macro for convience
 #define ALLOCATE(type) gc.allocate(&type)
 #define COLLECT() gc.collect()
@@ -47,17 +50,30 @@
 // logging macros
 #ifdef DEBUG
 #define LOG_ALLOC(base, size)                                                                                          \
-    std::cerr << "Allocate object " << std::hex << (uint64_t)base << " of size " << std::dec << size << std::endl;     \
-    _allocated_size += size;
+    if (LOGGING)                                                                                                       \
+    {                                                                                                                  \
+        std::cerr << "Allocate object " << std::hex << (uint64_t)base << " of size " << std::dec << size << std::endl; \
+        _allocated_size += size;                                                                                       \
+    }
 
-#define LOG_MARK_ROOT(base) std::cerr << "Mark root object " << std::hex << (uint64_t)base << std::endl;
-#define LOG_MARK(base) std::cerr << "Mark object " << std::hex << (uint64_t)base << std::endl;
+#define LOG_MARK_ROOT(base)                                                                                            \
+    if (LOGGING)                                                                                                       \
+        std::cerr << "Mark root object " << std::hex << (uint64_t)base << std::endl;
+
+#define LOG_MARK(base)                                                                                                 \
+    if (LOGGING)                                                                                                       \
+        std::cerr << "Mark object " << std::hex << (uint64_t)base << std::endl;
 
 #define LOG_SWEEP(base, size)                                                                                          \
-    std::cerr << "Sweep object " << std::hex << (uint64_t)base << " of size " << std::dec << size << std::endl;        \
-    _freed_size += size;
+    if (LOGGING)                                                                                                       \
+    {                                                                                                                  \
+        std::cerr << "Sweep object " << std::hex << (uint64_t)base << " of size " << std::dec << size << std::endl;    \
+        _freed_size += size;                                                                                           \
+    }
 
-#define LOG_COLLECT() std::cerr << "Collected dead objects!\n" << std::endl;
+#define LOG_COLLECT()                                                                                                  \
+    if (LOGGING)                                                                                                       \
+        std::cerr << "Collected dead objects!\n" << std::endl;
 #else
 #define LOG_ALLOC(base, size)
 #define LOG_MARK_ROOT(base)
@@ -94,8 +110,8 @@ class GCStatistics
 
     enum GCStatisticsType
     {
-        ALLOCATION,
         FULL_GC,
+        ALLOCATION,
         EXECUTION,
         GCStatisticsTypeAmount
     };
@@ -127,9 +143,10 @@ class GCStatistics
      *
      * @param type Type of the statistics
      * @param stat Statistics object
+     * @param sub Subtract value from stat
      * @param delim Delimeter
      */
-    static void print(GCStatisticsType type, const GCStatistics &stat, const char *delim);
+    static void print(GCStatisticsType type, const GCStatistics &stat, long long sub, const char *delim);
 
     /**
      * @brief Print GC Stats
@@ -268,13 +285,12 @@ class ZeroGC : public GC
 {
   protected:
     const size_t _heap_size;
-    const bool _need_zeroing;
 
     address _heap_start;
     address _heap_pos;
 
   public:
-    ZeroGC(size_t heap_size, bool need_zeroing);
+    ZeroGC(size_t heap_size);
 
     address allocate(objects::Klass *klass);
 
@@ -372,6 +388,9 @@ class StackRecord
 class Marker
 {
   private:
+    address _heap_start;
+    address _heap_end;
+
     /* "For a single-threaded collector, the work list could be implemented as a stack. This leads to a depthfirst
      * traversal of the graph. If mark bits are co-located with objects, it has the advantage that the
      * elements that are processed next are those that have been marked most recently, and hence are likely
@@ -382,6 +401,14 @@ class Marker
     void mark();
 
   public:
+    /**
+     * @brief Construct a new Marker object
+     *
+     * @param heap_start Start of the heap to be marked
+     * @param heap_end End of the heap to be marked
+     */
+    Marker(address heap_start, address heap_end);
+
     /**
      * @brief Mark live objects from root
      *
@@ -409,7 +436,7 @@ class MarkSweepGC : public ZeroGC
     address find_free_chunk(size_t size);
 
   public:
-    MarkSweepGC(size_t heap_size, bool need_zeroing);
+    MarkSweepGC(size_t heap_size);
 
     address allocate(objects::Klass *klass);
 

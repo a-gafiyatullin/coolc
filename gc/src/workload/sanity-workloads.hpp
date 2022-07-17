@@ -4,7 +4,7 @@ template <class GCType, int heap_size> DECLARE_TEST(sanity_trivial)
 {
     size_t i_field = INTOBJ.offset(0);
 
-    GCType gc(heap_size, true);
+    GCType gc(heap_size);
 
     {
         gc::StackRecord sr(&gc);
@@ -16,7 +16,7 @@ template <class GCType, int heap_size> DECLARE_TEST(sanity_trivial)
 
         COLLECT();
 
-        WRITE(ia, i_field, 0xDEAD);
+        WRITE(ia, i_field, (doubleword)0xDEAD);
         guarantee_eq(READ_DW(ia, i_field), 0xDEAD);
     }
 }
@@ -28,7 +28,7 @@ template <class GCType, int heap_size> DECLARE_TEST(sanity_trivial_collect)
 
     size_t intf = INTOBJ.offset(0);
 
-    GCType gc(heap_size, true);
+    GCType gc(heap_size);
     gc::StackRecord sr(&gc);
 
     // create linked list of the integers:
@@ -59,7 +59,7 @@ template <class GCType, int heap_size> DECLARE_TEST(sanity_trivial_collect)
         WRITE(third_i, intf, 2);
 
         dead_obj = ALLOCATE(INTOBJ);
-        WRITE(dead_obj, intf, 0xDEAD);
+        WRITE(dead_obj, intf, (doubleword)0xDEAD);
         sr1.reg_root(&dead_obj);
 
         COLLECT();
@@ -68,12 +68,6 @@ template <class GCType, int heap_size> DECLARE_TEST(sanity_trivial_collect)
     guarantee_eq(READ_DW(dead_obj, intf), 0xDEAD);
 
     COLLECT();
-
-    // for mark and sweep we know that objects are not relocated
-    if (std::is_same<GCType, gc::MarkSweepGC>::value)
-    {
-        guarantee_eq(READ_DW(dead_obj, intf), 0);
-    }
 
     second_node = READ_ADDRESS(root_node, nextf);
     guarantee_not_null(second_node);

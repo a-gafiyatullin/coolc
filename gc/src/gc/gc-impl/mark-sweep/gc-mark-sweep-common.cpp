@@ -1,5 +1,4 @@
 #include "gc/gc-interface/gc.hpp"
-#include "gc/gc-interface/object-desc.hpp"
 
 void gc::MarkSweepGC::sweep()
 {
@@ -26,9 +25,9 @@ void gc::MarkSweepGC::free(address obj)
 
     objects::ObjectHeader *hdr = (objects::ObjectHeader *)obj;
     hdr->unset_marked();
-    if (_need_zeroing)
+    if (ZEROING)
     {
-        hdr->zero_fields();
+        hdr->zero_fields(0xFE);
     }
     hdr->_tag = 0;
     // save size for allocation
@@ -50,8 +49,8 @@ address gc::MarkSweepGC::next_object(address obj)
     return (address)possible_object;
 }
 
-gc::MarkSweepGC::MarkSweepGC(size_t heap_size, bool need_zeroing)
-    : ZeroGC(heap_size, need_zeroing), _heap_end(_heap_start + _heap_size)
+gc::MarkSweepGC::MarkSweepGC(size_t heap_size)
+    : ZeroGC(heap_size), _heap_end(_heap_start + _heap_size), _mrkr(_heap_start, _heap_end)
 {
     // create an artificial object with tag 0 and size heap_size
     objects::ObjectHeader *aobj = (objects::ObjectHeader *)_heap_start;
@@ -153,10 +152,7 @@ address gc::MarkSweepGC::allocate(objects::Klass *klass)
     obj_header->_size = obj_size;
     obj_header->_tag = klass->type();
 
-    if (_need_zeroing)
-    {
-        obj_header->zero_fields();
-    }
+    obj_header->zero_fields();
 
     // adjust next chunk
     // at least have memory for the header

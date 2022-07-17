@@ -1,5 +1,8 @@
 #include "gc/gc-interface/gc.hpp"
 
+bool LOGGING = false;
+bool ZEROING = false;
+
 // --------------------------------------- StackRecord ---------------------------------------
 gc::StackRecord::StackRecord(GC *gc) : _gc(gc), _parent(NULL)
 {
@@ -17,24 +20,27 @@ gc::StackRecord::StackRecord(StackRecord *parent) : StackRecord(parent->_gc)
 }
 
 // --------------------------------------- GCStatisticsScope ---------------------------------------
-const char *gc::GCStatistics::GCStatisticsName[gc::GCStatistics::GCStatisticsTypeAmount] = {"ALLOCATION", "FULL_GC",
+const char *gc::GCStatistics::GCStatisticsName[gc::GCStatistics::GCStatisticsTypeAmount] = {"FULL_GC", "ALLOCATION",
                                                                                             "EXECUTION"};
 
-void gc::GCStatistics::print(GCStatisticsType type, const GCStatistics &stat, const char *delim)
+void gc::GCStatistics::print(GCStatisticsType type, const GCStatistics &stat, long long sub, const char *delim)
 {
-    std::cout << GCStatisticsName[type] << ": " << stat.time() << delim;
+    std::cout << GCStatisticsName[type] << ": " << stat.time() - sub << delim;
 }
 
 void gc::GCStatistics::print_gc_stats(GC *gc)
 {
-    for (int i = GCStatistics::ALLOCATION; i < gc::GCStatistics::GCStatisticsTypeAmount - 1; i++)
+    long long sum = 0;
+    for (int i = GCStatistics::FULL_GC; i < gc::GCStatistics::GCStatisticsTypeAmount - 1; i++)
     {
         auto stat_i = (gc::GCStatistics::GCStatisticsType)i;
-        print(stat_i, gc->stat(stat_i), ", ");
+        print(stat_i, gc->stat(stat_i), sum, ", ");
+
+        sum += gc->stat(stat_i).time();
     }
 
     auto last_stat = (gc::GCStatistics::GCStatisticsType)(gc::GCStatistics::GCStatisticsTypeAmount - 1);
-    print(last_stat, gc->stat(last_stat), "\n");
+    print(last_stat, gc->stat(last_stat), sum, "\n");
 
 #ifdef DEBUG
     std::cout << "Allocated bytes: " << gc->_allocated_size << std::endl;
@@ -75,7 +81,7 @@ gc::GC::~GC()
     GCStatistics::print_gc_stats(this);
 }
 
-gc::ZeroGC::ZeroGC(size_t heap_size, bool need_zeroing) : _heap_size(heap_size), _need_zeroing(need_zeroing)
+gc::ZeroGC::ZeroGC(size_t heap_size) : _heap_size(heap_size)
 {
     _heap_start = (address)malloc(heap_size);
     if (_heap_start == NULL)
@@ -105,10 +111,7 @@ address gc::ZeroGC::allocate(objects::Klass *klass)
     obj_header->_size = obj_size;
     obj_header->_tag = klass->type();
 
-    if (_need_zeroing)
-    {
-        obj_header->zero_fields();
-    }
+    obj_header->zero_fields();
 
     LOG_ALLOC(object, obj_header->_size);
 
@@ -116,15 +119,20 @@ address gc::ZeroGC::allocate(objects::Klass *klass)
 }
 
 // --------------------------------------- Marker ---------------------------------------
+gc::Marker::Marker(address heap_start, address heap_end) : _heap_start(heap_start), _heap_end(heap_end)
+{
+}
+
 void gc::Marker::mark_from_roots(StackRecord *sr)
 {
-    guarantee(_worklist.empty(), "_worklist is not empty!");
+    assert(_worklist.empty());
 
     while (sr)
     {
         for (address *obj : sr->roots_unsafe())
         {
             objects::ObjectHeader *hdr = (objects::ObjectHeader *)(*obj);
+            assert((address)hdr >= _heap_start && (address)hdr < _heap_end || !hdr);
             if (hdr && !hdr->is_marked())
             {
                 hdr->set_marked();
@@ -156,6 +164,13 @@ void gc::Marker::mark()
         for (int j = 0; j < fields_cnt; j++)
         {
             objects::ObjectHeader *child = (objects::ObjectHeader *)fields[j];
+#ifdef DEBUG
+            if (!((address)child >= _heap_start && (address)child < _heap_end || !child))
+            {
+                hdr->print();
+            }
+            assert((address)child >= _heap_start && (address)child < _heap_end || !child);
+#endif // DEBUG
             if (child && !child->is_marked())
             {
                 child->set_marked();

@@ -4,6 +4,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#ifdef DEBUG
+#include <iostream>
+#endif // DEBUG
 
 using address = char *;
 using address_fld = address *;
@@ -117,8 +120,17 @@ struct ObjectHeader
     /**
      * @brief Fill fields with zero
      *
+     * @param val Zeroing value
      */
-    void zero_fields();
+    void zero_fields(int val = 0);
+
+#ifdef DEBUG
+    /**
+     * @brief Print header
+     *
+     */
+    void print();
+#endif // DEBUG
 };
 
 /**
