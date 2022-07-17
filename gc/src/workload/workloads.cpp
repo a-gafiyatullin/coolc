@@ -57,7 +57,7 @@ DECLARE_TEST(linked_list)
 
     // rpi4 (Broadcom BCM2711, quad-core Cortex-A72 (ARM v8) 64-bit SoC @ 1.5GHz, 4GB LPDDR4), Ubuntu 20.04.4 LTS
     // clang version 10.0.0-4ubuntu1
-    // ALLOCATION: 18, FULL_GC: 5, EXECUTION: 27
+    // FULL_GC: 6, ALLOCATION: 11, EXECUTION: 9
 
     // Apple MacBook Air M1 2020 (Apple M1 (2.1/3.2 GHz), 8Gb LPDDR4X 4266MHz), macOS Monterey 12.4
     // Apple clang version 13.1.6 (clang-1316.0.21.2.5)
@@ -71,7 +71,7 @@ DECLARE_TEST(linked_list)
 
     // rpi4 (Broadcom BCM2711, quad-core Cortex-A72 (ARM v8) 64-bit SoC @ 1.5GHz, 4GB LPDDR4), Ubuntu 20.04.4 LTS
     // clang version 10.0.0-4ubuntu1
-    // ALLOCATION: 9290, FULL_GC: 4312, EXECUTION: 13837
+    // FULL_GC: 4188, ALLOCATION: 4813, EXECUTION: 4477
 
     // Apple MacBook Air M1 2020 (Apple M1 (2.1/3.2 GHz), 8Gb LPDDR4X 4266MHz), macOS Monterey 12.4
     // Apple clang version 13.1.6 (clang-1316.0.21.2.5)
@@ -85,7 +85,7 @@ DECLARE_TEST(linked_list)
 
     // rpi4 (Broadcom BCM2711, quad-core Cortex-A72 (ARM v8) 64-bit SoC @ 1.5GHz, 4GB LPDDR4), Ubuntu 20.04.4 LTS
     // clang version 10.0.0-4ubuntu1
-    // ALLOCATION: 18237, FULL_GC: 8419, EXECUTION: 27290
+    // FULL_GC: 8243, ALLOCATION: 9805, EXECUTION: 8259
 
     // Apple MacBook Air M1 2020 (Apple M1 (2.1/3.2 GHz), 8Gb LPDDR4X 4266MHz), macOS Monterey 12.4
     // Apple clang version 13.1.6 (clang-1316.0.21.2.5)
