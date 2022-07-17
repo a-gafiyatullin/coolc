@@ -36,7 +36,7 @@ void gc::GCStatistics::print_gc_stats(GC *gc)
         auto stat_i = (gc::GCStatistics::GCStatisticsType)i;
         print(stat_i, gc->stat(stat_i), sum, ", ");
 
-        sum += gc->stat(stat_i).time();
+        sum = gc->stat(stat_i).time();
     }
 
     auto last_stat = (gc::GCStatistics::GCStatisticsType)(gc::GCStatistics::GCStatisticsTypeAmount - 1);
@@ -176,6 +176,7 @@ void gc::Marker::mark()
                 child->set_marked();
                 LOG_MARK(child);
                 _worklist.push(child);
+                //__builtin_prefetch(child, 1);
             }
         }
     }

@@ -53,7 +53,7 @@ DECLARE_TEST(linked_list)
 
     // WSL 2.0, Intel(R) Core(TM) i7-9700F CPU @ 3.00GHz, 16GB (WSL) DDR4 3200MHz (XMP), Windows 11:
     // clang version 10.0.0-4ubuntu1
-    // ALLOCATION: 2, FULL_GC: 0, EXECUTION: 5
+    // FULL_GC: 0, ALLOCATION: 1, EXECUTION: 3
 
     // rpi4 (Broadcom BCM2711, quad-core Cortex-A72 (ARM v8) 64-bit SoC @ 1.5GHz, 4GB LPDDR4), Ubuntu 20.04.4 LTS
     // clang version 10.0.0-4ubuntu1
@@ -67,7 +67,7 @@ DECLARE_TEST(linked_list)
 
     // WSL 2.0, Intel(R) Core(TM) i7-9700F CPU @ 3.00GHz, 16GB (WSL) DDR4 3200MHz (XMP), Windows 11:
     // clang version 10.0.0-4ubuntu1
-    // ALLOCATION: 1631, FULL_GC: 504, EXECUTION: 2569
+    // FULL_GC: 502, ALLOCATION: 1158, EXECUTION: 947
 
     // rpi4 (Broadcom BCM2711, quad-core Cortex-A72 (ARM v8) 64-bit SoC @ 1.5GHz, 4GB LPDDR4), Ubuntu 20.04.4 LTS
     // clang version 10.0.0-4ubuntu1
@@ -81,7 +81,7 @@ DECLARE_TEST(linked_list)
 
     // WSL 2.0, Intel(R) Core(TM) i7-9700F CPU @ 3.00GHz, 16GB (WSL) DDR4 3200MHz (XMP), Windows 11:
     // clang version 10.0.0-4ubuntu1
-    // ALLOCATION: 3340, FULL_GC: 1048, EXECUTION: 5297
+    // FULL_GC: 995, ALLOCATION: 2353, EXECUTION: 1851
 
     // rpi4 (Broadcom BCM2711, quad-core Cortex-A72 (ARM v8) 64-bit SoC @ 1.5GHz, 4GB LPDDR4), Ubuntu 20.04.4 LTS
     // clang version 10.0.0-4ubuntu1
