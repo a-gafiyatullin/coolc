@@ -14,7 +14,6 @@ DECLARE_TEST(sanity)
 
     // Apple MacBook Air M1 2020 (Apple M1 (2.1/3.2 GHz), 8Gb LPDDR4X 4266MHz), macOS Monterey 12.4
     // Apple clang version 13.1.6 (clang-1316.0.21.2.5)
-    // Battery: ALLOCATION: 0, FULL_GC: 0, EXECUTION: 0
     // Power supply: ALLOCATION: 0, FULL_GC: 0, EXECUTION: 0
     RUN_TEST((sanity_trivial_workload<gc::ZeroGC, VERY_SMALL_HEAP>));
 
@@ -28,7 +27,6 @@ DECLARE_TEST(sanity)
 
     // Apple MacBook Air M1 2020 (Apple M1 (2.1/3.2 GHz), 8Gb LPDDR4X 4266MHz), macOS Monterey 12.4
     // Apple clang version 13.1.6 (clang-1316.0.21.2.5)
-    // Battery: ALLOCATION: 0, FULL_GC: 0, EXECUTION: 0
     // Power supply: ALLOCATION: 0, FULL_GC: 0, EXECUTION: 0
     RUN_TEST((sanity_trivial_workload<gc::MarkSweepGC, VERY_SMALL_HEAP>));
 
@@ -42,7 +40,6 @@ DECLARE_TEST(sanity)
 
     // Apple MacBook Air M1 2020 (Apple M1 (2.1/3.2 GHz), 8Gb LPDDR4X 4266MHz), macOS Monterey 12.4
     // Apple clang version 13.1.6 (clang-1316.0.21.2.5)
-    // Battery: ALLOCATION: 0, FULL_GC: 0, EXECUTION: 0
     // Power supply: ALLOCATION: 0, FULL_GC: 0, EXECUTION: 0
     RUN_TEST((sanity_trivial_collect_workload<gc::MarkSweepGC, VERY_SMALL_HEAP>));
 }
@@ -61,8 +58,7 @@ DECLARE_TEST(linked_list)
 
     // Apple MacBook Air M1 2020 (Apple M1 (2.1/3.2 GHz), 8Gb LPDDR4X 4266MHz), macOS Monterey 12.4
     // Apple clang version 13.1.6 (clang-1316.0.21.2.5)
-    // Battery: ALLOCATION: 7, FULL_GC: 0, EXECUTION: 13
-    // Power supply: ALLOCATION: 8, FULL_GC: 3, EXECUTION: 13
+    // Power supply: FULL_GC: 3, ALLOCATION: 3, EXECUTION: 8
     RUN_TEST((linked_list_allocation_workload<gc::MarkSweepGC, SMALL_HEAP, SMALL_LINKED_LIST, false, 0>));
 
     // WSL 2.0, Intel(R) Core(TM) i7-9700F CPU @ 3.00GHz, 16GB (WSL) DDR4 3200MHz (XMP), Windows 11:
@@ -75,8 +71,7 @@ DECLARE_TEST(linked_list)
 
     // Apple MacBook Air M1 2020 (Apple M1 (2.1/3.2 GHz), 8Gb LPDDR4X 4266MHz), macOS Monterey 12.4
     // Apple clang version 13.1.6 (clang-1316.0.21.2.5)
-    // Battery: ALLOCATION: 1330, FULL_GC: 583, EXECUTION: 2449
-    // Power supply: ALLOCATION: 1278, FULL_GC: 539, EXECUTION: 2401
+    // Power supply: FULL_GC: 558, ALLOCATION: 744, EXECUTION: 1112
     RUN_TEST((linked_list_allocation_workload<gc::MarkSweepGC, MEDIUM_HEAP, MEDIUM_LINKED_LIST, false, 0>));
 
     // WSL 2.0, Intel(R) Core(TM) i7-9700F CPU @ 3.00GHz, 16GB (WSL) DDR4 3200MHz (XMP), Windows 11:
@@ -89,7 +84,6 @@ DECLARE_TEST(linked_list)
 
     // Apple MacBook Air M1 2020 (Apple M1 (2.1/3.2 GHz), 8Gb LPDDR4X 4266MHz), macOS Monterey 12.4
     // Apple clang version 13.1.6 (clang-1316.0.21.2.5)
-    // Battery: ALLOCATION: 2610, FULL_GC: 1171, EXECUTION: 4835
-    // Power supply: ALLOCATION: 2589, FULL_GC: 1116, EXECUTION: 4778
+    // Power supply: FULL_GC: 1135, ALLOCATION: 1441, EXECUTION: 2226
     RUN_TEST((linked_list_allocation_workload<gc::MarkSweepGC, BIG_HEAP, BIG_LINKED_LIST, false, 0>));
 }
