@@ -1,4 +1,5 @@
 #include "workload/workloads.hpp"
+#include "gc/gc-interface/gc.hpp"
 #include <cstring>
 
 #define GLOBAL_VAR_NAME(var) #var
@@ -25,7 +26,12 @@ void process_args(int argc, char *argv[])
 {
     for (int i = 1; i < argc; i++)
     {
-        CHECK_VAR_AND_SET(argv[i], LOGGING, true)
+        // clang-format off
+        CHECK_VAR_AND_SET(argv[i], LOGALOC, true)
+        else CHECK_VAR_AND_SET(argv[i], LOGMARK, true)
+        else CHECK_VAR_AND_SET(argv[i], LOGSWEEP, true)
+        else CHECK_VAR_AND_SET(argv[i], LOGGING, true)
         else CHECK_VAR_AND_SET(argv[i], ZEROING, true)
+        // clang-format on
     }
 }

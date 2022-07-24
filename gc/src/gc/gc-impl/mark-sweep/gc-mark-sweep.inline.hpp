@@ -1,6 +1,6 @@
 #include "gc/gc-interface/gc.hpp"
 
-void gc::MarkSweepGC::sweep()
+template <class MarkerType> void gc::MarkSweepGC<MarkerType>::sweep()
 {
     address scan = _heap_start;
     while (scan < _heap_end)
@@ -19,7 +19,7 @@ void gc::MarkSweepGC::sweep()
     }
 }
 
-void gc::MarkSweepGC::free(address obj)
+template <class MarkerType> void gc::MarkSweepGC<MarkerType>::free(address obj)
 {
     // memory chunk is free if tag of the object starts from this address is 0
 
@@ -34,7 +34,7 @@ void gc::MarkSweepGC::free(address obj)
     assert(hdr->_size != 0);
 }
 
-address gc::MarkSweepGC::next_object(address obj)
+template <class MarkerType> address gc::MarkSweepGC<MarkerType>::next_object(address obj)
 {
     objects::ObjectHeader *hdr = (objects::ObjectHeader *)obj;
     objects::ObjectHeader *possible_object = (objects::ObjectHeader *)(obj + hdr->_size);
@@ -49,7 +49,8 @@ address gc::MarkSweepGC::next_object(address obj)
     return (address)possible_object;
 }
 
-gc::MarkSweepGC::MarkSweepGC(size_t heap_size)
+template <class MarkerType>
+gc::MarkSweepGC<MarkerType>::MarkSweepGC(size_t heap_size)
     : ZeroGC(heap_size), _heap_end(_heap_start + _heap_size), _mrkr(_heap_start, _heap_end)
 {
     // create an artificial object with tag 0 and size heap_size
@@ -57,7 +58,7 @@ gc::MarkSweepGC::MarkSweepGC(size_t heap_size)
     aobj->set_unused(heap_size);
 }
 
-address gc::MarkSweepGC::find_free_chunk(size_t size)
+template <class MarkerType> address gc::MarkSweepGC<MarkerType>::find_free_chunk(size_t size)
 {
     // try to find suitable chunk of the memeory
     // compact chunks by the way
@@ -120,7 +121,7 @@ address gc::MarkSweepGC::find_free_chunk(size_t size)
     return (address)possible_chunk;
 }
 
-address gc::MarkSweepGC::allocate(objects::Klass *klass)
+template <class MarkerType> address gc::MarkSweepGC<MarkerType>::allocate(objects::Klass *klass)
 {
     GCStatisticsScope scope(&_stat[GCStatistics::ALLOCATION]);
 
@@ -168,12 +169,16 @@ address gc::MarkSweepGC::allocate(objects::Klass *klass)
     return object;
 }
 
-void gc::MarkSweepGC::collect()
+template <class MarkerType> void gc::MarkSweepGC<MarkerType>::collect()
 {
-    GCStatisticsScope scope(&_stat[GCStatistics::FULL_GC]);
+    GCStatisticsScope scope(&_stat[GCStatistics::GC_SWEEP]);
 
     _heap_pos = NULL; // forget last free chunk
-    _mrkr.mark_from_roots(_current_scope);
+    {
+        GCStatisticsScope scope(&_stat[GCStatistics::GC_MARK]);
+        _mrkr.mark_from_roots(_current_scope);
+    }
+
     sweep();
 
     LOG_COLLECT();

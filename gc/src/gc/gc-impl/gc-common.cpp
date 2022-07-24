@@ -1,5 +1,9 @@
+#include "gc/gc-impl/mark-sweep/gc-mark-sweep.inline.hpp"
 #include "gc/gc-interface/gc.hpp"
 
+bool LOGALOC = false;
+bool LOGMARK = false;
+bool LOGSWEEP = false;
 bool LOGGING = false;
 bool ZEROING = false;
 
@@ -20,8 +24,8 @@ gc::StackRecord::StackRecord(StackRecord *parent) : StackRecord(parent->_gc)
 }
 
 // --------------------------------------- GCStatisticsScope ---------------------------------------
-const char *gc::GCStatistics::GCStatisticsName[gc::GCStatistics::GCStatisticsTypeAmount] = {"FULL_GC", "ALLOCATION",
-                                                                                            "EXECUTION"};
+const char *gc::GCStatistics::GCStatisticsName[gc::GCStatistics::GCStatisticsTypeAmount] = {"GC_MARK", "GC_SWEEP",
+                                                                                            "ALLOCATION", "EXECUTION"};
 
 void gc::GCStatistics::print(GCStatisticsType type, const GCStatistics &stat, long long sub, const char *delim)
 {
@@ -31,7 +35,7 @@ void gc::GCStatistics::print(GCStatisticsType type, const GCStatistics &stat, lo
 void gc::GCStatistics::print_gc_stats(GC *gc)
 {
     long long sum = 0;
-    for (int i = GCStatistics::FULL_GC; i < gc::GCStatistics::GCStatisticsTypeAmount - 1; i++)
+    for (int i = GCStatistics::GC_MARK; i < gc::GCStatistics::GCStatisticsTypeAmount - 1; i++)
     {
         auto stat_i = (gc::GCStatistics::GCStatisticsType)i;
         print(stat_i, gc->stat(stat_i), sum, ", ");
@@ -118,12 +122,73 @@ address gc::ZeroGC::allocate(objects::Klass *klass)
     return object;
 }
 
-// --------------------------------------- Marker ---------------------------------------
+// --------------------------------------- MarkerLIFO ---------------------------------------
 gc::Marker::Marker(address heap_start, address heap_end) : _heap_start(heap_start), _heap_end(heap_end)
 {
 }
 
-void gc::Marker::mark_from_roots(StackRecord *sr)
+void gc::MarkerLIFO::mark_from_roots(StackRecord *sr)
+{
+    assert(_worklist.empty());
+    _worklist.reserve(WORKLIST_MAX_LEN);
+
+    while (sr)
+    {
+        for (address *obj : sr->roots_unsafe())
+        {
+            objects::ObjectHeader *hdr = (objects::ObjectHeader *)(*obj);
+            assert((address)hdr >= _heap_start && (address)hdr < _heap_end || !hdr);
+            if (hdr && !hdr->is_marked())
+            {
+                hdr->set_marked();
+                LOG_MARK_ROOT(hdr);
+                _worklist.push_back(hdr);
+                mark();
+            }
+        }
+
+        sr = sr->parent();
+    }
+}
+
+void gc::MarkerLIFO::mark()
+{
+    while (!_worklist.empty())
+    {
+        objects::ObjectHeader *hdr = _worklist.back();
+        _worklist.pop_back();
+
+        // fields of this objects are not heap pointers
+        if (hdr->has_special_type())
+        {
+            continue;
+        }
+
+        int fields_cnt = hdr->field_cnt();
+        address_fld fields = hdr->fields_base();
+        for (int j = 0; j < fields_cnt; j++)
+        {
+            objects::ObjectHeader *child = (objects::ObjectHeader *)fields[j];
+#ifdef DEBUG
+            if (!((address)child >= _heap_start && (address)child < _heap_end || !child))
+            {
+                hdr->print();
+            }
+            assert((address)child >= _heap_start && (address)child < _heap_end || !child);
+#endif // DEBUG
+            if (child && !child->is_marked())
+            {
+                child->set_marked();
+                LOG_MARK(child);
+                _worklist.push_back(child);
+                //__builtin_prefetch(child, 1);
+            }
+        }
+    }
+}
+
+// --------------------------------------- MarkerFIFO ---------------------------------------
+void gc::MarkerFIFO::mark_from_roots(StackRecord *sr)
 {
     assert(_worklist.empty());
 
@@ -146,11 +211,11 @@ void gc::Marker::mark_from_roots(StackRecord *sr)
     }
 }
 
-void gc::Marker::mark()
+void gc::MarkerFIFO::mark()
 {
     while (!_worklist.empty())
     {
-        objects::ObjectHeader *hdr = _worklist.top();
+        objects::ObjectHeader *hdr = _worklist.front();
         _worklist.pop();
 
         // fields of this objects are not heap pointers
@@ -176,7 +241,69 @@ void gc::Marker::mark()
                 child->set_marked();
                 LOG_MARK(child);
                 _worklist.push(child);
-                //__builtin_prefetch(child, 1);
+            }
+        }
+    }
+}
+
+// --------------------------------------- MarkerEdgeFIFO ---------------------------------------
+void gc::MarkerEdgeFIFO::mark_from_roots(StackRecord *sr)
+{
+    assert(_worklist.empty());
+
+    while (sr)
+    {
+        for (address *obj : sr->roots_unsafe())
+        {
+            objects::ObjectHeader *hdr = (objects::ObjectHeader *)(*obj);
+            assert((address)hdr >= _heap_start && (address)hdr < _heap_end || !hdr);
+            if (hdr)
+            {
+                _worklist.push(hdr);
+                mark();
+            }
+        }
+
+        sr = sr->parent();
+    }
+}
+
+void gc::MarkerEdgeFIFO::mark()
+{
+    while (!_worklist.empty())
+    {
+        objects::ObjectHeader *hdr = _worklist.front();
+        _worklist.pop();
+
+        if (hdr->is_marked())
+        {
+            continue;
+        }
+
+        hdr->set_marked();
+        LOG_MARK(hdr);
+
+        // fields of this objects are not heap pointers
+        if (hdr->has_special_type())
+        {
+            continue;
+        }
+
+        int fields_cnt = hdr->field_cnt();
+        address_fld fields = hdr->fields_base();
+        for (int j = 0; j < fields_cnt; j++)
+        {
+            objects::ObjectHeader *child = (objects::ObjectHeader *)fields[j];
+#ifdef DEBUG
+            if (!((address)child >= _heap_start && (address)child < _heap_end || !child))
+            {
+                hdr->print();
+            }
+            assert((address)child >= _heap_start && (address)child < _heap_end || !child);
+#endif // DEBUG
+            if (child)
+            {
+                _worklist.push(child);
             }
         }
     }

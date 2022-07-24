@@ -1,5 +1,6 @@
 #pragma once
 
+#include "gc/gc-impl/mark-sweep/gc-mark-sweep.inline.hpp"
 #include "gc/gc-interface/gc.hpp"
 #include <iomanip>
 

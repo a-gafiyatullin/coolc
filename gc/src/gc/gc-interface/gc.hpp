@@ -7,9 +7,12 @@
 #include <cstdlib>
 #include <iostream>
 #include <new>
-#include <stack>
+#include <queue>
 #include <vector>
 
+extern bool LOGALOC;
+extern bool LOGMARK;
+extern bool LOGSWEEP;
 extern bool LOGGING;
 extern bool ZEROING;
 
@@ -52,22 +55,26 @@ extern bool ZEROING;
 #define LOG_ALLOC(base, size)                                                                                          \
     if (LOGGING)                                                                                                       \
     {                                                                                                                  \
-        std::cerr << "Allocate object " << std::hex << (uint64_t)base << " of size " << std::dec << size << std::endl; \
+        if (LOGALOC)                                                                                                   \
+            std::cerr << "Allocate object " << std::hex << (uint64_t)base << " of size " << std::dec << size           \
+                      << std::endl;                                                                                    \
         _allocated_size += size;                                                                                       \
     }
 
 #define LOG_MARK_ROOT(base)                                                                                            \
-    if (LOGGING)                                                                                                       \
+    if (LOGMARK)                                                                                                       \
         std::cerr << "Mark root object " << std::hex << (uint64_t)base << std::endl;
 
 #define LOG_MARK(base)                                                                                                 \
-    if (LOGGING)                                                                                                       \
+    if (LOGMARK)                                                                                                       \
         std::cerr << "Mark object " << std::hex << (uint64_t)base << std::endl;
 
 #define LOG_SWEEP(base, size)                                                                                          \
     if (LOGGING)                                                                                                       \
     {                                                                                                                  \
-        std::cerr << "Sweep object " << std::hex << (uint64_t)base << " of size " << std::dec << size << std::endl;    \
+        if (LOGSWEEP)                                                                                                  \
+            std::cerr << "Sweep object " << std::hex << (uint64_t)base << " of size " << std::dec << size              \
+                      << std::endl;                                                                                    \
         _freed_size += size;                                                                                           \
     }
 
@@ -110,7 +117,8 @@ class GCStatistics
 
     enum GCStatisticsType
     {
-        FULL_GC,
+        GC_MARK,
+        GC_SWEEP,
         ALLOCATION,
         EXECUTION,
         GCStatisticsTypeAmount
@@ -381,24 +389,22 @@ class StackRecord
     }
 };
 
+#define WORKLIST_MAX_LEN 8192
+
 /**
  * @brief Marker marks live objects
  *
  */
 class Marker
 {
-  private:
+  protected:
     address _heap_start;
     address _heap_end;
 
-    /* "For a single-threaded collector, the work list could be implemented as a stack. This leads to a depthfirst
-     * traversal of the graph. If mark bits are co-located with objects, it has the advantage that the
-     * elements that are processed next are those that have been marked most recently, and hence are likely
-     * to still be in the hardware cache." (c) The Garbage Collection Handbook, Richard Jones, p. 47
-     */
-    std::stack<objects::ObjectHeader *> _worklist; // TODO: maybe smth better?
-
-    void mark();
+    void mark()
+    {
+        UNIMPEMENTED("mark");
+    }
 
   public:
     /**
@@ -414,17 +420,80 @@ class Marker
      *
      * @param sr Current StackRecord
      */
+    void mark_from_roots(StackRecord *sr)
+    {
+        UNIMPEMENTED("mark_from_roots");
+    }
+};
+
+class MarkerLIFO : public Marker
+{
+  private:
+    /* "For a single-threaded collector, the work list could be implemented as a stack. This leads to a depthfirst
+     * traversal of the graph. If mark bits are co-located with objects, it has the advantage that the
+     * elements that are processed next are those that have been marked most recently, and hence are likely
+     * to still be in the hardware cache." (c) The Garbage Collection Handbook, Richard Jones, p. 47
+     */
+    std::vector<objects::ObjectHeader *> _worklist; // TODO: maybe smth better?
+
+    void mark();
+
+  public:
+    MarkerLIFO(address heap_start, address heap_end) : Marker(heap_start, heap_end)
+    {
+    }
+
+    void mark_from_roots(StackRecord *sr);
+};
+
+class MarkerFIFO : public Marker
+{
+  protected:
+    /* "Cher et al [2004] observe that the fundamental problem is that cache lines are fetched in a breadthfirst,
+     * first-in, first-out (FIFO), order but the mark-sweep algorithm traverses the graph depth-first,
+     * last-in, first-out (LIFO). Their solution is to insert a first-in, first-out queue in front of the mark stack."
+     * (c) The Garbage Collection Handbook, Richard Jones, p. 56
+     */
+    std::queue<objects::ObjectHeader *> _worklist;
+
+    void mark();
+
+  public:
+    MarkerFIFO(address heap_start, address heap_end) : Marker(heap_start, heap_end)
+    {
+    }
+
+    void mark_from_roots(StackRecord *sr);
+};
+
+class MarkerEdgeFIFO : public MarkerFIFO
+{
+  private:
+    /* Garner et al [2007] realised that mark’s tracing loop can be restructured
+     * to offer greater opportunities for prefetching.
+     * Instead of adding children to the work list only if they are unmarked,
+     * this algorithm inserts the children of unmarked objects unconditionally.
+     * (c) The Garbage Collection Handbook, Richard Jones, p. 57
+     */
+
+    void mark();
+
+  public:
+    MarkerEdgeFIFO(address heap_start, address heap_end) : MarkerFIFO(heap_start, heap_end)
+    {
+    }
+
     void mark_from_roots(StackRecord *sr);
 };
 
 // --------------------------------------- Mark-Sweep ---------------------------------------
 // The Garbage Collection Handbook, Richard Jones: 2.1 The mark-sweep algorithm
-class MarkSweepGC : public ZeroGC
+template <class MarkerType> class MarkSweepGC : public ZeroGC
 {
   protected:
     address _heap_end;
 
-    Marker _mrkr;
+    MarkerType _mrkr;
 
     void sweep();
 
