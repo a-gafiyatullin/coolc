@@ -2,9 +2,7 @@
 
 #include "alloca.hpp"
 #include "mark.hpp"
-#include <cassert>
 #include <chrono>
-#include <cstddef>
 
 extern bool LOGSWEEP;
 extern bool LOGGING;
