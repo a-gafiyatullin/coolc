@@ -31,12 +31,14 @@ DECLARE_TEST(sanity)
 DECLARE_TEST(linked_list)
 {
     // INTEL: GC_MARK: 456, GC_MAIN_PHASE: 312, ALLOCATION: 1800, EXECUTION: 1915
-    // RPI4:  GC_MARK: 3946, GC_MAIN_PHASE: 2387, ALLOCATION: 7994, EXECUTION: 8379
-    // MACM1: GC_MARK: 789, GC_SWEEP: 251, ALLOCATION: 1256, EXECUTION: 2183
+    // RPI4:  GC_MARK: 3902, GC_MAIN_PHASE: 2389, ALLOCATION: 7810, EXECUTION: 8221
+    // MACM1: GC_MARK: 824, GC_MAIN_PHASE: 244, ALLOCATION: 1220, EXECUTION: 3531
     RUN_TEST((linked_list_allocation_workload<gc::MarkSweepGC<allocator::NextFitAlloca, gc::MarkerFIFO, IIS_HEADER>,
                                               IIS_HEADER, BIG_HEAP, BIG_LINKED_LIST, false, 0>));
 
     // INTEL: GC_MARK: 297, GC_MAIN_PHASE: 1000, ALLOCATION: 1595, EXECUTION: 1750
+    // RPI4:  GC_MARK: 2647, GC_MAIN_PHASE: 6536, ALLOCATION: 6473, EXECUTION: 7811
+    // MACM1: GC_MARK: 480, GC_MAIN_PHASE: 712, ALLOCATION: 1041, EXECUTION: 3124
     RUN_TEST((linked_list_allocation_workload<gc::Lisp2GC<allocator::NextFitAlloca, gc::MarkerFIFO, AIS_HEADER>,
                                               AIS_HEADER, (int)(1.14 * BIG_HEAP), BIG_LINKED_LIST, false, 0>));
 }
