@@ -30,15 +30,13 @@ DECLARE_TEST(sanity)
 
 DECLARE_TEST(linked_list)
 {
-    // INTEL: GC_MARK: 458, GC_MAIN_PHASE: 311, ALLOCATION: 1900, EXECUTION: 1858
-    // RPI4:  GC_MARK: 4010, GC_SWEEP: 2430, ALLOCATION: 8575, EXECUTION: 8974
+    // INTEL: GC_MARK: 456, GC_MAIN_PHASE: 312, ALLOCATION: 1800, EXECUTION: 1915
+    // RPI4:  GC_MARK: 3946, GC_MAIN_PHASE: 2387, ALLOCATION: 7994, EXECUTION: 8379
     // MACM1: GC_MARK: 789, GC_SWEEP: 251, ALLOCATION: 1256, EXECUTION: 2183
     RUN_TEST((linked_list_allocation_workload<gc::MarkSweepGC<allocator::NextFitAlloca, gc::MarkerFIFO, IIS_HEADER>,
                                               IIS_HEADER, BIG_HEAP, BIG_LINKED_LIST, false, 0>));
 
-    // INTEL: GC_MARK: 406, GC_MAIN_PHASE: 1312, ALLOCATION: 1500, EXECUTION: 1829
-    RUN_TEST(
-        (linked_list_allocation_workload<gc::Lisp2GC<allocator::NextFitAlloca, gc::MarkerFIFO, AIS_HEADER>, AIS_HEADER,
-                                         BIG_HEAP + (sizeof(AIS_HEADER) - sizeof(IIS_HEADER)) * BIG_LINKED_LIST,
-                                         BIG_LINKED_LIST, false, 0>));
+    // INTEL: GC_MARK: 297, GC_MAIN_PHASE: 1000, ALLOCATION: 1595, EXECUTION: 1750
+    RUN_TEST((linked_list_allocation_workload<gc::Lisp2GC<allocator::NextFitAlloca, gc::MarkerFIFO, AIS_HEADER>,
+                                              AIS_HEADER, (int)(1.14 * BIG_HEAP), BIG_LINKED_LIST, false, 0>));
 }
