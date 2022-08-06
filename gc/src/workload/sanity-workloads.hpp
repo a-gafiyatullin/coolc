@@ -1,6 +1,6 @@
 #include "tests-support.hpp"
 
-template <class GCType, int heap_size> DECLARE_TEST(sanity_trivial)
+template <class GCType, class ObjectHeaderType, int heap_size> DECLARE_TEST(sanity_trivial)
 {
     size_t i_field = INTOBJ.offset(0);
 
@@ -21,7 +21,7 @@ template <class GCType, int heap_size> DECLARE_TEST(sanity_trivial)
     }
 }
 
-template <class GCType, int heap_size> DECLARE_TEST(sanity_trivial_collect)
+template <class GCType, class ObjectHeaderType, int heap_size> DECLARE_TEST(sanity_trivial_collect)
 {
     size_t dataf = LLNODE.offset(0);
     size_t nextf = LLNODE.offset(1);

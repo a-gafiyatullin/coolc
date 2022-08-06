@@ -4,7 +4,8 @@
 #define MEDIUM_LINKED_LIST 8038400
 #define BIG_LINKED_LIST 16076800
 
-template <class GCType, int heap_size, int nodes, bool verbose, int verbose_iter> DECLARE_TEST(linked_list_allocation)
+template <class GCType, class ObjectHeaderType, int heap_size, int nodes, bool verbose, int verbose_iter>
+DECLARE_TEST(linked_list_allocation)
 {
     size_t dataf = LLNODE.offset(0);
     size_t nextf = LLNODE.offset(1);
@@ -91,6 +92,26 @@ template <class GCType, int heap_size, int nodes, bool verbose, int verbose_iter
             curr = new_node;
 
             guarantee_eq(READ_DW(READ_ADDRESS(new_node, dataf), intf), READ_DW(check_val, intf));
+        }
+
+        // validation
+        prev = root;
+
+        int prev_int = 0;
+        int curr_int = 1;
+
+        for (int i = 0; i < nodes - 1; i++)
+        {
+            curr = READ_ADDRESS(prev, nextf);
+            int prev_val = READ_DW(READ_ADDRESS(prev, dataf), intf);
+            int curr_val = READ_DW(READ_ADDRESS(curr, dataf), intf);
+
+            guarantee_eq(prev_int + curr_int, prev_val + curr_val);
+
+            prev_int = curr_int;
+            curr_int = prev_val + curr_val;
+
+            prev = curr;
         }
     }
 }

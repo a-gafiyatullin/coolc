@@ -5,20 +5,20 @@
 
 namespace gc
 {
-class GC;
+template <class ObjectHeaderType> class GC;
 
 /**
  * @brief StackRecord tracks root objects
  *
  */
-class StackRecord
+template <class ObjectHeaderType> class StackRecord
 {
   private:
     StackRecord *_parent;
 
     std::vector<address *> _objects;
 
-    GC *_gc;
+    GC<ObjectHeaderType> *_gc;
 
   public:
     /**
@@ -26,7 +26,7 @@ class StackRecord
      *
      * @param gc Assosiated GC
      */
-    StackRecord(GC *gc);
+    StackRecord(GC<ObjectHeaderType> *gc);
 
     /**
      * @brief Construct a new StackRecord and adjust GC state

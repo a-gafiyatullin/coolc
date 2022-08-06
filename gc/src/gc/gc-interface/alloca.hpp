@@ -24,7 +24,7 @@ namespace allocator
  * @brief Basic allocation class
  *
  */
-class Alloca
+template <class ObjectHeaderType> class Alloca
 {
   protected:
     const size_t _size;
@@ -48,7 +48,7 @@ class Alloca
      * @param klass Klass of the object
      * @return address Start of the object
      */
-    address allocate(objects::Klass *klass);
+    address allocate(objects::Klass<ObjectHeaderType> *klass);
 
     /**
      * @brief Free memory
@@ -89,14 +89,30 @@ class Alloca
     ~Alloca();
 };
 
-class NextFitAlloca : public Alloca
+template <class ObjectHeaderType> class NextFitAlloca : public Alloca<ObjectHeaderType>
 {
+  private:
+    using Alloca<ObjectHeaderType>::_start;
+    using Alloca<ObjectHeaderType>::_end;
+    using Alloca<ObjectHeaderType>::_size;
+    using Alloca<ObjectHeaderType>::_pos;
+
+#ifdef DEBUG
+    using Alloca<ObjectHeaderType>::_freed_size;
+    using Alloca<ObjectHeaderType>::_allocated_size;
+
+#endif // DEBUG
+
   public:
     NextFitAlloca(size_t size);
 
-    address allocate(objects::Klass *klass);
+    address allocate(objects::Klass<ObjectHeaderType> *klass);
 
     void free(address start);
+
+    void move(ObjectHeaderType *src, address dst);
+
+    void force_alloc_pos(address pos);
 };
 
 }; // namespace allocator

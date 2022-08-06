@@ -16,11 +16,10 @@ using word = uint32_t;
 using doubleword = uint64_t;
 
 // will see it further
-#define INTOBJ objects::Klass::Integer
-#define LLNODE objects::Klass::LinkedListNode
+#define INTOBJ objects::Klass<ObjectHeaderType>::Integer
+#define LLNODE objects::Klass<ObjectHeaderType>::LinkedListNode
 
 #define FIELD_SIZE sizeof(address)
-#define HEADER_SIZE sizeof(objects::ObjectHeader)
 
 namespace objects
 {
@@ -36,11 +35,11 @@ enum ObjectType
  * @brief ObjectHeader describes object
  *
  */
-struct ObjectHeader
+template <class MarkWordType, class TagWordType, class SizeWordType> struct ObjectHeader
 {
-    int _mark;
-    int _tag;
-    size_t _size;
+    MarkWordType _mark;
+    TagWordType _tag;
+    SizeWordType _size;
 
   public:
     /**
@@ -60,7 +59,7 @@ struct ObjectHeader
      */
     inline void set_marked()
     {
-        _mark = 1;
+        _mark = (MarkWordType)1;
     }
 
     /**
@@ -92,7 +91,7 @@ struct ObjectHeader
      */
     inline int field_cnt() const
     {
-        return (_size - HEADER_SIZE) / FIELD_SIZE;
+        return (_size - sizeof(ObjectHeader)) / FIELD_SIZE;
     }
 
     /**
@@ -102,7 +101,7 @@ struct ObjectHeader
      */
     inline address_fld fields_base() const
     {
-        return (address_fld)((address)this + HEADER_SIZE);
+        return (address_fld)((address)this + sizeof(ObjectHeader));
     }
 
     /**
@@ -136,7 +135,8 @@ struct ObjectHeader
  * @brief Klass describes types of the objects
  *
  */
-class Klass
+
+template <class ObjectHeaderType> class Klass
 {
   private:
     const int _fields_count;
@@ -166,7 +166,7 @@ class Klass
     __attribute__((always_inline)) size_t offset(int field_num) const
     {
         assert(field_num < _fields_count);
-        return HEADER_SIZE + field_num * FIELD_SIZE; // all fields are pointers or pointer-sized for now
+        return sizeof(ObjectHeaderType) + field_num * FIELD_SIZE; // all fields are pointers or pointer-sized for now
     }
 
     /**
@@ -176,7 +176,7 @@ class Klass
      */
     inline size_t size() const
     {
-        return HEADER_SIZE + _fields_count * FIELD_SIZE;
+        return sizeof(ObjectHeaderType) + _fields_count * FIELD_SIZE;
     }
 
     /**
@@ -189,5 +189,4 @@ class Klass
         return _type;
     }
 };
-
 }; // namespace objects

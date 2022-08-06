@@ -1,10 +1,7 @@
 #include "gc/gc-interface/alloca.hpp"
-#include "gc/gc-interface/object.hpp"
 
-bool LOGALOC = false;
-bool ZEROING = false;
-
-allocator::Alloca::Alloca(size_t size)
+template <class ObjectHeaderType>
+allocator::Alloca<ObjectHeaderType>::Alloca(size_t size)
     : _size(size)
 #ifdef DEBUG
       ,
@@ -20,13 +17,13 @@ allocator::Alloca::Alloca(size_t size)
     _pos = _start;
 }
 
-allocator::Alloca::~Alloca()
+template <class ObjectHeaderType> allocator::Alloca<ObjectHeaderType>::~Alloca()
 {
     dump();
     std::free(_start);
 }
 
-void allocator::Alloca::dump()
+template <class ObjectHeaderType> void allocator::Alloca<ObjectHeaderType>::dump()
 {
 #ifdef DEBUG
     std::cout << "Allocated bytes: " << _allocated_size << std::endl;
@@ -34,7 +31,8 @@ void allocator::Alloca::dump()
 #endif // DEBUG
 }
 
-address allocator::Alloca::allocate(objects::Klass *klass)
+template <class ObjectHeaderType>
+address allocator::Alloca<ObjectHeaderType>::allocate(objects::Klass<ObjectHeaderType> *klass)
 {
     size_t obj_size = klass->size();
     if (_pos + obj_size >= _start + _size)
@@ -46,7 +44,7 @@ address allocator::Alloca::allocate(objects::Klass *klass)
     address object = _pos;
     _pos += obj_size;
 
-    objects::ObjectHeader *obj_header = (objects::ObjectHeader *)object;
+    ObjectHeaderType *obj_header = (ObjectHeaderType *)object;
     obj_header->_mark = 0;
     obj_header->_size = obj_size;
     obj_header->_tag = klass->type();
@@ -59,22 +57,23 @@ address allocator::Alloca::allocate(objects::Klass *klass)
 }
 
 // -------------------------------------------- NextFitAlloca --------------------------------------------
-allocator::NextFitAlloca::NextFitAlloca(size_t size) : Alloca(size)
+template <class ObjectHeaderType>
+allocator::NextFitAlloca<ObjectHeaderType>::NextFitAlloca(size_t size) : Alloca<ObjectHeaderType>(size)
 {
     // create an artificial object with tag 0 and size heap_size
-    objects::ObjectHeader *aobj = (objects::ObjectHeader *)_start;
-    aobj->set_unused(_size);
+    force_alloc_pos(_start);
 }
 
-address allocator::NextFitAlloca::allocate(objects::Klass *klass)
+template <class ObjectHeaderType>
+address allocator::NextFitAlloca<ObjectHeaderType>::allocate(objects::Klass<ObjectHeaderType> *klass)
 {
     size_t obj_size = klass->size();
 
     // try to find suitable chunk of the memeory
     // compact chunks by the way
-    objects::ObjectHeader *chunk = NULL;
+    ObjectHeaderType *chunk = NULL;
     // assume that we allocate memory consequently between collections
-    objects::ObjectHeader *current_chunk = (objects::ObjectHeader *)(_pos ? _pos : _start);
+    ObjectHeaderType *current_chunk = (ObjectHeaderType *)(_pos ? _pos : _start);
     size_t current_chunk_size = 0;
     while ((address)current_chunk < _end)
     {
@@ -120,7 +119,7 @@ address allocator::NextFitAlloca::allocate(objects::Klass *klass)
         }
 
         // go to next chunk
-        current_chunk = (objects::ObjectHeader *)((address)current_chunk + current_chunk->_size);
+        current_chunk = (ObjectHeaderType *)((address)current_chunk + current_chunk->_size);
     }
 
     if (!chunk || chunk->_size < obj_size)
@@ -128,18 +127,18 @@ address allocator::NextFitAlloca::allocate(objects::Klass *klass)
         return NULL;
     }
 
-    if (current_chunk_size - obj_size < HEADER_SIZE)
+    if (current_chunk_size - obj_size < sizeof(ObjectHeaderType))
     {
         obj_size = current_chunk_size; // allign allocation for correct heap interation
         // this headen fields always will be zero, so will not affeсt gc
     }
 
-    if (current_chunk_size - obj_size >= HEADER_SIZE)
+    if (current_chunk_size - obj_size >= sizeof(ObjectHeaderType))
     {
         // adjust next chunk
         // at least have memory for the header
 
-        objects::ObjectHeader *next_free = (objects::ObjectHeader *)((address)chunk + obj_size);
+        ObjectHeaderType *next_free = (ObjectHeaderType *)((address)chunk + obj_size);
         next_free->set_unused(current_chunk_size - obj_size);
         _pos = (address)next_free;
     }
@@ -155,10 +154,10 @@ address allocator::NextFitAlloca::allocate(objects::Klass *klass)
     return (address)chunk;
 }
 
-void allocator::NextFitAlloca::free(address start)
+template <class ObjectHeaderType> void allocator::NextFitAlloca<ObjectHeaderType>::free(address start)
 {
     // memory chunk is free if tag of the object starts from this address is 0
-    objects::ObjectHeader *hdr = (objects::ObjectHeader *)start;
+    ObjectHeaderType *hdr = (ObjectHeaderType *)start;
 
 #ifdef DEBUG
     _freed_size += hdr->_size;
@@ -179,4 +178,23 @@ void allocator::NextFitAlloca::free(address start)
     {
         _pos = start;
     }
+}
+
+template <class ObjectHeaderType>
+void allocator::NextFitAlloca<ObjectHeaderType>::move(ObjectHeaderType *src, address dst)
+{
+    if (dst != (address)src)
+    {
+        assert(dst >= (address)src + src->_size || dst + src->_size <= (address)src);
+        memcpy(dst, (address)src, src->_size);
+    }
+}
+
+template <class ObjectHeaderType> void allocator::NextFitAlloca<ObjectHeaderType>::force_alloc_pos(address pos)
+{
+    // create an artificial object with tag 0 and size heap_size
+    ObjectHeaderType *aobj = (ObjectHeaderType *)pos;
+    aobj->set_unused(_end - pos);
+
+    _pos = pos;
 }

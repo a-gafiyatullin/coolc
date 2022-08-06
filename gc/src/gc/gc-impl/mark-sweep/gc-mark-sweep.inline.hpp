@@ -1,11 +1,12 @@
 #include "gc/gc-interface/gc.hpp"
 
-template <class Allocator, class MarkerType> void gc::MarkSweepGC<Allocator, MarkerType>::sweep()
+template <template <class> class Allocator, template <class> class MarkerType, class ObjectHeaderType>
+void gc::MarkSweepGC<Allocator, MarkerType, ObjectHeaderType>::sweep()
 {
     address scan = _alloca.start();
     while (scan < _alloca.end())
     {
-        objects::ObjectHeader *obj = (objects::ObjectHeader *)scan;
+        ObjectHeaderType *obj = (ObjectHeaderType *)scan;
         if (obj->is_marked())
         {
             obj->unset_marked();
@@ -19,33 +20,35 @@ template <class Allocator, class MarkerType> void gc::MarkSweepGC<Allocator, Mar
     }
 }
 
-template <class Allocator, class MarkerType> address gc::MarkSweepGC<Allocator, MarkerType>::next_object(address obj)
+template <template <class> class Allocator, template <class> class MarkerType, class ObjectHeaderType>
+address gc::MarkSweepGC<Allocator, MarkerType, ObjectHeaderType>::next_object(address obj)
 {
-    objects::ObjectHeader *hdr = (objects::ObjectHeader *)obj;
-    objects::ObjectHeader *possible_object = (objects::ObjectHeader *)(obj + hdr->_size);
+    ObjectHeaderType *hdr = (ObjectHeaderType *)obj;
+    ObjectHeaderType *possible_object = (ObjectHeaderType *)(obj + hdr->_size);
 
     // search for the first object with non-zero tag
     while ((address)possible_object < _alloca.end() && possible_object->_tag == 0)
     {
         // assuming size is correct for dead objects
-        possible_object = (objects::ObjectHeader *)((address)possible_object + possible_object->_size);
+        possible_object = (ObjectHeaderType *)((address)possible_object + possible_object->_size);
     }
 
     return (address)possible_object;
 }
 
-template <class Allocator, class MarkerType>
-gc::MarkSweepGC<Allocator, MarkerType>::MarkSweepGC(size_t heap_size)
-    : ZeroGC<Allocator>(heap_size), _mrkr(_alloca.start(), _alloca.end())
+template <template <class> class Allocator, template <class> class MarkerType, class ObjectHeaderType>
+gc::MarkSweepGC<Allocator, MarkerType, ObjectHeaderType>::MarkSweepGC(size_t heap_size)
+    : ZeroGC<Allocator, ObjectHeaderType>(heap_size), _mrkr(_alloca.start(), _alloca.end())
 {
 }
 
-template <class Allocator, class MarkerType> void gc::MarkSweepGC<Allocator, MarkerType>::collect()
+template <template <class> class Allocator, template <class> class MarkerType, class ObjectHeaderType>
+void gc::MarkSweepGC<Allocator, MarkerType, ObjectHeaderType>::collect()
 {
-    GCStatisticsScope scope(&_stat[GCStatistics::GC_SWEEP]);
+    GCStatisticsScope scope(&_stat[GCStatistics<ObjectHeaderType>::GC_SWEEP]);
 
     {
-        GCStatisticsScope scope(&_stat[GCStatistics::GC_MARK]);
+        GCStatisticsScope scope(&_stat[GCStatistics<ObjectHeaderType>::GC_MARK]);
         _mrkr.mark_from_roots(_current_scope);
     }
 

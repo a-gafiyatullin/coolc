@@ -1,8 +1,6 @@
 #pragma once
 
-#include "gc/gc-impl/gc-common.inline.hpp"
-#include "gc/gc-impl/mark-sweep/gc-mark-sweep.inline.hpp"
-#include "gc/gc-interface/gc.hpp"
+#include "gc/gc-interface/globals.hpp"
 #include <iomanip>
 
 #define VERY_SMALL_HEAP 192           // bytes

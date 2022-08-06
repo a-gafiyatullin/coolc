@@ -27,15 +27,19 @@ extern bool LOGGING;
 #define LOG_COLLECT()                                                                                                  \
     if (LOGGING)                                                                                                       \
         std::cerr << "Collected dead objects!\n" << std::endl;
+
+#define LOG_COLLECT_MSG(msg)                                                                                           \
+    if (LOGGING)                                                                                                       \
+        std::cerr << "Collection: " << msg << std::endl;
+
 #else
 #define LOG_SWEEP(base, size)
 #define LOG_COLLECT()
+#define LOG_COLLECT_MSG()
 #endif // DEBUG
 
 namespace gc
 {
-
-class GC;
 
 typedef std::chrono::milliseconds precision;
 
@@ -43,7 +47,7 @@ typedef std::chrono::milliseconds precision;
  * @brief Class to gather GC Statistics
  *
  */
-class GCStatistics
+template <class ObjectHeaderType> class GCStatistics
 {
   private:
     precision _time;
@@ -103,17 +107,17 @@ class GCStatistics
      *
      * @param gc GC
      */
-    static void print_gc_stats(GC *gc);
+    static void print_gc_stats(GC<ObjectHeaderType> *gc);
 };
 
 /**
  * @brief Helper for time calculation
  *
  */
-class GCStatisticsScope
+template <class ObjectHeaderType> class GCStatisticsScope
 {
   private:
-    GCStatistics *_stat;
+    GCStatistics<ObjectHeaderType> *_stat;
 
     precision _start;
 
@@ -123,7 +127,7 @@ class GCStatisticsScope
      *
      * @param stat GCStatistics to record
      */
-    GCStatisticsScope(GCStatistics *stat);
+    GCStatisticsScope(GCStatistics<ObjectHeaderType> *stat);
 
     /**
      * @brief Save and reset time record
@@ -142,16 +146,16 @@ class GCStatisticsScope
  * @brief Base class for all GCs
  *
  */
-class GC
+template <class ObjectHeaderType> class GC
 {
-    friend class StackRecord;
-    friend class GCStatistics;
+    friend class StackRecord<ObjectHeaderType>;
+    friend class GCStatistics<ObjectHeaderType>;
 
   protected:
-    StackRecord *_current_scope; // emulate stack
-    GCStatistics _stat[GCStatistics::GCStatisticsTypeAmount];
+    StackRecord<ObjectHeaderType> *_current_scope; // emulate stack
+    GCStatistics<ObjectHeaderType> _stat[GCStatistics<ObjectHeaderType>::GCStatisticsTypeAmount];
 
-    GCStatisticsScope _exec; // collect exec time
+    GCStatisticsScope<ObjectHeaderType> _exec; // collect exec time
 
   public:
     /**
@@ -165,7 +169,7 @@ class GC
      * @param klass Klass handle
      * @return address to the start of the object
      */
-    virtual address allocate(objects::Klass *klass) = 0;
+    virtual address allocate(objects::Klass<ObjectHeaderType> *klass) = 0;
 
     /**
      * @brief Write to memory
@@ -205,9 +209,10 @@ class GC
      * @param type Type of the statistics
      * @return GC Statistics
      */
-    inline const GCStatistics &stat(GCStatistics::GCStatisticsType type) const
+    inline const GCStatistics<ObjectHeaderType> &stat(
+        typename GCStatistics<ObjectHeaderType>::GCStatisticsType type) const
     {
-        assert(type < GCStatistics::GCStatisticsTypeAmount);
+        assert(type < GCStatistics<ObjectHeaderType>::GCStatisticsTypeAmount);
         return _stat[type];
     }
 
@@ -219,10 +224,11 @@ class GC
 };
 
 // --------------------------------------- ZeroGC ---------------------------------------
-template <class Allocator> class ZeroGC : public GC
+template <template <class> class Allocator, class ObjectHeaderType> class ZeroGC : public GC<ObjectHeaderType>
 {
   protected:
-    Allocator _alloca;
+    Allocator<ObjectHeaderType> _alloca;
+    using GC<ObjectHeaderType>::_stat;
 
   public:
     ZeroGC(size_t heap_size);
@@ -237,7 +243,7 @@ template <class Allocator> class ZeroGC : public GC
         return *((T *)(base + offset));
     }
 
-    address allocate(objects::Klass *klass) override;
+    address allocate(objects::Klass<ObjectHeaderType> *klass) override;
 
     void collect() override
     {
@@ -246,14 +252,15 @@ template <class Allocator> class ZeroGC : public GC
 
 // --------------------------------------- Mark-Sweep ---------------------------------------
 // The Garbage Collection Handbook, Richard Jones: 2.1 The mark-sweep algorithm
-template <class Allocator, class MarkerType> class MarkSweepGC : public ZeroGC<Allocator>
+template <template <class> class Allocator, template <class> class MarkerType, class ObjectHeaderType>
+class MarkSweepGC : public ZeroGC<Allocator, ObjectHeaderType>
 {
   protected:
-    using ZeroGC<Allocator>::_alloca;
-    using ZeroGC<Allocator>::_stat;
-    using ZeroGC<Allocator>::_current_scope;
+    using ZeroGC<Allocator, ObjectHeaderType>::_alloca;
+    using ZeroGC<Allocator, ObjectHeaderType>::_stat;
+    using ZeroGC<Allocator, ObjectHeaderType>::_current_scope;
 
-    MarkerType _mrkr;
+    MarkerType<ObjectHeaderType> _mrkr;
 
     void sweep();
 
@@ -262,6 +269,49 @@ template <class Allocator, class MarkerType> class MarkSweepGC : public ZeroGC<A
 
   public:
     MarkSweepGC(size_t heap_size);
+
+    void collect() override;
+};
+
+// The Garbage Collection Handbook, Richard Jones: 3.2 The Lisp 2 algorithm
+template <template <class> class Allocator, template <class> class MarkerType, class ObjectHeaderType>
+class Lisp2GC : public ZeroGC<Allocator, ObjectHeaderType>
+{
+  protected:
+    using ZeroGC<Allocator, ObjectHeaderType>::_alloca;
+    using ZeroGC<Allocator, ObjectHeaderType>::_stat;
+    using ZeroGC<Allocator, ObjectHeaderType>::_current_scope;
+
+    MarkerType<ObjectHeaderType> _mrkr;
+
+    /* 1. phase computeLocations.
+     * The first pass over the heap (after marking) computes the location to which each live object will be
+     * moved, and stores this address in the object’s forwardingAddress field
+     */
+    void compute_locations();
+
+    /* 2. phase updateReferences.
+     * The second pass updates the roots of mutator threads and
+     * references in marked objects so that they refer to the new locations of their targets, using the
+     * forwarding address stored in each about-to-be-relocated object’s header by the first pass.
+     */
+
+    void update_fererences();
+
+    /* 3. phase relocate.
+     * Finally, in the third pass, relocate moves each live (marked) object in a region to its new destination.
+     */
+
+    void relocate();
+
+    // main compaction routine
+    void compact();
+
+    // helpers for collection
+    address next_object(address obj);
+
+  public:
+    Lisp2GC(size_t heap_size);
 
     void collect() override;
 };
