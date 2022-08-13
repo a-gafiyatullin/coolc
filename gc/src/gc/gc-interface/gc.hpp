@@ -11,6 +11,7 @@ extern bool LOGGING;
 #define ALLOCATE(type) gc.allocate(&type)
 #define COLLECT() gc.collect()
 
+#define WRITE(base, address, value) gc.write(base, address, value)
 #define READ(base, offset, type) gc.template read<type>(base, offset)
 #define READ_B(base, offset) READ(base, offset, byte)
 #define READ_HW(base, offset) READ(base, offset, halfword)
@@ -264,9 +265,6 @@ class MarkSweepGC : public ZeroGC<Allocator, ObjectHeaderType>
 
     void sweep();
 
-    // helpers for collection
-    address next_object(address obj);
-
   public:
     MarkSweepGC(size_t heap_size);
 
@@ -295,20 +293,15 @@ class Lisp2GC : public ZeroGC<Allocator, ObjectHeaderType>
      * references in marked objects so that they refer to the new locations of their targets, using the
      * forwarding address stored in each about-to-be-relocated object’s header by the first pass.
      */
-
-    void update_fererences();
+    void update_references();
 
     /* 3. phase relocate.
      * Finally, in the third pass, relocate moves each live (marked) object in a region to its new destination.
      */
-
     void relocate();
 
     // main compaction routine
     void compact();
-
-    // helpers for collection
-    address next_object(address obj);
 
   public:
     Lisp2GC(size_t heap_size);

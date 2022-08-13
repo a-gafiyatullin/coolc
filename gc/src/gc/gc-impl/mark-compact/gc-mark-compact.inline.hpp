@@ -25,7 +25,7 @@ template <template <class> class Allocator, template <class> class MarkerType, c
 void gc::Lisp2GC<Allocator, MarkerType, ObjectHeaderType>::compact()
 {
     compute_locations();
-    update_fererences();
+    update_references();
     relocate();
 }
 
@@ -47,28 +47,12 @@ void gc::Lisp2GC<Allocator, MarkerType, ObjectHeaderType>::compute_locations()
             obj->_mark = free;
             free = free + obj->_size;
         }
-        scan = next_object(scan);
+        scan = _alloca.next_object(scan);
     }
 }
 
 template <template <class> class Allocator, template <class> class MarkerType, class ObjectHeaderType>
-address gc::Lisp2GC<Allocator, MarkerType, ObjectHeaderType>::next_object(address obj)
-{
-    ObjectHeaderType *hdr = (ObjectHeaderType *)obj;
-    ObjectHeaderType *possible_object = (ObjectHeaderType *)(obj + hdr->_size);
-
-    // search for the first object with non-zero tag
-    while ((address)possible_object < _alloca.end() && possible_object->_tag == 0)
-    {
-        // assuming size is correct for dead objects
-        possible_object = (ObjectHeaderType *)((address)possible_object + possible_object->_size);
-    }
-
-    return (address)possible_object;
-}
-
-template <template <class> class Allocator, template <class> class MarkerType, class ObjectHeaderType>
-void gc::Lisp2GC<Allocator, MarkerType, ObjectHeaderType>::update_fererences()
+void gc::Lisp2GC<Allocator, MarkerType, ObjectHeaderType>::update_references()
 {
     // update roots
     StackRecord<ObjectHeaderType> *scope = _current_scope;
@@ -111,7 +95,7 @@ void gc::Lisp2GC<Allocator, MarkerType, ObjectHeaderType>::update_fererences()
                 }
             }
         }
-        scan = next_object(scan);
+        scan = _alloca.next_object(scan);
     }
 }
 
@@ -141,7 +125,7 @@ void gc::Lisp2GC<Allocator, MarkerType, ObjectHeaderType>::relocate()
             _alloca.free(scan);
         }
 #endif // DEBUG
-        scan = next_object(scan);
+        scan = _alloca.next_object(scan);
     }
 
     size_t dest_size = ((ObjectHeaderType *)dest)->_size;

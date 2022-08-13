@@ -4,15 +4,17 @@
 #define MEDIUM_LINKED_LIST 8038400
 #define BIG_LINKED_LIST 16076800
 
-template <class GCType, class ObjectHeaderType, int heap_size, int nodes, bool verbose, int verbose_iter>
-DECLARE_TEST(linked_list_allocation)
+template <template <template <class> class, template <class> class, class> class GCType,
+          template <class> class AllocatorType, template <class> class MarkerType, class ObjectHeaderType, bool verbose,
+          int verbose_iter>
+void linked_list_allocation_workload(size_t heap_size, size_t nodes)
 {
     size_t dataf = LLNODE.offset(0);
     size_t nextf = LLNODE.offset(1);
 
     size_t intf = INTOBJ.offset(0);
 
-    GCType gc(heap_size);
+    GCType<AllocatorType, MarkerType, ObjectHeaderType> gc(heap_size);
 
     {
         gc::StackRecord sr(&gc);

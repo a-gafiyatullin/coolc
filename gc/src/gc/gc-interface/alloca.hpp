@@ -110,9 +110,28 @@ template <class ObjectHeaderType> class NextFitAlloca : public Alloca<ObjectHead
 
     void free(address start);
 
+    /**
+     * @brief Move object
+     *
+     * @param src Source object
+     * @param dst New location
+     */
     void move(ObjectHeaderType *src, address dst);
 
+    /**
+     * @brief Hint for allocation
+     *
+     * @param pos Heap position
+     */
     void force_alloc_pos(address pos);
+
+    /**
+     * @brief Get next object
+     *
+     * @param obj Current object start
+     * @return Next object
+     */
+    address next_object(address obj);
 };
 
 }; // namespace allocator

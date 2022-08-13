@@ -1,4 +1,5 @@
 #include "gc/gc-interface/alloca.hpp"
+#include "gc/gc-interface/object.hpp"
 
 template <class ObjectHeaderType>
 allocator::Alloca<ObjectHeaderType>::Alloca(size_t size)
@@ -197,4 +198,19 @@ template <class ObjectHeaderType> void allocator::NextFitAlloca<ObjectHeaderType
     aobj->set_unused(_end - pos);
 
     _pos = pos;
+}
+
+template <class ObjectHeaderType> address allocator::NextFitAlloca<ObjectHeaderType>::next_object(address obj)
+{
+    ObjectHeaderType *hdr = (ObjectHeaderType *)obj;
+    ObjectHeaderType *possible_object = (ObjectHeaderType *)(obj + hdr->_size);
+
+    // search for the first object with non-zero tag
+    while ((address)possible_object < _end && possible_object->_tag == 0)
+    {
+        // assuming size is correct for dead objects
+        possible_object = (ObjectHeaderType *)((address)possible_object + possible_object->_size);
+    }
+
+    return (address)possible_object;
 }

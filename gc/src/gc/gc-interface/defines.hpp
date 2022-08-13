@@ -3,8 +3,6 @@
 #include <cstdlib>
 #include <iostream>
 
-#define WRITE(base, address, value) gc.write(base, address, value)
-
 // some macro for testing
 #define guarantee(cond, msg)                                                                                           \
     if (!(cond))                                                                                                       \

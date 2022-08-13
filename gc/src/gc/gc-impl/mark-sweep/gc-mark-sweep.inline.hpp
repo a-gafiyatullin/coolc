@@ -16,24 +16,8 @@ void gc::MarkSweepGC<Allocator, MarkerType, ObjectHeaderType>::sweep()
             LOG_SWEEP(scan, obj->_size);
             _alloca.free(scan);
         }
-        scan = next_object(scan);
+        scan = _alloca.next_object(scan);
     }
-}
-
-template <template <class> class Allocator, template <class> class MarkerType, class ObjectHeaderType>
-address gc::MarkSweepGC<Allocator, MarkerType, ObjectHeaderType>::next_object(address obj)
-{
-    ObjectHeaderType *hdr = (ObjectHeaderType *)obj;
-    ObjectHeaderType *possible_object = (ObjectHeaderType *)(obj + hdr->_size);
-
-    // search for the first object with non-zero tag
-    while ((address)possible_object < _alloca.end() && possible_object->_tag == 0)
-    {
-        // assuming size is correct for dead objects
-        possible_object = (ObjectHeaderType *)((address)possible_object + possible_object->_size);
-    }
-
-    return (address)possible_object;
 }
 
 template <template <class> class Allocator, template <class> class MarkerType, class ObjectHeaderType>

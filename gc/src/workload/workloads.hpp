@@ -2,5 +2,5 @@
 #include "sanity-workloads.hpp"
 
 // simple tests
-DECLARE_TEST(sanity);
-DECLARE_TEST(linked_list);
+void sanity_workload();
+void linked_list_workload();
