@@ -35,7 +35,7 @@ void linked_list_workload()
 {
     // INTEL: GC_MARK: 456, GC_MAIN_PHASE: 312, ALLOCATION: 1800, EXECUTION: 1915
     // RPI4:  GC_MARK: 3902, GC_MAIN_PHASE: 2389, ALLOCATION: 7810, EXECUTION: 8221
-    // MACM1: GC_MARK: 824, GC_MAIN_PHASE: 244, ALLOCATION: 1220, EXECUTION: 3531
+    // MACM1: GC_MARK: 794, GC_MAIN_PHASE: 245, ALLOCATION: 1235, EXECUTION: 3507
     RUN_TEST1((linked_list_allocation_workload<gc::MarkSweepGC, allocator::NextFitAlloca, gc::MarkerFIFO, IIS_HEADER,
                                                false, 0>),
               BIG_HEAP, BIG_LINKED_LIST);
@@ -48,11 +48,18 @@ void linked_list_workload()
         1.14 * BIG_HEAP, BIG_LINKED_LIST);
 
     // INTEL: GC_MARK: 276, GC_MAIN_PHASE: 740, ALLOCATION: 1529, EXECUTION: 1813
+    // RPI4:  GC_MARK: 2330, GC_MAIN_PHASE: 4933, ALLOCATION: 6016, EXECUTION: 7712
+    // MACM1: GC_MARK: 467, GC_MAIN_PHASE: 627, ALLOCATION: 1024, EXECUTION: 3214
     RUN_TEST1((linked_list_allocation_workload<gc::ThreadedCompactionGC, allocator::NextFitAlloca, gc::MarkerFIFO,
                                                IIS_HEADER, false, 0>),
               0.92 * BIG_HEAP, BIG_LINKED_LIST);
 
+    // Because of memory fragmentation MarkSweepGC does 3 memory cleanings.
+    // MarkCompact does 2 for the same amount of memory.
+
     // INTEL: GC_MARK: 192, GC_MAIN_PHASE: 533, ALLOCATION: 1510, EXECUTION: 1806
+    // RPI4:  GC_MARK: 1684, GC_MAIN_PHASE: 3751, ALLOCATION: 6115, EXECUTION: 7742
+    // MACM1: GC_MARK: 309, GC_MAIN_PHASE: 460, ALLOCATION: 993, EXECUTION: 3335
     RUN_TEST1((linked_list_allocation_workload<gc::ThreadedCompactionGC, allocator::NextFitAlloca, gc::MarkerFIFO,
                                                IIS_HEADER, false, 0>),
               BIG_HEAP, BIG_LINKED_LIST);
