@@ -26,6 +26,9 @@ void sanity_workload()
 
     sanity_trivial_workload<gc::Lisp2GC<allocator::NextFitAlloca, gc::MarkerEdgeFIFO, AIS_HEADER>, AIS_HEADER>(
         VERY_SMALL_HEAP);
+
+    sanity_trivial_workload<gc::ThreadedCompactionGC<allocator::NextFitAlloca, gc::MarkerEdgeFIFO, IIS_HEADER>,
+                            IIS_HEADER>(VERY_SMALL_HEAP);
 }
 
 void linked_list_workload()
@@ -43,4 +46,14 @@ void linked_list_workload()
     RUN_TEST1(
         (linked_list_allocation_workload<gc::Lisp2GC, allocator::NextFitAlloca, gc::MarkerFIFO, AIS_HEADER, false, 0>),
         1.14 * BIG_HEAP, BIG_LINKED_LIST);
+
+    // INTEL: GC_MARK: 276, GC_MAIN_PHASE: 740, ALLOCATION: 1529, EXECUTION: 1813
+    RUN_TEST1((linked_list_allocation_workload<gc::ThreadedCompactionGC, allocator::NextFitAlloca, gc::MarkerFIFO,
+                                               IIS_HEADER, false, 0>),
+              0.92 * BIG_HEAP, BIG_LINKED_LIST);
+
+    // INTEL: GC_MARK: 192, GC_MAIN_PHASE: 533, ALLOCATION: 1510, EXECUTION: 1806
+    RUN_TEST1((linked_list_allocation_workload<gc::ThreadedCompactionGC, allocator::NextFitAlloca, gc::MarkerFIFO,
+                                               IIS_HEADER, false, 0>),
+              BIG_HEAP, BIG_LINKED_LIST);
 }

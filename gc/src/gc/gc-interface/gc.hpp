@@ -271,16 +271,33 @@ class MarkSweepGC : public ZeroGC<Allocator, ObjectHeaderType>
     void collect() override;
 };
 
+// --------------------------------------- Mark-Compact ---------------------------------------
+template <template <class> class Allocator, template <class> class MarkerType, class ObjectHeaderType>
+class MarkCompactGC : public ZeroGC<Allocator, ObjectHeaderType>
+{
+  protected:
+    using ZeroGC<Allocator, ObjectHeaderType>::_alloca;
+    using ZeroGC<Allocator, ObjectHeaderType>::_current_scope;
+    using ZeroGC<Allocator, ObjectHeaderType>::_stat;
+
+    MarkerType<ObjectHeaderType> _mrkr;
+
+    virtual void compact() = 0;
+
+  public:
+    MarkCompactGC(size_t heap_size);
+
+    void collect() override;
+};
+
 // The Garbage Collection Handbook, Richard Jones: 3.2 The Lisp 2 algorithm
 template <template <class> class Allocator, template <class> class MarkerType, class ObjectHeaderType>
-class Lisp2GC : public ZeroGC<Allocator, ObjectHeaderType>
+class Lisp2GC : public MarkCompactGC<Allocator, MarkerType, ObjectHeaderType>
 {
   protected:
     using ZeroGC<Allocator, ObjectHeaderType>::_alloca;
     using ZeroGC<Allocator, ObjectHeaderType>::_stat;
     using ZeroGC<Allocator, ObjectHeaderType>::_current_scope;
-
-    MarkerType<ObjectHeaderType> _mrkr;
 
     /* 1. phase computeLocations.
      * The first pass over the heap (after marking) computes the location to which each live object will be
@@ -301,11 +318,50 @@ class Lisp2GC : public ZeroGC<Allocator, ObjectHeaderType>
     void relocate();
 
     // main compaction routine
-    void compact();
+    void compact() override;
 
   public:
-    Lisp2GC(size_t heap_size);
+    Lisp2GC(size_t heap_size) : MarkCompactGC<Allocator, MarkerType, ObjectHeaderType>(heap_size)
+    {
+    }
+};
 
-    void collect() override;
+// The Garbage Collection Handbook, Richard Jones: 3.3 Jonkers’s threaded compactor
+template <template <class> class Allocator, template <class> class MarkerType, class ObjectHeaderType>
+class ThreadedCompactionGC : public MarkCompactGC<Allocator, MarkerType, ObjectHeaderType>
+{
+  protected:
+    using ZeroGC<Allocator, ObjectHeaderType>::_alloca;
+    using ZeroGC<Allocator, ObjectHeaderType>::_stat;
+    using ZeroGC<Allocator, ObjectHeaderType>::_current_scope;
+
+    // fast check on stack roots
+    address _stack_start;
+    address _stack_end;
+
+    // Jonkers requires two passes over the heap:
+
+    // 1. phase updateForwardReferences
+    // the first to thread references that point forward in the heap
+    void update_forward_references();
+
+    // 2. phase updateBackwardReferences
+    // and the second to thread backward pointers
+    void update_backward_references();
+
+    // main compaction routine
+    void compact() override;
+
+    // thread a reference
+    void thread(address *ref);
+
+    // unthread all references, replacing with addr
+    void update(address *obj, address addr);
+
+  public:
+    ThreadedCompactionGC(size_t heap_size)
+        : MarkCompactGC<Allocator, MarkerType, ObjectHeaderType>(heap_size), _stack_start((address)-1), _stack_end(0)
+    {
+    }
 };
 }; // namespace gc

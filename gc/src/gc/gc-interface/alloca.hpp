@@ -86,6 +86,18 @@ template <class ObjectHeaderType> class Alloca
      */
     void dump();
 
+    /**
+     * @brief Check if this address is heap addr
+     *
+     * @param addr Address to check
+     * @return true if addr is from the heap
+     * @return false if addr isn't from the heap
+     */
+    inline bool is_heap_addr(address addr) const
+    {
+        return addr >= _start && addr <= _end;
+    }
+
     ~Alloca();
 };
 

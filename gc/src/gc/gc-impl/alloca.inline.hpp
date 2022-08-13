@@ -203,6 +203,7 @@ template <class ObjectHeaderType> void allocator::NextFitAlloca<ObjectHeaderType
 template <class ObjectHeaderType> address allocator::NextFitAlloca<ObjectHeaderType>::next_object(address obj)
 {
     ObjectHeaderType *hdr = (ObjectHeaderType *)obj;
+    assert(hdr->_size != 0);
     ObjectHeaderType *possible_object = (ObjectHeaderType *)(obj + hdr->_size);
 
     // search for the first object with non-zero tag
