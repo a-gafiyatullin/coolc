@@ -1,7 +1,6 @@
 #include "utils/Utils.h"
 
 #ifdef DEBUG
-
 std::string printable_string(const std::string &str)
 {
     // transform escape sequencies
@@ -44,7 +43,6 @@ std::string printable_string(const std::string &str)
 
     return str_for_out;
 }
-#endif // DEBUG
 
 bool TraceLexer;
 bool TokensOnly;
@@ -52,6 +50,8 @@ bool PrintFinalAST;
 bool TraceParser;
 bool TraceSemant;
 bool TraceCodeGen;
+#endif // DEBUG
+
 bool UseArchSpecFeatures;
 
 bool maybe_set(const char *arg, const char *flag_name, bool &flag)
@@ -69,19 +69,21 @@ bool maybe_set(const char *arg, const char *flag_name, bool &flag)
 }
 
 #define check_flag(flag)                                                                                               \
-    if (maybe_set(args[i], #flag, flag))                                                                  \
+    if (maybe_set(args[i], #flag, flag))                                                                               \
     {                                                                                                                  \
         continue;                                                                                                      \
     }
 
 std::pair<std::vector<int>, std::string> process_args(char *const args[], const int &args_num)
 {
+#ifdef DEBUG
     TraceLexer = false;
     PrintFinalAST = false;
     TraceParser = false;
     TraceSemant = false;
     TraceCodeGen = false;
     TokensOnly = false;
+#endif // DEBUG
     UseArchSpecFeatures = true;
 
     std::string out_file_name;
@@ -92,12 +94,14 @@ std::pair<std::vector<int>, std::string> process_args(char *const args[], const 
     {
         if (args[i][0] == '-' || args[i][0] == '+')
         {
+#ifdef DEBUG
             check_flag(TraceLexer);
             check_flag(PrintFinalAST);
             check_flag(TraceParser);
             check_flag(TraceSemant);
             check_flag(TokensOnly);
             check_flag(TraceCodeGen);
+#endif // DEBUG
             check_flag(UseArchSpecFeatures);
 
             // output file name

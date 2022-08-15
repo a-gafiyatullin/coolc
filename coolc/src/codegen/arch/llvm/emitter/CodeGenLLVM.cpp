@@ -910,7 +910,7 @@ std::pair<std::string, std::string> CodeGenLLVM::find_best_vec_ext()
             return {static_cast<std::string>(elem->getKey()), cpu};
         }
     }
-    
+
     return {"", cpu};
 }
 

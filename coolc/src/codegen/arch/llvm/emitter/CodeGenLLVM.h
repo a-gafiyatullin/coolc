@@ -8,6 +8,7 @@
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/filesystem.hpp>
 #include <filesystem>
+#include <iostream>
 #include <llvm/Support/Host.h>
 #include <llvm/Support/Program.h>
 #include <llvm/Support/TargetRegistry.h>

@@ -1,21 +1,11 @@
 #pragma once
 
 #include "utils/logger/Logger.h"
-
-#ifdef DEBUG
-
-#include <cassert>
-#include <iomanip>
-#include <sstream>
-#include <string.h>
+#include <cstring>
+#include <string>
+#include <utility>
 #include <vector>
 
-extern bool TraceLexer;
-extern bool TokensOnly;
-extern bool PrintFinalAST;
-extern bool TraceParser;
-extern bool TraceSemant;
-extern bool TraceCodeGen;
 extern bool UseArchSpecFeatures;
 
 /**
@@ -26,6 +16,18 @@ extern bool UseArchSpecFeatures;
  * @return Positions of the all non-flag command line argument and output file name
  */
 std::pair<std::vector<int>, std::string> process_args(char *const args[], const int &args_num);
+
+#ifdef DEBUG
+#include <cassert>
+#include <iomanip>
+#include <sstream>
+
+extern bool TraceLexer;
+extern bool TokensOnly;
+extern bool PrintFinalAST;
+extern bool TraceParser;
+extern bool TraceSemant;
+extern bool TraceCodeGen;
 
 /**
  * @brief Get the printable string object
