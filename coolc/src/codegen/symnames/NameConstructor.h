@@ -49,6 +49,7 @@ class Names
         OBJ_DISP_TAB,
 
         VALUE,
+        STACK_SLOT,
 
         CommentsNumber
     };

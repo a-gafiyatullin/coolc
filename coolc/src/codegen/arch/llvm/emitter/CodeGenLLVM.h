@@ -34,6 +34,13 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     const RuntimeLLVM _runtime;
     DataLLVM _data;
 
+    // control stack
+    std::vector<llvm::Value *> _stack;
+    int _current_stack_size;
+#ifdef DEBUG
+    int _max_stack_size;
+#endif // DEBUG
+
     // helper values
     llvm::Value *const _true_obj;
     llvm::Value *const _false_obj;
@@ -49,6 +56,8 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     void emit_class_method_inner(const std::shared_ptr<ast::Feature> &method) override;
 
     void emit_class_init_method_inner() override;
+
+    void preserve_value_for_gc(llvm::Value *value);
 
     llvm::Value *emit_binary_expr_inner(const ast::BinaryExpression &expr,
                                         const std::shared_ptr<ast::Type> &expr_type) override;

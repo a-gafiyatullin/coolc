@@ -17,6 +17,6 @@ const std::pair<std::string, bool> Names::COMMENT_NAMES[CommentsNumber] = {
 
     {"obj_tag_", false},     {"obj_size_", false},   {"obj_disp_tab_", false},
 
-    {"val_", false}};
+    {"val_", false},         {"stack_slot_", false}};
 
 int Names::CommentNumber[CommentsNumber] = {};

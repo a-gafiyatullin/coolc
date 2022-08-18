@@ -36,6 +36,7 @@ std::shared_ptr<ClassNode> Semant::make_basic_class(
     klass->_class = std::make_shared<ast::Class>();
     klass->_class->_type = std::make_shared<ast::Type>();
     klass->_class->_parent = std::make_shared<ast::Type>();
+    klass->_class->_expression_stack = 0;
 
     klass->_class->_type->_string = name;
     klass->_class->_parent->_string = parent;
@@ -53,19 +54,20 @@ std::shared_ptr<ClassNode> Semant::make_basic_class(
         feature->_type = std::make_shared<ast::Type>();
         feature->_type->_string = m.second.front();
 
+        auto &method = std::get<ast::MethodFeature>(feature->_base);
+        method._expression_stack = 0;
+
         // method args
         for (auto i = 1; i < m.second.size(); i++)
         {
             // formal name
-            std::get<ast::MethodFeature>(feature->_base)._formals.push_back(std::make_shared<ast::Formal>());
-            std::get<ast::MethodFeature>(feature->_base)._formals.back()->_object =
-                std::make_shared<ast::ObjectExpression>();
-            std::get<ast::MethodFeature>(feature->_base)._formals.back()->_object->_object =
-                static_cast<std::string>(DUMMY_ARG_SUFFIX) + std::to_string(i);
+            method._formals.push_back(std::make_shared<ast::Formal>());
+            method._formals.back()->_object = std::make_shared<ast::ObjectExpression>();
+            method._formals.back()->_object->_object = static_cast<std::string>(DUMMY_ARG_SUFFIX) + std::to_string(i);
 
             // formal type
-            std::get<ast::MethodFeature>(feature->_base)._formals.back()->_type = std::make_shared<ast::Type>();
-            std::get<ast::MethodFeature>(feature->_base)._formals.back()->_type->_string = m.second[i];
+            method._formals.back()->_type = std::make_shared<ast::Type>();
+            method._formals.back()->_type->_string = m.second[i];
         }
 
         klass->_class->_features.push_back(feature);
@@ -359,8 +361,10 @@ bool Semant::check_expression_in_method(const std::shared_ptr<ast::Feature> &fea
 
     scope.push_scope();
 
-    const auto &this_method = std::get<ast::MethodFeature>(feature->_base);
+    auto &this_method = std::get<ast::MethodFeature>(feature->_base);
     const auto &klass = _classes[_current_class->_string]->_class;
+
+    _expression_stack = 0;
 
     // return type is defined
     SEMANT_RETURN_IF_FALSE_WITH_ERROR(check_exists(feature->_type),
@@ -446,7 +450,10 @@ bool Semant::check_expression_in_method(const std::shared_ptr<ast::Feature> &fea
 
     scope.pop_scope();
 
-    SEMANT_VERBOSE_ONLY(LOG_EXIT("CHECK METHOD \"" + name + "\""));
+    // slots for args
+    this_method._expression_stack = _expression_stack;
+
+    SEMANT_VERBOSE_ONLY(LOG_EXIT("CHECK METHOD \"" + name + "\", max stack = " + std::to_string(_expression_stack)));
     return true;
 }
 
@@ -521,18 +528,22 @@ bool Semant::check_expressions_in_class(const std::shared_ptr<ClassNode> &node, 
             }
         }
 
-        // 2. Check features types
+        // 2. Check attributes types
         for (const auto &feature : node->_class->_features)
         {
             if (std::holds_alternative<ast::AttrFeature>(feature->_base))
             {
+                _expression_stack = 0;
                 SEMANT_RETURN_IF_FALSE(check_expression_in_attribute(feature, scope), false);
+                node->_class->_expression_stack = std::max(_expression_stack, node->_class->_expression_stack);
             }
             else
             {
                 SEMANT_RETURN_IF_FALSE(check_expression_in_method(feature, scope), false);
             }
         }
+
+        SEMANT_VERBOSE_ONLY(LOG("Init method max stack = " + std::to_string(node->_class->_expression_stack)));
     }
 
     // 3. Check childs with parent scope
@@ -622,6 +633,8 @@ std::shared_ptr<ast::Type> Semant::infer_let_type(const ast::LetExpression &let,
         check_exists(var_type),
         "Class " + var_type->_string + " of let-bound identifier " + var_name + " is undefined.", -1, nullptr);
 
+    int let_expr_stack = _expression_stack;
+    int let_body_stack = _expression_stack + 1;
     if (let._expr)
     {
         const auto &init_type = let._expr->_type;
@@ -632,12 +645,19 @@ std::shared_ptr<ast::Type> Semant::infer_let_type(const ast::LetExpression &let,
                                               " does not conform to identifier's declared type " + var_type->_string +
                                               ".",
                                           -1, nullptr);
+        let_expr_stack = _expression_stack;
     }
 
     scope.push_scope();
     SEMANT_RETURN_IF_FALSE_WITH_ERROR(scope.add_if_can(var_name, var_type) == Scope::AddResult::OK,
                                       "'" + var_name + "' cannot be bound in a 'let' expression.", -1, nullptr);
+
+    _expression_stack = let_body_stack;
     SEMANT_RETURN_IF_FALSE(infer_expression_type(let._body_expr, scope), nullptr);
+    let_body_stack = _expression_stack;
+
+    // let doesn't create a new value
+    _expression_stack = std::max(let_expr_stack, let_body_stack);
 
     scope.pop_scope();
 
@@ -649,11 +669,20 @@ std::shared_ptr<ast::Type> Semant::infer_loop_type(const ast::WhileExpression &l
 {
     SEMANT_VERBOSE_ONLY(LOG_ENTER("INFER LOOP TYPE"));
 
+    int predicate_expr_stack = _expression_stack;
+    int body_expr_stack = _expression_stack;
+
     SEMANT_RETURN_IF_FALSE(infer_expression_type(loop._predicate, scope), nullptr);
     SEMANT_RETURN_IF_FALSE_WITH_ERROR(is_bool(loop._predicate->_type), "Loop condition does not have type Bool.", -1,
                                       nullptr);
+    predicate_expr_stack = _expression_stack;
 
+    _expression_stack = body_expr_stack;
     SEMANT_RETURN_IF_FALSE(infer_expression_type(loop._body_expr, scope), nullptr);
+    body_expr_stack = _expression_stack;
+
+    // loop doesn't ceate a new value
+    _expression_stack = std::max(predicate_expr_stack, body_expr_stack);
 
     SEMANT_VERBOSE_ONLY(LOG_EXIT("INFER LOOP TYPE"));
     return Object;
@@ -694,9 +723,19 @@ std::shared_ptr<ast::Type> Semant::infer_binary_type(const ast::BinaryExpression
 {
     SEMANT_VERBOSE_ONLY(LOG_ENTER("INFER BINARY TYPE"));
 
+    int lhs_expr_stack = _expression_stack;
+    int rhs_expr_stack = _expression_stack + 1;
+
     std::shared_ptr<ast::Type> result;
+
     SEMANT_RETURN_IF_FALSE(infer_expression_type(binary._lhs, scope), nullptr);
+    lhs_expr_stack = _expression_stack;
+
+    _expression_stack = rhs_expr_stack;
     SEMANT_RETURN_IF_FALSE(infer_expression_type(binary._rhs, scope), nullptr);
+    rhs_expr_stack = _expression_stack;
+
+    _expression_stack = std::max(lhs_expr_stack, rhs_expr_stack);
 
     const auto &lhs_type = binary._lhs->_type;
     const auto &rhs_type = binary._rhs->_type;
@@ -790,11 +829,24 @@ std::shared_ptr<ast::Type> Semant::infer_if_type(const ast::IfExpression &branch
     const auto &true_branch = branch._true_path_expr;
     const auto &false_branch = branch._false_path_expr;
 
+    int pred_expr_stack = _expression_stack;
+    int true_expr_stack = _expression_stack;
+    int false_expr_stack = _expression_stack;
+
     SEMANT_RETURN_IF_FALSE(infer_expression_type(pred, scope), nullptr);
     SEMANT_RETURN_IF_FALSE_WITH_ERROR(is_bool(pred->_type), "Predicate of 'if' does not have type Bool.", -1, nullptr);
+    pred_expr_stack = _expression_stack;
 
+    _expression_stack = true_expr_stack;
     SEMANT_RETURN_IF_FALSE(infer_expression_type(true_branch, scope), nullptr);
+    true_expr_stack = _expression_stack;
+
+    _expression_stack = false_expr_stack;
     SEMANT_RETURN_IF_FALSE(infer_expression_type(false_branch, scope), nullptr);
+    false_expr_stack = _expression_stack;
+
+    _expression_stack = std::max(pred_expr_stack, true_expr_stack);
+    _expression_stack = std::max(_expression_stack, false_expr_stack);
 
     SEMANT_VERBOSE_ONLY(LOG_EXIT("INFER IF TYPE"));
     return find_common_ancestor({true_branch->_type, false_branch->_type});
@@ -804,10 +856,20 @@ std::shared_ptr<ast::Type> Semant::infer_sequence_type(const ast::ListExpression
 {
     SEMANT_VERBOSE_ONLY(LOG_ENTER("INFER SEQUENCE TYPE"));
 
+    std::vector<int> stacks(seq._exprs.size(), _expression_stack);
+    int i = 0;
     for (const auto &expr : seq._exprs)
     {
+        _expression_stack = stacks.at(i);
+
         SEMANT_RETURN_IF_FALSE(infer_expression_type(expr, scope), nullptr);
+
+        stacks[i] = _expression_stack;
+        i++;
     }
+
+    // don't need extra slot, because we don't save any values
+    _expression_stack = *std::max_element(stacks.begin(), stacks.end());
 
     SEMANT_VERBOSE_ONLY(LOG_EXIT("INFER SEQUENCE TYPE"));
     return seq._exprs.back()->_type;
@@ -817,13 +879,20 @@ std::shared_ptr<ast::Type> Semant::infer_cases_type(const ast::CaseExpression &c
 {
     SEMANT_VERBOSE_ONLY(LOG_ENTER("INFER CASE TYPE"));
 
+    std::vector<int> stacks(cases._cases.size() + 1, _expression_stack);
+
     SEMANT_RETURN_IF_FALSE(infer_expression_type(cases._expr, scope), nullptr);
+    stacks[0] = _expression_stack;
 
     std::vector<std::shared_ptr<ast::Type>> meet_types;
     std::vector<std::shared_ptr<ast::Type>> classes;
+    int i = 1;
     for (const auto &kase : cases._cases)
     {
         scope.push_scope();
+
+        // one additional slot for object
+        _expression_stack = stacks.at(i) + 1;
 
         const auto &var_name = kase->_object->_object;
         const auto &var_type = kase->_type;
@@ -848,9 +917,15 @@ std::shared_ptr<ast::Type> Semant::infer_cases_type(const ast::CaseExpression &c
 
         SEMANT_RETURN_IF_FALSE(infer_expression_type(kase->_expr, scope), nullptr);
 
+        stacks[i] = _expression_stack;
+        i++;
+
         scope.pop_scope();
         classes.push_back(kase->_expr->_type);
     }
+
+    // case don't create a new value
+    _expression_stack = *std::max_element(stacks.begin(), stacks.end());
 
     SEMANT_VERBOSE_ONLY(LOG_EXIT("INFER CASE TYPE"));
     return find_common_ancestor(classes);
@@ -862,7 +937,10 @@ std::shared_ptr<ast::Type> Semant::infer_dispatch_type(const ast::DispatchExpres
 
     const auto is_static = std::holds_alternative<ast::StaticDispatchExpression>(disp._base);
 
+    std::vector<int> stacks(disp._args.size() + 1, _expression_stack);
+
     SEMANT_RETURN_IF_FALSE(infer_expression_type(disp._expr, scope), nullptr);
+    stacks[0] = _expression_stack + disp._args.size(); // can save all args on stack
 
     auto dispatch_expr_type = disp._expr->_type;
     if (is_static)
@@ -892,6 +970,8 @@ std::shared_ptr<ast::Type> Semant::infer_dispatch_type(const ast::DispatchExpres
     SEMANT_RETURN_IF_FALSE_WITH_ERROR(method._formals.size() == disp._args.size(), "", 0, nullptr);
     for (auto i = 0; i < disp._args.size(); i++)
     {
+        _expression_stack = stacks.at(i + 1);
+
         const auto &arg = disp._args[i];
         const auto &formal = method._formals[i];
 
@@ -901,7 +981,11 @@ std::shared_ptr<ast::Type> Semant::infer_dispatch_type(const ast::DispatchExpres
                                               " of parameter " + formal->_object->_object +
                                               " does not conform to declared type " + formal->_type->_string + ".",
                                           arg->_line_number, nullptr);
+
+        stacks[i + 1] = _expression_stack + i;
     }
+
+    _expression_stack = *std::max_element(stacks.begin(), stacks.end());
 
     SEMANT_VERBOSE_ONLY(LOG_EXIT("INFER DISPATCH TYPE"));
     return is_self_type(feature->_type) ? disp._expr->_type : feature->_type;

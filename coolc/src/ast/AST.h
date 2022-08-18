@@ -39,6 +39,7 @@ struct Class
 
     std::string _file_name;
     int _line_number;
+    int _expression_stack; // minimal number of slots for expression stack of this init for his class
 };
 
 struct AttrFeature
@@ -48,6 +49,7 @@ struct AttrFeature
 struct MethodFeature
 {
     std::vector<std::shared_ptr<Formal>> _formals;
+    int _expression_stack; // minimal number of slots for expression stack of this method
 };
 
 struct Feature

@@ -54,15 +54,42 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
     // add formals to symbol table
     // formals are local variables, so create their copy in this method and initialize by formals
     _table.push_scope();
-    const auto &formals = std::get<ast::MethodFeature>(method->_base)._formals;
+    const auto &m = std::get<ast::MethodFeature>(method->_base);
+    const auto &formals = m._formals;
+
+    std::vector<llvm::Value *> args_stack;
+
+    _stack.resize(m._expression_stack);
+    _current_stack_size = 0;
+    _max_stack_size = 0;
+
+    // stack slots for args
+    for (int i = 0; i < func->arg_size(); i++)
+    {
+        auto *const arg = func->getArg(i);
+        args_stack.push_back(__ CreateAlloca(arg->getType(), nullptr, arg->getName()));
+    }
+
+    // stack slots for temporaries
+    for (int i = 0; i < _stack.size(); i++)
+    {
+        _stack[i] = __ CreateAlloca(_runtime.void_type()->getPointerTo(), nullptr, Names::name(Names::STACK_SLOT));
+    }
+
+    //
     for (auto i = 0; i < func->arg_size(); i++)
     {
         auto *const arg = func->getArg(i);
+        __ CreateStore(arg, args_stack[i]);
 
-        const auto &local = __ CreateAlloca(arg->getType(), nullptr, arg->getName());
-        __ CreateStore(arg, local);
         _table.add_symbol(static_cast<std::string>(arg->getName()),
-                          Symbol(local, i != 0 ? formals[i - 1]->_type : _current_class->_type));
+                          Symbol(args_stack[i], i != 0 ? formals[i - 1]->_type : _current_class->_type));
+    }
+
+    // empty stack slots
+    for (int i = 0; i < _stack.size(); i++)
+    {
+        __ CreateStore(_int0_64, _stack[i]);
     }
 
     __ CreateRet(emit_expr(method->_expr));
@@ -70,12 +97,25 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
     // TODO: verifier don't compile
     // GUARANTEE_DEBUG(!llvm::verifyFunction(*func));
 
+    GUARANTEE_DEBUG(_max_stack_size == _stack.size());
     _table.pop_scope();
+}
+
+void CodeGenLLVM::preserve_value_for_gc(llvm::Value *value)
+{
+    __ CreateStore(value, _stack.at(_current_stack_size++));
+#ifdef DEBUG
+    _max_stack_size = std::max(_current_stack_size, _max_stack_size);
+#endif // DEBUG
 }
 
 void CodeGenLLVM::emit_class_init_method_inner()
 {
     const auto &klass = _builder->klass(_current_class->_type->_string);
+
+    _stack.resize(_current_class->_expression_stack);
+    _current_stack_size = 0;
+    _max_stack_size = 0;
 
     // Note, that init method don't init header
     auto *const func = _module.getFunction(klass->init_method());
@@ -91,8 +131,20 @@ void CodeGenLLVM::emit_class_init_method_inner()
 
     auto *const self_formal = func->getArg(0);
     const auto &local = __ CreateAlloca(self_formal->getType(), nullptr, self_formal->getName());
+
+    for (int i = 0; i < _stack.size(); i++)
+    {
+        _stack[i] = __ CreateAlloca(_runtime.void_type()->getPointerTo(), nullptr, Names::name(Names::STACK_SLOT));
+    }
+
     __ CreateStore(self_formal, local);
     _table.add_symbol(SelfObject, Symbol(local, _current_class->_type));
+
+    // initialize temporaries
+    for (int i = 0; i < _stack.size(); i++)
+    {
+        __ CreateStore(_int0_64, _stack[i]);
+    }
 
     // set default value before init for fields of this class
     for (const auto &feature : _current_class->_features)
@@ -171,6 +223,8 @@ void CodeGenLLVM::emit_class_init_method_inner()
 
     // TODO: verifier don't compile
     // GUARANTEE_DEBUG(!llvm::verifyFunction(*func));
+
+    GUARANTEE_DEBUG(_max_stack_size == _stack.size());
 }
 
 void CodeGenLLVM::make_control_flow(llvm::Value *pred, llvm::BasicBlock *&true_block, llvm::BasicBlock *&false_block,
@@ -218,6 +272,10 @@ llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &ex
                                                  const std::shared_ptr<ast::Type> &expr_type)
 {
     auto *const lhs = emit_expr(expr._lhs);
+
+    // preserve lhs on stack for gc
+    preserve_value_for_gc(lhs);
+
     auto *const rhs = emit_expr(expr._rhs);
 
     auto logical_result = false;
@@ -300,6 +358,8 @@ llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &ex
         static_cast<llvm::PHINode *>(op_result)->addIncoming(_true_obj, true_block);
         static_cast<llvm::PHINode *>(op_result)->addIncoming(false_branch_res, false_block);
     }
+
+    _current_stack_size--;
 
     return logical_result ? op_result : emit_allocate_int(op_result);
 }
@@ -667,6 +727,9 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
     for (const auto &arg : expr._args)
     {
         args.push_back(emit_expr(arg));
+
+        // preserve args for GC
+        preserve_value_for_gc(args.back());
     }
 
     // get receiver
@@ -739,6 +802,7 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
     phi->addIncoming(casted_call, true_block);
     phi->addIncoming(llvm::ConstantPointerNull::get(phi_type), false_block);
 
+    _current_stack_size -= expr._args.size();
     return phi;
 }
 
@@ -804,12 +868,6 @@ llvm::Value *CodeGenLLVM::emit_in_scope(const std::shared_ptr<ast::ObjectExpress
     const auto local_type = semant::Semant::exact_type(object_type, _current_class->_type);
     auto *const object_ptr_type = _data.class_struct(_builder->klass(local_type->_string))->getPointerTo();
 
-    // allocate pointer to local variable
-    auto *const local_val =
-        __ CreateAlloca(object_ptr_type, nullptr, Names::name(Names::Comment::ALLOCA, object->_object));
-
-    _table.add_symbol(object->_object, Symbol(local_val, local_type));
-
     if (!initializer)
     {
         // initial value for trivial type or null
@@ -818,10 +876,16 @@ llvm::Value *CodeGenLLVM::emit_in_scope(const std::shared_ptr<ast::ObjectExpress
                           : static_cast<llvm::Value *>(llvm::ConstantPointerNull::get(object_ptr_type));
     }
 
-    __ CreateStore(initializer, local_val);
+    preserve_value_for_gc(initializer);
+
+    // allocate pointer to local variable
+    auto *const local_val = _stack[_current_stack_size - 1];
+    _table.add_symbol(object->_object, Symbol(local_val, local_type));
 
     auto *const result = emit_expr(expr);
     _table.pop_scope();
+
+    _current_stack_size--;
 
     return result;
 }

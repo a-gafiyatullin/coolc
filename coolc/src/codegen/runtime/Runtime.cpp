@@ -27,6 +27,7 @@ ObjectLayout *gc_alloc(int tag, size_t size, void *disp_tab) // NOLINT
 
 ObjectLayout *IO_out_string(ObjectLayout *receiver, StringLayout *str) // NOLINT
 {
+    assert(str->_header._tag == StringTag);
     printf("%s", str->_string);
 
     return receiver;
@@ -96,6 +97,7 @@ StringLayout *IO_in_string(ObjectLayout *receiver) // NOLINT
 
 ObjectLayout *IO_out_int(ObjectLayout *receiver, IntLayout *integer) // NOLINT
 {
+    assert(integer->_header._tag == IntTag);
     printf("%lld", integer->_value);
 
     return receiver;

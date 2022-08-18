@@ -42,6 +42,7 @@ class Semant
         const std::vector<std::shared_ptr<ast::Program>> &programs);
     std::shared_ptr<ast::Program> _program;    // program to analyze
     std::shared_ptr<ast::Type> _current_class; // current class of analysis for SELF_TYPE
+    int _expression_stack; // expression stack slots number for the currently analysing method/class init
 
     // ----------------------------- Analysis algorithms support -----------------------------
     std::unordered_map<std::string, std::shared_ptr<ClassNode>> _classes; // fast access to class info
