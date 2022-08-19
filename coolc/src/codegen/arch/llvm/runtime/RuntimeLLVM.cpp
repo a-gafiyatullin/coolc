@@ -23,7 +23,9 @@ RuntimeLLVM::RuntimeLLVM(llvm::Module &module)
       _dispatch_abort(module, SYMBOLS[RuntimeLLVMSymbols::DISPATCH_ABORT], _void_type,
                       {_void_type->getPointerTo(), _int32_type}, *this),
       _case_abort_2(module, SYMBOLS[RuntimeLLVMSymbols::CASE_ABORT_2], _void_type,
-                    {_void_type->getPointerTo(), _int32_type}, *this)
+                    {_void_type->getPointerTo(), _int32_type}, *this),
+      _gc_root(module, SYMBOLS[RuntimeLLVMSymbols::LLVM_GCROOT], _void_type,
+               {_int8_type->getPointerTo()->getPointerTo(), _int8_type->getPointerTo()}, *this)
 {
     _header_layout_types[HeaderLayout::Mark] = llvm::IntegerType::get(module.getContext(), HeaderLayoutSizes::MarkSize);
     _header_layout_types[HeaderLayout::Tag] = llvm::IntegerType::get(module.getContext(), HeaderLayoutSizes::TagSize);
@@ -32,5 +34,5 @@ RuntimeLLVM::RuntimeLLVM(llvm::Module &module)
 }
 
 const std::string RuntimeLLVM::SYMBOLS[RuntimeLLVMSymbolsSize] = {
-    "equals",       "case_abort",  "case_abort_2", "gc_alloc", "dispatch_abort",
-    "ClassNameTab", "ClassObjTab", "IntTag",       "BoolTag",  "StringTag"};
+    "equals",      "case_abort", "case_abort_2", "gc_alloc",  "dispatch_abort", "ClassNameTab",
+    "ClassObjTab", "IntTag",     "BoolTag",      "StringTag", "llvm.gcroot"};

@@ -68,6 +68,8 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
         BOOL_TAG_NAME,
         STRING_TAG_NAME,
 
+        LLVM_GCROOT,
+
         RuntimeLLVMSymbolsSize
     };
 
@@ -91,6 +93,9 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
 
     // GC
     const RuntimeMethod _gc_alloc;
+
+    // LLVM GC intrinsics
+    const RuntimeMethod _gc_root;
 
   public:
     /**

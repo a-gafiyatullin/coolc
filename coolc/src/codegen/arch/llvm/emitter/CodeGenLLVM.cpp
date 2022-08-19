@@ -47,6 +47,9 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
 
     GUARANTEE_DEBUG(func);
 
+    // TODO: get info from GC
+    func->setGC("shadow-stack");
+
     // Create a new basic block to start insertion into.
     auto *entry = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::ENTRY_BLOCK), func);
     __ SetInsertPoint(entry);
@@ -73,10 +76,24 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
     // stack slots for temporaries
     for (int i = 0; i < _stack.size(); i++)
     {
-        _stack[i] = __ CreateAlloca(_runtime.void_type()->getPointerTo(), nullptr, Names::name(Names::STACK_SLOT));
+        _stack[i] = __ CreateAlloca(_runtime.int8_type()->getPointerTo(), nullptr, Names::name(Names::STACK_SLOT));
     }
 
-    //
+    auto *const gcroot = _runtime.symbol_by_id(RuntimeLLVM::LLVM_GCROOT)->_func;
+    auto *const null_ptr = llvm::ConstantPointerNull::get(_runtime.int8_type()->getPointerTo());
+
+    // now register this slots
+    for (int i = 0; i < args_stack.size(); i++)
+    {
+        __ CreateCall(gcroot, {__ CreateBitCast(args_stack.at(i), gcroot->getArg(0)->getType()), null_ptr},
+                      Names::name(Names::Comment::CALL, gcroot->getName()));
+    }
+
+    for (int i = 0; i < _stack.size(); i++)
+    {
+        __ CreateCall(gcroot, {_stack[i], null_ptr}, Names::name(Names::Comment::CALL, gcroot->getName()));
+    }
+
     for (auto i = 0; i < func->arg_size(); i++)
     {
         auto *const arg = func->getArg(i);
@@ -122,6 +139,9 @@ void CodeGenLLVM::emit_class_init_method_inner()
 
     GUARANTEE_DEBUG(func);
 
+    // TODO: get info from GC
+    func->setGC("shadow-stack");
+
     // Create a new basic block to start insertion into.
     auto *entry = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::ENTRY_BLOCK), func);
     __ SetInsertPoint(entry);
@@ -135,6 +155,18 @@ void CodeGenLLVM::emit_class_init_method_inner()
     for (int i = 0; i < _stack.size(); i++)
     {
         _stack[i] = __ CreateAlloca(_runtime.void_type()->getPointerTo(), nullptr, Names::name(Names::STACK_SLOT));
+    }
+
+    // register slots
+    auto *const gcroot = _runtime.symbol_by_id(RuntimeLLVM::LLVM_GCROOT)->_func;
+    auto *const null_ptr = llvm::ConstantPointerNull::get(_runtime.int8_type()->getPointerTo());
+
+    __ CreateCall(gcroot, {__ CreateBitCast(local, gcroot->getArg(0)->getType()), null_ptr},
+                  Names::name(Names::Comment::CALL, gcroot->getName()));
+
+    for (int i = 0; i < _stack.size(); i++)
+    {
+        __ CreateCall(gcroot, {_stack[i], null_ptr}, Names::name(Names::Comment::CALL, gcroot->getName()));
     }
 
     __ CreateStore(self_formal, local);
