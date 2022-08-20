@@ -1,4 +1,8 @@
 #include "Allocator.hpp"
+#include "codegen/runtime/globals.hpp"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 using namespace gc;
 
@@ -10,7 +14,7 @@ Allocator::Allocator(const size_t &size)
 #endif // DEBUG
 {
     _start = (gc_address)malloc(_size);
-    if (_start == NULL)
+    if (_start == nullptr)
     {
         exit_with_error("cannot allocate memory for heap!");
     }
@@ -40,7 +44,10 @@ Allocator::~Allocator()
 #ifdef DEBUG
 void Allocator::dump()
 {
-    fprintf(stderr, "Allocated bytes: %lu\nFreed bytes: %lu", _allocated_size, _freed_size);
+    if (PrintGCStatistics)
+    {
+        fprintf(stderr, "Allocated bytes: %lu\nFreed bytes: %lu\n", _allocated_size, _freed_size);
+    }
 }
 #endif // DEBUG
 
@@ -49,6 +56,11 @@ ObjectLayout *Allocator::allocate(int tag, size_t size, void *disp_tab)
     auto *object = allocate_inner(tag, size, disp_tab);
 #ifdef DEBUG
     _allocated_size += size;
+
+    if (PrintAllocatedObjects)
+    {
+        object->print();
+    }
 #endif // DEBUG
     return object;
 }
@@ -91,7 +103,7 @@ ObjectLayout *NextFitAllocator::allocate_inner(int tag, size_t size, void *disp_
 {
     // try to find suitable chunk of the memeory
     // compact chunks by the way
-    ObjectLayout *chunk = NULL;
+    ObjectLayout *chunk = nullptr;
     // assume that we allocate memory consequently between collections
     ObjectLayout *current_chunk = (ObjectLayout *)(_pos ? _pos : _start);
 
@@ -103,16 +115,16 @@ ObjectLayout *NextFitAllocator::allocate_inner(int tag, size_t size, void *disp_
             // found allocated object
 
             // merge previous chunks, but it is not ours chunk
-            if (current_chunk_size != 0 && chunk != NULL)
+            if (current_chunk_size != 0 && chunk != nullptr)
             {
                 chunk->_size = current_chunk_size;
             }
-            chunk = NULL;
+            chunk = nullptr;
         }
-        else if (current_chunk->_tag == 0 && chunk == NULL)
+        else if (current_chunk->_tag == 0 && chunk == nullptr)
         {
             // remember the first free chunk
-            if (_pos == NULL)
+            if (_pos == nullptr)
             {
                 _pos = (gc_address)current_chunk;
             }
@@ -123,7 +135,7 @@ ObjectLayout *NextFitAllocator::allocate_inner(int tag, size_t size, void *disp_
         else if (current_chunk->_tag == 0)
         {
             // remember the first free chunk
-            if (_pos == NULL)
+            if (_pos == nullptr)
             {
                 _pos = (gc_address)current_chunk;
             }
@@ -145,7 +157,7 @@ ObjectLayout *NextFitAllocator::allocate_inner(int tag, size_t size, void *disp_
 
     if (!chunk || chunk->_size < size)
     {
-        return NULL;
+        return nullptr;
     }
 
     int appendix_size = 0;

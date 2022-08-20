@@ -21,9 +21,8 @@ DataLLVM::DataLLVM(const std::shared_ptr<KlassBuilder> &builder, llvm::Module &m
     // use 64 bit field for allignment
     make_base_class(_builder->klass(BaseClassesNames[BaseClasses::BOOL]), {_runtime.default_int()});
 
-    make_base_class(
-        _builder->klass(BaseClassesNames[BaseClasses::STRING]),
-        {_classes[BaseClassesNames[BaseClasses::INT]]->getPointerTo(), _runtime.int8_type()->getPointerTo()});
+    make_base_class(_builder->klass(BaseClassesNames[BaseClasses::STRING]),
+                    {_classes[BaseClassesNames[BaseClasses::INT]]->getPointerTo(), _runtime.int8_type()});
 
     make_base_class(_builder->klass(BaseClassesNames[BaseClasses::IO]), {});
 
@@ -226,39 +225,44 @@ void DataLLVM::int_const_inner(const int64_t &value)
     _int_constants.insert({value, constant_int});
 }
 
-llvm::Constant *DataLLVM::make_char_string(const std::string &str)
-{
-    auto *const char_type = _runtime.int8_type();
-
-    std::vector<llvm::Constant *> chars;
-    for (auto i = 0; i < str.size(); i++)
-    {
-        chars.push_back(llvm::ConstantInt::get(char_type, str[i]));
-    }
-
-    chars.push_back(llvm::ConstantInt::get(char_type, 0));
-
-    auto *const const_char_str = make_constant_array(Names::name(Names::Comment::CHAR_STRING, str),
-                                                     llvm::ArrayType::get(char_type, chars.size()), chars);
-
-    // TODO: need this?
-    // const_global->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-
-    return const_char_str;
-}
-
 void DataLLVM::string_const_inner(const std::string &str)
 {
     const auto &klass_name = BaseClassesNames[BaseClasses::STRING];
     const auto &klass = _builder->klass(klass_name);
 
-    auto *const constant_str = make_constant_struct(
-        Names::string_constant(), _classes.at(klass_name),
-        {llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordSetValue, true),
-         llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag(), true),
-         llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size()),
-         _dispatch_tables.at(klass_name), int_const(str.length()), // length field
-         make_char_string(str)});                                  // string field
+    std::vector<llvm::Constant *> elements;
+    std::vector<llvm::Type *> fields;
+
+    elements.push_back(llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordSetValue, true));
+    elements.push_back(llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag(), true));
+    elements.push_back(llvm::ConstantInt::get(
+        _runtime.header_elem_type(HeaderLayout::Size),
+        klass->size() + str.length() - (WORD_SIZE - 1))); // native string is a 8 byte field, so substract 7 for '\0'
+    elements.push_back(_dispatch_tables.at(klass_name));
+    elements.push_back(int_const(str.length())); // length field
+
+    // save types
+    for (int i = 0; i < elements.size(); i++)
+    {
+        fields.push_back(elements.at(i)->getType());
+    }
+
+    // and now add string
+    auto *const char_type = _runtime.int8_type();
+    for (auto i = 0; i < str.size(); i++)
+    {
+        fields.push_back(char_type);
+        elements.push_back(llvm::ConstantInt::get(char_type, str[i]));
+    }
+
+    fields.push_back(char_type);
+    elements.push_back(llvm::ConstantInt::get(char_type, 0));
+
+    // unfortunately we have to create type for this string...
+    auto *const string_class = llvm::StructType::create(_module.getContext(), std::string(klass_name) + "_" + str);
+    string_class->setBody(fields);
+
+    auto *const constant_str = make_constant_struct(Names::string_constant(), string_class, elements);
 
     _string_constants.insert({str, constant_str});
 }

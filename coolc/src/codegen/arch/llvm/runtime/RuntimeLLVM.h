@@ -64,6 +64,7 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
         DISPATCH_ABORT,
 
         INIT_RUNTIME,
+        FINISH_RUNTIME,
 
         CLASS_NAME_TAB,
         CLASS_OBJ_TAB,
@@ -106,6 +107,7 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
 
     // runtime init
     const RuntimeMethod _init_runtime;
+    const RuntimeMethod _finish_runtime;
 
   public:
     /**

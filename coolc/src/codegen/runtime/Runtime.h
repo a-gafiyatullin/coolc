@@ -13,6 +13,12 @@ extern "C"
     void init_runtime(int argc, char **argv);
 
     /**
+     * @brief Finalize runtime
+     *
+     */
+    void finish_runtime();
+
+    /**
      * @brief Check if two objects are equal
      *
      * @param lo left operand

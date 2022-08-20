@@ -44,14 +44,6 @@ class DataLLVM : public Data<llvm::GlobalVariable *, llvm::StructType *>
      * @param runtime Runtime methods
      */
     DataLLVM(const std::shared_ptr<KlassBuilder> &builder, llvm::Module &module, const RuntimeLLVM &runtime);
-
-    /**
-     * @brief Create C-like null-terminated string
-     *
-     * @param str String to create
-     * @return LLVM representation of the string
-     */
-    llvm::Constant *make_char_string(const std::string &str);
 };
 
 }; // namespace codegen

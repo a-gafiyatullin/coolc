@@ -13,7 +13,8 @@ CodeGenLLVM::CodeGenLLVM(const std::shared_ptr<semant::ClassNode> &root)
       _true_val(llvm::ConstantInt::get(_runtime.default_int(), TrueValue)),
       _false_val(llvm::ConstantInt::get(_runtime.default_int(), FalseValue)),
       _int0_64(llvm::ConstantInt::get(_runtime.int64_type(), 0, true)),
-      _int0_32(llvm::ConstantInt::get(_runtime.int32_type(), 0, true))
+      _int0_32(llvm::ConstantInt::get(_runtime.int32_type(), 0, true)),
+      _int0_8(llvm::ConstantInt::get(_runtime.int8_type(), 0, true))
 {
     GUARANTEE_DEBUG(_true_obj);
     GUARANTEE_DEBUG(_false_obj);
@@ -208,7 +209,7 @@ void CodeGenLLVM::emit_class_init_method_inner()
                 }
                 else if (semant::Semant::is_native_string(this_field._value_type))
                 {
-                    initial_val = _data.make_char_string("");
+                    initial_val = _int0_8;
                 }
                 else
                 {
@@ -944,6 +945,10 @@ void CodeGenLLVM::emit_runtime_main()
 
     const auto main_method = main_klass->method_full_name(MainMethodName);
     __ CreateCall(_module.getFunction(main_method), {main_object}, Names::name(Names::Comment::CALL, main_method));
+
+    // finish runtime
+    auto *const finish_rt = _runtime.symbol_by_id(RuntimeLLVM::FINISH_RUNTIME)->_func;
+    __ CreateCall(finish_rt, {}, Names::name(Names::Comment::CALL, finish_rt->getName()));
 
     __ CreateRet(_int0_32);
 

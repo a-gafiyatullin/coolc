@@ -1,6 +1,7 @@
 #pragma once
 
 #include "codegen/runtime/ObjectLayout.hpp"
+#include <cassert>
 
 namespace gc
 {

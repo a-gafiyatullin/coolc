@@ -1,0 +1,71 @@
+#include "globals.hpp"
+#include <cstddef>
+#include <cstdio>
+#include <cstring>
+#include <unordered_map>
+
+#define KB 1024
+#define MB 1024 * KB
+
+#define flag_name(flag) #flag
+#define int_flag_delim '='
+
+// ---------------------------- Flags ----------------------------
+#ifdef DEBUG
+bool PrintGCStatistics = false;
+bool PrintAllocatedObjects = false;
+#endif // DEBUG
+
+size_t MaxHeapSize = 512 * KB;
+
+const std::unordered_map<std::string, bool *> BoolFlags = {
+#ifdef DEBUG
+    {flag_name(PrintGCStatistics), &PrintGCStatistics},
+    {flag_name(PrintAllocatedObjects), &PrintAllocatedObjects},
+#endif // DEBUG
+};
+
+const std::unordered_map<std::string, size_t *> IntFlags = {{flag_name(MaxHeapSize), &MaxHeapSize}};
+
+// ---------------------------- Flags Settings ----------------------------
+bool maybe_set(const char *arg, const char *flag_name)
+{
+    auto bool_flags = BoolFlags.find(arg + 1);
+    if (bool_flags != BoolFlags.end())
+    {
+        *(bool_flags->second) = arg[0] == '+';
+        return true;
+    }
+
+    std::string int_flag_str = arg;
+    int delim_pos = int_flag_str.find(int_flag_delim);
+    if (delim_pos != std::string::npos)
+    {
+        auto int_flag = IntFlags.find(int_flag_str.substr(0, delim_pos));
+        if (int_flag != IntFlags.end())
+        {
+            *(int_flag->second) = std::stoi(int_flag_str.substr(delim_pos + 1));
+            return true;
+        }
+    }
+
+    return false;
+}
+
+#define check_flag(flag)                                                                                               \
+    if (maybe_set(argv[i], #flag))                                                                                     \
+    {                                                                                                                  \
+        continue;                                                                                                      \
+    }
+
+void process_runtime_args(int argc, char **argv)
+{
+    for (int i = 1; i < argc; i++)
+    {
+#ifdef DEBUG
+        check_flag(PrintGCStatistics);
+        check_flag(PrintAllocatedObjects);
+#endif // DEBUG
+        check_flag(MaxHeapSize);
+    }
+}

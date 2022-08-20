@@ -19,7 +19,7 @@ class GC
     };
 
   protected:
-    Allocator *_allocator; // TODO: use shared ptr?
+    Allocator *_allocator;
     Marker *_marker;
 
     gc_address _heap_start;
@@ -41,6 +41,12 @@ class GC
      * @param type GC Type
      */
     static void init(const GcType &type, const size_t &heap_size);
+
+    /**
+     * @brief Finalize GC
+     *
+     */
+    static void finish();
 
     /**
      * @brief Get GC

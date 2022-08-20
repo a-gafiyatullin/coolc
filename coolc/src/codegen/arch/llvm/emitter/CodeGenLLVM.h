@@ -51,6 +51,7 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
 
     llvm::Value *const _int0_64;
     llvm::Value *const _int0_32;
+    llvm::Value *const _int0_8;
 
     void add_fields() override;
 

@@ -25,7 +25,8 @@ RuntimeLLVM::RuntimeLLVM(llvm::Module &module)
       _case_abort_2(module, SYMBOLS[RuntimeLLVMSymbols::CASE_ABORT_2], _void_type,
                     {_void_type->getPointerTo(), _int32_type}, *this),
       _init_runtime(module, SYMBOLS[RuntimeLLVMSymbols::INIT_RUNTIME], _void_type,
-                    {_int32_type, _int8_type->getPointerTo()->getPointerTo()}, *this)
+                    {_int32_type, _int8_type->getPointerTo()->getPointerTo()}, *this),
+      _finish_runtime(module, SYMBOLS[RuntimeLLVMSymbols::FINISH_RUNTIME], _void_type, {}, *this)
 {
     _header_layout_types[HeaderLayout::Mark] =
         llvm::IntegerType::get(module.getContext(), HeaderLayoutSizes::MarkSize * BITS_PER_BYTE);
@@ -37,7 +38,7 @@ RuntimeLLVM::RuntimeLLVM(llvm::Module &module)
 }
 
 const std::string RuntimeLLVM::SYMBOLS[RuntimeLLVMSymbolsSize] = {
-    "equals",       "case_abort",  "case_abort_2", "gc_alloc", "dispatch_abort", "init_runtime",
-    "ClassNameTab", "ClassObjTab", "IntTag",       "BoolTag",  "StringTag"};
+    "equals",         "case_abort",   "case_abort_2", "gc_alloc", "dispatch_abort", "init_runtime",
+    "finish_runtime", "ClassNameTab", "ClassObjTab",  "IntTag",   "BoolTag",        "StringTag"};
 
 const std::string RuntimeLLVM::GC_STRATEGIES[RuntimeLLVMGCStrategySize] = {"shadow-stack"};

@@ -1,10 +1,11 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 #define MARK_TYPE int32_t
 #define TAG_TYPE uint32_t
-#define SIZE_TYPE std::size_t
+#define SIZE_TYPE size_t
 #define DISP_TAB_TYPE void *
 
 #ifdef MIPS

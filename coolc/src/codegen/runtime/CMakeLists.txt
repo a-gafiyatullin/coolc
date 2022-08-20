@@ -2,4 +2,5 @@ add_library(cool-rt SHARED Runtime.cpp
                            ObjectLayout.cpp
                            gc/Allocator.cpp
                            gc/GC.cpp
-                           gc/Marker.cpp)
+                           gc/Marker.cpp
+                           globals.cpp)

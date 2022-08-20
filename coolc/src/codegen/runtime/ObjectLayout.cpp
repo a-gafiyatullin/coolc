@@ -1,4 +1,6 @@
 #include "ObjectLayout.hpp"
+#include <cstdio>
+#include <cstring>
 
 void ObjectLayout::zero_fields(int val)
 {

@@ -1,9 +1,19 @@
 #include "Runtime.h"
 #include "gc/GC.hpp"
+#include "globals.hpp"
+#include <cstdio>
+#include <cstring>
 
 void init_runtime(int argc, char **argv)
 {
-    gc::GC::init(gc::GC::ZEROGC, 384 * 1024);
+    process_runtime_args(argc, argv);
+
+    gc::GC::init(gc::GC::ZEROGC, MaxHeapSize);
+}
+
+void finish_runtime()
+{
+    gc::GC::finish();
 }
 
 ObjectLayout *Object_abort(ObjectLayout *receiver) // NOLINT
@@ -50,11 +60,14 @@ IntLayout *make_int(const int &value, void *int_disp_tab)
 
 StringLayout *String_concat(StringLayout *receiver, StringLayout *str) // NOLINT
 {
-    auto *const new_string = reinterpret_cast<StringLayout *>(Object_copy(reinterpret_cast<ObjectLayout *>(receiver)));
+    int size = str->_string_size->_value + receiver->_string_size->_value + sizeof(StringLayout);
+    auto *const new_string = (StringLayout *)gc_alloc(StringTag, size, str->_dispatch_table);
 
+    // set size
     new_string->_string_size =
         make_int(str->_string_size->_value + receiver->_string_size->_value, receiver->_string_size->_dispatch_table);
-    new_string->_string = reinterpret_cast<char *>(malloc(new_string->_string_size->_value + 1));
+
+    // copy strings
     memcpy(new_string->_string, receiver->_string, receiver->_string_size->_value);
     memcpy(new_string->_string + receiver->_string_size->_value, str->_string, str->_string_size->_value);
     new_string->_string[new_string->_string_size->_value] = '\0';
@@ -64,10 +77,11 @@ StringLayout *String_concat(StringLayout *receiver, StringLayout *str) // NOLINT
 
 StringLayout *String_substr(StringLayout *receiver, IntLayout *index, IntLayout *len) // NOLINT
 {
-    auto *const new_string = reinterpret_cast<StringLayout *>(Object_copy(reinterpret_cast<ObjectLayout *>(receiver)));
+    auto *const new_string =
+        (StringLayout *)gc_alloc(StringTag, len->_value + sizeof(StringLayout), receiver->_dispatch_table);
 
     new_string->_string_size = len;
-    new_string->_string = reinterpret_cast<char *>(malloc(len->_value + 1));
+
     memcpy(new_string->_string, receiver->_string + index->_value, len->_value);
     new_string->_string[new_string->_string_size->_value] = '\0';
 

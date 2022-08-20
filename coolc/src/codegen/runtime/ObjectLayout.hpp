@@ -1,10 +1,7 @@
 #pragma once
 
 #include "codegen/constants/Constants.h"
-#include <cassert>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
+#include "globals.hpp"
 
 #define gc_address char *
 #define FIELD_SIZE sizeof(gc_address)
@@ -150,5 +147,5 @@ struct BoolLayout : public ObjectLayout
 struct StringLayout : public ObjectLayout
 {
     IntLayout *_string_size;
-    char *_string; // null terminated
+    char _string[1]; // null terminated
 };

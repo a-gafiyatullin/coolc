@@ -1,19 +1,20 @@
 #include "GC.hpp"
+#include <cstring>
 
 using namespace gc;
 
-GC *GC::Gc = NULL; // TODO: or nullptr?
+GC *GC::Gc = nullptr;
 
 ObjectLayout *GC::allocate(int tag, size_t size, void *disp_tab)
 {
     ObjectLayout *object = _allocator->allocate(tag, size, disp_tab);
-    if (object == NULL)
+    if (object == nullptr)
     {
         collect();
         object = _allocator->allocate(tag, size, disp_tab);
     }
 
-    if (object == NULL)
+    if (object == nullptr)
     {
         _allocator->exit_with_error("cannot allocate memory for object!");
     }
@@ -42,6 +43,12 @@ void GC::init(const GcType &type, const size_t &heap_size)
     default:
         assert(false);
     };
+}
+
+void GC::finish()
+{
+    delete Gc;
+    Gc = nullptr;
 }
 
 // -------------------------------------- ZeroGC --------------------------------------

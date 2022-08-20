@@ -24,7 +24,7 @@ template <class SymbolHandle> class Runtime
      */
     inline SymbolHandle *symbol(const std::string &name) const
     {
-        return _symbol_by_name.find(name) != _symbol_by_name.end() ? _symbol_by_name.at(name) : NULL;
+        return _symbol_by_name.find(name) != _symbol_by_name.end() ? _symbol_by_name.at(name) : nullptr;
     }
 
     /**
