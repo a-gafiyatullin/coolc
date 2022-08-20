@@ -1,48 +1,16 @@
 #pragma once
 
-#include "codegen/constants/Constants.h"
-#include <cstdlib>
-#include <cstring>
-#include <stdio.h>
-#include <cassert>
+#include "ObjectLayout.hpp"
 
 extern "C"
 {
-    extern "C" void *ClassNameTab; // must be defined by coolc. It is the pointer of the first name
-    extern "C" int IntTag;
-    extern "C" int BoolTag;
-    extern "C" int StringTag;
-
     /**
-     * @brief Structure of the Object header
+     * @brief Initialize language runtime
      *
+     * @param argc Number of args in argv
+     * @param argv Argument strings
      */
-    struct ObjectLayout
-    {
-        MARK_TYPE _mark;
-        TAG_TYPE _tag;
-        SIZE_TYPE _size;
-        DISP_TAB_TYPE _dispatch_table;
-    };
-
-    struct IntLayout
-    {
-        ObjectLayout _header;
-        long long int _value;
-    };
-
-    struct BoolLayout
-    {
-        ObjectLayout _header;
-        long long int _value;
-    };
-
-    struct StringLayout
-    {
-        ObjectLayout _header;
-        IntLayout *_string_size;
-        char *_string; // null terminated
-    };
+    void init_runtime(int argc, char **argv);
 
     /**
      * @brief Check if two objects are equal
@@ -165,8 +133,7 @@ extern "C"
      */
     IntLayout *IO_in_int(ObjectLayout *receiver); // NOLINT
 
-    // -------------------------------------- GC --------------------------------------
-
+    // ------------------------------ GC ------------------------------
     /**
      * @brief Allocate object with known size
      *

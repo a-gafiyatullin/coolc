@@ -9,6 +9,7 @@
 #include <boost/filesystem.hpp>
 #include <filesystem>
 #include <iostream>
+#include <llvm/IR/Intrinsics.h>
 #include <llvm/Support/Host.h>
 #include <llvm/Support/Program.h>
 #include <llvm/Support/TargetRegistry.h>

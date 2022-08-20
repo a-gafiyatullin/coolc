@@ -1,1 +1,5 @@
-add_library(cool-rt SHARED Runtime.cpp)
+add_library(cool-rt SHARED Runtime.cpp
+                           ObjectLayout.cpp
+                           gc/Allocator.cpp
+                           gc/GC.cpp
+                           gc/Marker.cpp)

@@ -47,8 +47,7 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
 
     GUARANTEE_DEBUG(func);
 
-    // TODO: get info from GC
-    func->setGC("shadow-stack");
+    func->setGC(_runtime.gc_strategy(RuntimeLLVM::SHADOW_STACK));
 
     // Create a new basic block to start insertion into.
     auto *entry = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::ENTRY_BLOCK), func);
@@ -79,7 +78,7 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
         _stack[i] = __ CreateAlloca(_runtime.int8_type()->getPointerTo(), nullptr, Names::name(Names::STACK_SLOT));
     }
 
-    auto *const gcroot = _runtime.symbol_by_id(RuntimeLLVM::LLVM_GCROOT)->_func;
+    auto *const gcroot = llvm::Intrinsic::getDeclaration(&_module, llvm::Intrinsic::gcroot);
     auto *const null_ptr = llvm::ConstantPointerNull::get(_runtime.int8_type()->getPointerTo());
 
     // now register this slots
@@ -139,8 +138,7 @@ void CodeGenLLVM::emit_class_init_method_inner()
 
     GUARANTEE_DEBUG(func);
 
-    // TODO: get info from GC
-    func->setGC("shadow-stack");
+    func->setGC(_runtime.gc_strategy(RuntimeLLVM::SHADOW_STACK));
 
     // Create a new basic block to start insertion into.
     auto *entry = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::ENTRY_BLOCK), func);
@@ -158,7 +156,7 @@ void CodeGenLLVM::emit_class_init_method_inner()
     }
 
     // register slots
-    auto *const gcroot = _runtime.symbol_by_id(RuntimeLLVM::LLVM_GCROOT)->_func;
+    auto *const gcroot = llvm::Intrinsic::getDeclaration(&_module, llvm::Intrinsic::gcroot);
     auto *const null_ptr = llvm::ConstantPointerNull::get(_runtime.int8_type()->getPointerTo());
 
     __ CreateCall(gcroot, {__ CreateBitCast(local, gcroot->getArg(0)->getType()), null_ptr},
@@ -924,12 +922,22 @@ llvm::Value *CodeGenLLVM::emit_in_scope(const std::shared_ptr<ast::ObjectExpress
 
 void CodeGenLLVM::emit_runtime_main()
 {
-    const auto &runtime_main =
-        llvm::Function::Create(llvm::FunctionType::get(llvm::Type::getInt32Ty(_context), {}, false),
-                               llvm::Function::ExternalLinkage, static_cast<std::string>(RUNTIME_MAIN_FUNC), &_module);
+    const auto &runtime_main = llvm::Function::Create(
+        llvm::FunctionType::get(llvm::Type::getInt32Ty(_context),
+                                {
+                                    _runtime.int32_type(),                               // int argc
+                                    _runtime.int8_type()->getPointerTo()->getPointerTo() // char** argv
+                                },
+                                false),
+        llvm::Function::ExternalLinkage, static_cast<std::string>(RUNTIME_MAIN_FUNC), &_module);
 
     auto *entry = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::ENTRY_BLOCK), runtime_main);
     __ SetInsertPoint(entry);
+
+    // first init runtime
+    auto *const init_rt = _runtime.symbol_by_id(RuntimeLLVM::INIT_RUNTIME)->_func;
+    __ CreateCall(init_rt, {runtime_main->getArg(0), runtime_main->getArg(1)},
+                  Names::name(Names::Comment::CALL, init_rt->getName()));
 
     const auto main_klass = _builder->klass(MainClassName);
     auto *const main_object = emit_new_inner(main_klass->klass());

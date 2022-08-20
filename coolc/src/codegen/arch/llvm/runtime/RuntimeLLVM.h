@@ -5,6 +5,8 @@
 
 namespace codegen
 {
+#define BITS_PER_BYTE 8
+
 class RuntimeLLVM;
 
 enum HeaderLayout
@@ -19,10 +21,10 @@ enum HeaderLayout
 
 enum HeaderLayoutSizes
 {
-    MarkSize = sizeof(MARK_TYPE) * WORD_SIZE,
-    TagSize = sizeof(TAG_TYPE) * WORD_SIZE,
-    SizeSize = sizeof(SIZE_TYPE) * WORD_SIZE,
-    DispatchTableSize = sizeof(DISP_TAB_TYPE) * WORD_SIZE,
+    MarkSize = sizeof(MARK_TYPE),
+    TagSize = sizeof(TAG_TYPE),
+    SizeSize = sizeof(SIZE_TYPE),
+    DispatchTableSize = sizeof(DISP_TAB_TYPE),
 
     HeaderSize = MarkSize + TagSize + SizeSize + DispatchTableSize
 };
@@ -61,6 +63,8 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
         GC_ALLOC,
         DISPATCH_ABORT,
 
+        INIT_RUNTIME,
+
         CLASS_NAME_TAB,
         CLASS_OBJ_TAB,
 
@@ -68,13 +72,19 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
         BOOL_TAG_NAME,
         STRING_TAG_NAME,
 
-        LLVM_GCROOT,
-
         RuntimeLLVMSymbolsSize
+    };
+
+    enum RuntimeLLVMGCStrategy
+    {
+        SHADOW_STACK,
+
+        RuntimeLLVMGCStrategySize
     };
 
   private:
     static const std::string SYMBOLS[RuntimeLLVMSymbolsSize];
+    static const std::string GC_STRATEGIES[RuntimeLLVMGCStrategySize];
 
     llvm::Type *const _int8_type;
     llvm::Type *const _int32_type;
@@ -94,8 +104,8 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
     // GC
     const RuntimeMethod _gc_alloc;
 
-    // LLVM GC intrinsics
-    const RuntimeMethod _gc_root;
+    // runtime init
+    const RuntimeMethod _init_runtime;
 
   public:
     /**
@@ -169,6 +179,17 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
     std::string symbol_name(const int &id) const override
     {
         return SYMBOLS[id];
+    }
+
+    /**
+     * @brief Get gc strategy by id
+     *
+     * @param id gc strategy id
+     * @return string for this strategy
+     */
+    std::string gc_strategy(const RuntimeLLVMGCStrategy &id) const
+    {
+        return GC_STRATEGIES[id];
     }
 };
 }; // namespace codegen

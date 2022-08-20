@@ -4,7 +4,7 @@
 
 #define MARK_TYPE int32_t
 #define TAG_TYPE uint32_t
-#define SIZE_TYPE size_t
+#define SIZE_TYPE std::size_t
 #define DISP_TAB_TYPE void *
 
 #ifdef MIPS
@@ -18,5 +18,9 @@
 #define TrueValue 1
 #define FalseValue 0
 #define DefaultValue 0
+
 #define MarkWordDefaultValue -1
 #define MarkWordSetValue 1
+#define MarkWordUnsetValue 0
+
+#define UnusedTag 0

@@ -24,15 +24,20 @@ RuntimeLLVM::RuntimeLLVM(llvm::Module &module)
                       {_void_type->getPointerTo(), _int32_type}, *this),
       _case_abort_2(module, SYMBOLS[RuntimeLLVMSymbols::CASE_ABORT_2], _void_type,
                     {_void_type->getPointerTo(), _int32_type}, *this),
-      _gc_root(module, SYMBOLS[RuntimeLLVMSymbols::LLVM_GCROOT], _void_type,
-               {_int8_type->getPointerTo()->getPointerTo(), _int8_type->getPointerTo()}, *this)
+      _init_runtime(module, SYMBOLS[RuntimeLLVMSymbols::INIT_RUNTIME], _void_type,
+                    {_int32_type, _int8_type->getPointerTo()->getPointerTo()}, *this)
 {
-    _header_layout_types[HeaderLayout::Mark] = llvm::IntegerType::get(module.getContext(), HeaderLayoutSizes::MarkSize);
-    _header_layout_types[HeaderLayout::Tag] = llvm::IntegerType::get(module.getContext(), HeaderLayoutSizes::TagSize);
-    _header_layout_types[HeaderLayout::Size] = llvm::IntegerType::get(module.getContext(), HeaderLayoutSizes::SizeSize);
+    _header_layout_types[HeaderLayout::Mark] =
+        llvm::IntegerType::get(module.getContext(), HeaderLayoutSizes::MarkSize * BITS_PER_BYTE);
+    _header_layout_types[HeaderLayout::Tag] =
+        llvm::IntegerType::get(module.getContext(), HeaderLayoutSizes::TagSize * BITS_PER_BYTE);
+    _header_layout_types[HeaderLayout::Size] =
+        llvm::IntegerType::get(module.getContext(), HeaderLayoutSizes::SizeSize * BITS_PER_BYTE);
     _header_layout_types[HeaderLayout::DispatchTable] = _void_type->getPointerTo();
 }
 
 const std::string RuntimeLLVM::SYMBOLS[RuntimeLLVMSymbolsSize] = {
-    "equals",      "case_abort", "case_abort_2", "gc_alloc",  "dispatch_abort", "ClassNameTab",
-    "ClassObjTab", "IntTag",     "BoolTag",      "StringTag", "llvm.gcroot"};
+    "equals",       "case_abort",  "case_abort_2", "gc_alloc", "dispatch_abort", "init_runtime",
+    "ClassNameTab", "ClassObjTab", "IntTag",       "BoolTag",  "StringTag"};
+
+const std::string RuntimeLLVM::GC_STRATEGIES[RuntimeLLVMGCStrategySize] = {"shadow-stack"};

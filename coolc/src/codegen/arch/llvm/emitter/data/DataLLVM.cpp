@@ -291,6 +291,12 @@ void DataLLVM::gen_class_obj_tab()
 
     std::vector<llvm::Constant *> init_methods;
 
+    // create null init method, because tag 0 is reserved
+    // always have at least one class
+    assert(_builder->klasses().size());
+    auto *const init_method = _module.getFunction(_builder->klasses()[0]->init_method());
+    init_methods.push_back(llvm::ConstantPointerNull::get(init_method->getType()));
+
     for (const auto &klass : _builder->klasses())
     {
         auto *const init_method = _module.getFunction(klass->init_method());

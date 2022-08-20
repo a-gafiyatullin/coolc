@@ -133,7 +133,7 @@ void KlassBuilder::init()
     // parent of the Object class. Need for algorithms
     _klasses.insert({semant::Semant::empty_type()->_string, make_klass(nullptr)});
 
-    build_klass(_root, 0);
+    build_klass(_root, 1); // convention with GC: tag 0 is reserved
 
     // delete parent of the Object class
     _klasses.erase(semant::Semant::empty_type()->_string);
