@@ -64,7 +64,9 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
 
     _stack.resize(m._expression_stack);
     _current_stack_size = 0;
+#ifdef DEBUG
     _max_stack_size = 0;
+#endif // DEBUG
 
     // stack slots for args
     for (int i = 0; i < func->arg_size(); i++)
@@ -132,7 +134,9 @@ void CodeGenLLVM::emit_class_init_method_inner()
 
     _stack.resize(_current_class->_expression_stack);
     _current_stack_size = 0;
+#ifdef DEBUG
     _max_stack_size = 0;
+#endif // DEBUG
 
     // Note, that init method don't init header
     auto *const func = _module.getFunction(klass->init_method());

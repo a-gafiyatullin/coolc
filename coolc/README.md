@@ -19,6 +19,6 @@ assistance with **coolc**.
         - `-clean` --- clean build directory before compile.
         - `-asan` --- build with AddressSanitizer (Debug only).
         - `-ubsan` --- build with UndefinedBehaviorSanitizer (Debug only).
-        - `-test` --- run tests after building (Debug only).
+        - `-test` --- run tests after building.
         - `-mips` --- build for SPIM emulator.
         - `-llvm` --- build with **LLVM** for host architecture.

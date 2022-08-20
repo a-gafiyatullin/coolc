@@ -21,19 +21,12 @@ void ShadowStackMarkerFIFO::mark_from_roots()
         {
             ObjectLayout *obj = (ObjectLayout *)r->_roots[i];
 
-            // we don't bother about non-heap objects
-            if (obj && is_heap_addr((gc_address)obj) && !obj->is_marked())
+            if (obj && !obj->is_marked())
             {
                 obj->set_marked();
                 _worklist.push(obj);
                 mark();
             }
-#ifdef DEBUG
-            else if (obj && !obj->is_marked())
-            {
-                assert(obj->has_special_type());
-            }
-#endif // DEBUG
         }
         r = r->_next;
     }
