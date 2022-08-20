@@ -55,11 +55,21 @@ ObjectLayout *Allocator::allocate(int tag, size_t size, void *disp_tab)
 {
     auto *object = allocate_inner(tag, size, disp_tab);
 #ifdef DEBUG
-    _allocated_size += size;
+    if (object)
+    {
+        _allocated_size += size;
+    }
 
     if (PrintAllocatedObjects)
     {
-        object->print();
+        if (object)
+        {
+            object->print();
+        }
+        else
+        {
+            fprintf(stderr, "Allocation failed!\n");
+        }
     }
 #endif // DEBUG
     return object;

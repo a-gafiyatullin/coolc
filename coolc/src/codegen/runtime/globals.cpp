@@ -16,7 +16,7 @@ bool PrintGCStatistics = false;
 bool PrintAllocatedObjects = false;
 #endif // DEBUG
 
-size_t MaxHeapSize = 512 * KB;
+size_t MaxHeapSize = 6 * KB;
 
 const std::unordered_map<std::string, bool *> BoolFlags = {
 #ifdef DEBUG

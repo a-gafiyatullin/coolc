@@ -978,10 +978,16 @@ void CodeGenLLVM::execute_linker(const std::string &object_file_name, const std:
 
     std::string error;
     // create executable
-    EXIT_ON_ERROR((llvm::sys::ExecuteAndWait(
-                       clang_path.get(),
-                       {clang_path.get(), object_file_name, rt_lib_path, "-o", out_file_name}, // first arg is file name
-                       llvm::None, {}, 0, 0, &error) == 0),
+    EXIT_ON_ERROR((llvm::sys::ExecuteAndWait(clang_path.get(),
+                                             {clang_path.get(), object_file_name, rt_lib_path,
+#ifdef ASAN
+                                              "-fsanitize=address", "-fno-omit-frame-pointer",
+#elif UBSAN
+                                              "-fsanitize=undefined", "-fno-omit-frame-pointer",
+#endif // UBSAN
+
+                                              "-o", out_file_name}, // first arg is file name
+                                             llvm::None, {}, 0, 0, &error) == 0),
                   error);
 
     // delete object file

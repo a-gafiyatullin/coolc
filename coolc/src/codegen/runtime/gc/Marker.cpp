@@ -29,7 +29,7 @@ void ShadowStackMarkerFIFO::mark_from_roots()
                 mark();
             }
 #ifdef DEBUG
-            else if (obj)
+            else if (obj && !obj->is_marked())
             {
                 assert(obj->has_special_type());
             }
@@ -53,8 +53,7 @@ void ShadowStackMarkerFIFO::mark()
             {
                 StringLayout *str = (StringLayout *)hdr;
                 IntLayout *size = str->_string_size;
-                assert(size);                           // cannot be null
-                assert(is_heap_addr((gc_address)size)); // has to be heap object
+                assert(size); // cannot be null
                 if (!size->is_marked())
                 {
                     size->set_marked();
@@ -70,13 +69,6 @@ void ShadowStackMarkerFIFO::mark()
         for (int j = 0; j < fields_cnt; j++)
         {
             ObjectLayout *child = (ObjectLayout *)fields[j];
-#ifdef DEBUG
-            if (!(is_heap_addr((gc_address)child) || !child))
-            {
-                hdr->print();
-            }
-            assert(is_heap_addr((gc_address)child) || !child);
-#endif // DEBUG
             if (child && !child->is_marked())
             {
                 child->set_marked();

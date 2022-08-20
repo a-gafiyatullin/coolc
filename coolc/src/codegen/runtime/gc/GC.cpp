@@ -40,6 +40,9 @@ void GC::init(const GcType &type, const size_t &heap_size)
     case ZEROGC:
         Gc = new ZeroGC(heap_size);
         break;
+    case MARKSWEEPGC:
+        Gc = new MarkSweepGC(heap_size);
+        break;
     default:
         assert(false);
     };

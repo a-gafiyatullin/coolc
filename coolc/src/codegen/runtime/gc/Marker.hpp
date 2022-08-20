@@ -60,13 +60,13 @@ class ShadowStackMarkerFIFO : public ShadowStackMarker
   protected:
     std::queue<ObjectLayout *> _worklist;
 
-    void mark();
+    void mark() override;
 
   public:
     ShadowStackMarkerFIFO(gc_address heap_start, gc_address heap_end) : ShadowStackMarker(heap_start, heap_end)
     {
     }
 
-    void mark_from_roots();
+    void mark_from_roots() override;
 };
 } // namespace gc

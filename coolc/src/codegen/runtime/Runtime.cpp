@@ -8,7 +8,7 @@ void init_runtime(int argc, char **argv)
 {
     process_runtime_args(argc, argv);
 
-    gc::GC::init(gc::GC::ZEROGC, MaxHeapSize);
+    gc::GC::init(gc::GC::MARKSWEEPGC, std::max(MaxHeapSize, sizeof(ObjectLayout)));
 }
 
 void finish_runtime()

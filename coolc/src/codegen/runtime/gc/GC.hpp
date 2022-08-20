@@ -15,6 +15,7 @@ class GC
     enum GcType
     {
         ZEROGC, // Dummy GC that don't really collect garbage
+        MARKSWEEPGC,
         GcTypeNumber
     };
 
@@ -88,6 +89,7 @@ class GC
     }
 };
 
+// --------------------------------------- ZeroGC ---------------------------------------
 /**
  * @brief Dummy GC that don't really collect garbage
  *
@@ -102,5 +104,23 @@ class ZeroGC : public GC
     }
 
     ~ZeroGC();
+};
+
+// --------------------------------------- Mark-Sweep ---------------------------------------
+/**
+ * @brief Mark-and-Sweep GC
+ *
+ */
+class MarkSweepGC : public GC
+{
+  protected:
+    void sweep();
+
+  public:
+    MarkSweepGC(const size_t &heap_size);
+
+    void collect() override;
+
+    ~MarkSweepGC();
 };
 }; // namespace gc
