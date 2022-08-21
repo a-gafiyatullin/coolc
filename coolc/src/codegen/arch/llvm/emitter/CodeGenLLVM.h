@@ -12,7 +12,11 @@
 #include <llvm/IR/Intrinsics.h>
 #include <llvm/Support/Host.h>
 #include <llvm/Support/Program.h>
+#ifdef __APPLE__
+#include <llvm/MC/TargetRegistry.h>
+#else
 #include <llvm/Support/TargetRegistry.h>
+#endif // __APPLE__
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>

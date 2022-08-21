@@ -88,12 +88,12 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
     for (int i = 0; i < args_stack.size(); i++)
     {
         __ CreateCall(gcroot, {__ CreateBitCast(args_stack.at(i), gcroot->getArg(0)->getType()), null_ptr},
-                      Names::name(Names::Comment::CALL, gcroot->getName()));
+                      Names::name(Names::Comment::CALL, gcroot->getName().str()));
     }
 
     for (int i = 0; i < _stack.size(); i++)
     {
-        __ CreateCall(gcroot, {_stack[i], null_ptr}, Names::name(Names::Comment::CALL, gcroot->getName()));
+        __ CreateCall(gcroot, {_stack[i], null_ptr}, Names::name(Names::Comment::CALL, gcroot->getName().str()));
     }
 
     for (auto i = 0; i < func->arg_size(); i++)
@@ -174,11 +174,11 @@ void CodeGenLLVM::emit_class_init_method_inner()
     auto *const null_ptr = llvm::ConstantPointerNull::get(_runtime.int8_type()->getPointerTo());
 
     __ CreateCall(gcroot, {__ CreateBitCast(local, gcroot->getArg(0)->getType()), null_ptr},
-                  Names::name(Names::Comment::CALL, gcroot->getName()));
+                  Names::name(Names::Comment::CALL, gcroot->getName().str()));
 
     for (int i = 0; i < _stack.size(); i++)
     {
-        __ CreateCall(gcroot, {_stack[i], null_ptr}, Names::name(Names::Comment::CALL, gcroot->getName()));
+        __ CreateCall(gcroot, {_stack[i], null_ptr}, Names::name(Names::Comment::CALL, gcroot->getName().str()));
     }
 
     __ CreateStore(self_formal, local);
@@ -951,7 +951,7 @@ void CodeGenLLVM::emit_runtime_main()
     // first init runtime
     auto *const init_rt = _runtime.symbol_by_id(RuntimeLLVM::INIT_RUNTIME)->_func;
     __ CreateCall(init_rt, {runtime_main->getArg(0), runtime_main->getArg(1)},
-                  Names::name(Names::Comment::CALL, init_rt->getName()));
+                  Names::name(Names::Comment::CALL, init_rt->getName().str()));
 
     const auto main_klass = _builder->klass(MainClassName);
     auto *const main_object = emit_new_inner(main_klass->klass());
@@ -961,7 +961,7 @@ void CodeGenLLVM::emit_runtime_main()
 
     // finish runtime
     auto *const finish_rt = _runtime.symbol_by_id(RuntimeLLVM::FINISH_RUNTIME)->_func;
-    __ CreateCall(finish_rt, {}, Names::name(Names::Comment::CALL, finish_rt->getName()));
+    __ CreateCall(finish_rt, {}, Names::name(Names::Comment::CALL, finish_rt->getName().str()));
 
     __ CreateRet(_int0_32);
 
