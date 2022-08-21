@@ -44,7 +44,8 @@ void GC::init(const GcType &type, const size_t &heap_size)
         Gc = new MarkSweepGC(heap_size);
         break;
     default:
-        assert(false);
+        Gc = new MarkSweepGC(heap_size);
+        break;
     };
 }
 

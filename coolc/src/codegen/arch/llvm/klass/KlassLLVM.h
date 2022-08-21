@@ -11,7 +11,7 @@ class KlassLLVM : public Klass
     static constexpr char FULL_METHOD_DELIM = '_';
     static constexpr std::string_view INIT_METHOD_SUFFIX = "-init";
     static constexpr std::string_view PROTOTYPE_NAME_SUFFIX = "-protObj";
-    static constexpr std::string_view DISP_TAB_NAME_SUFFIX = "-dispTab";
+    static constexpr std::string_view DISP_TAB_NAME_SUFFIX = "_dispTab";
 
     KlassLLVM(const std::shared_ptr<ast::Class> &klass, const KlassBuilder *builder) : Klass(klass, builder)
     {

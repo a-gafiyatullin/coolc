@@ -65,8 +65,8 @@ do
 done
 
 if [ $mode -eq 0 ]; then
-    result_args+=" -DCMAKE_BUILD_TYPE:STRING=Debug"
-    config="Debug"
+    result_args+=" -DCMAKE_BUILD_TYPE:STRING=Release"
+    config="Release"
 fi
 
 cmake --no-warn-unused-cli -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE $result_args -DCMAKE_C_COMPILER:FILEPATH=$c_compiler -DCMAKE_CXX_COMPILER:FILEPATH=$cxx_compiler -H. -Bbuild -G "Unix Makefiles"

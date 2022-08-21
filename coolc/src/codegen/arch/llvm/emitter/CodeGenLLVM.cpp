@@ -128,6 +128,15 @@ void CodeGenLLVM::preserve_value_for_gc(llvm::Value *value)
 #endif // DEBUG
 }
 
+void CodeGenLLVM::pop_dead_value(int slots)
+{
+    for (int i = 0; i < slots; i++)
+    {
+        _current_stack_size--;
+        __ CreateStore(_int0_64, _stack.at(_current_stack_size));
+    }
+}
+
 void CodeGenLLVM::emit_class_init_method_inner()
 {
     const auto &klass = _builder->klass(_current_class->_type->_string);
@@ -394,7 +403,7 @@ llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &ex
         static_cast<llvm::PHINode *>(op_result)->addIncoming(false_branch_res, false_block);
     }
 
-    _current_stack_size--;
+    pop_dead_value();
 
     return logical_result ? op_result : emit_allocate_int(op_result);
 }
@@ -837,7 +846,7 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
     phi->addIncoming(casted_call, true_block);
     phi->addIncoming(llvm::ConstantPointerNull::get(phi_type), false_block);
 
-    _current_stack_size -= expr._args.size();
+    pop_dead_value(expr._args.size());
     return phi;
 }
 
@@ -920,7 +929,7 @@ llvm::Value *CodeGenLLVM::emit_in_scope(const std::shared_ptr<ast::ObjectExpress
     auto *const result = emit_expr(expr);
     _table.pop_scope();
 
-    _current_stack_size--;
+    pop_dead_value();
 
     return result;
 }

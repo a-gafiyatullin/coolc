@@ -60,6 +60,7 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     void emit_class_init_method_inner() override;
 
     void preserve_value_for_gc(llvm::Value *value);
+    void pop_dead_value(int slots = 1);
 
     llvm::Value *emit_binary_expr_inner(const ast::BinaryExpression &expr,
                                         const std::shared_ptr<ast::Type> &expr_type) override;

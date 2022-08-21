@@ -8,10 +8,13 @@
 
 extern "C"
 {
-    extern "C" void *ClassNameTab; // must be defined by coolc. It is the pointer of the first name
-    extern "C" int IntTag;
-    extern "C" int BoolTag;
-    extern "C" int StringTag;
+    extern "C" void *class_nameTab; // NOLINT // must be defined by coolc. It is the pointer of the first name
+    extern "C" int _int_tag;        // NOLINT
+    extern "C" int _bool_tag;       // NOLINT
+    extern "C" int _string_tag;     // NOLINT
+
+    extern "C" void *String_dispTab; // NOLINT // because we need it in IO
+    extern "C" void *Int_dispTab;    // NOLINT // because we need it in IO
 };
 
 /**
@@ -104,7 +107,7 @@ struct ObjectLayout
      */
     inline bool has_special_type() const
     {
-        return _tag == IntTag || _tag == BoolTag || _tag == StringTag;
+        return _tag == _int_tag || _tag == _bool_tag || _tag == _string_tag;
     }
 
     /**
@@ -115,7 +118,7 @@ struct ObjectLayout
      */
     inline bool is_string() const
     {
-        return _tag == StringTag;
+        return _tag == _string_tag;
     }
 
     /**

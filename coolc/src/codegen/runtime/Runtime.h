@@ -10,13 +10,13 @@ extern "C"
      * @param argc Number of args in argv
      * @param argv Argument strings
      */
-    void init_runtime(int argc, char **argv);
+    void _init_runtime(int argc, char **argv); // NOLINT
 
     /**
      * @brief Finalize runtime
      *
      */
-    void finish_runtime();
+    void _finish_runtime(); // NOLINT
 
     /**
      * @brief Check if two objects are equal
@@ -25,14 +25,14 @@ extern "C"
      * @param ro right operand
      * @return TrueVal for true, FalseVal for false
      */
-    int equals(ObjectLayout *lo, ObjectLayout *ro);
+    int _equals(ObjectLayout *lo, ObjectLayout *ro); // NOLINT
 
     /**
      * @brief Abort on case mismatch
      *
      * @param tag Class tag
      */
-    void case_abort(int tag);
+    void _case_abort(int tag); // NOLINT
 
     /**
      * @brief Abort on dispatch to void
@@ -40,7 +40,7 @@ extern "C"
      * @param filename File name of the method
      * @param linenumber Line number of the method
      */
-    void dispatch_abort(StringLayout *filename, int linenumber);
+    void _dispatch_abort(StringLayout *filename, int linenumber); // NOLINT
 
     /**
      * @brief Abort on match on void
@@ -48,7 +48,7 @@ extern "C"
      * @param filename File name of the method
      * @param linenumber Line number of the method
      */
-    void case_abort_2(StringLayout *filename, int linenumber);
+    void _case_abort_2(StringLayout *filename, int linenumber); // NOLINT
 
     // Basic classes methods
     // ------------------------------ Object ------------------------------
@@ -148,5 +148,5 @@ extern "C"
      * @param disp_tab Dispatch table
      * @return Pointer to the newly allocated object
      */
-    ObjectLayout *gc_alloc(int tag, size_t size, void *disp_tab);
+    ObjectLayout *_gc_alloc(int tag, size_t size, void *disp_tab); // NOLINT
 }

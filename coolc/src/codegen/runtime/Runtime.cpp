@@ -1,17 +1,18 @@
 #include "Runtime.h"
+#include "codegen/runtime/ObjectLayout.hpp"
 #include "gc/GC.hpp"
 #include "globals.hpp"
 #include <cstdio>
 #include <cstring>
 
-void init_runtime(int argc, char **argv)
+void _init_runtime(int argc, char **argv) // NOLINT
 {
     process_runtime_args(argc, argv);
 
-    gc::GC::init(gc::GC::MARKSWEEPGC, std::max(MaxHeapSize, sizeof(ObjectLayout)));
+    gc::GC::init((gc::GC::GcType)GCAlgo, std::max(MaxHeapSize, sizeof(ObjectLayout)));
 }
 
-void finish_runtime()
+void _finish_runtime() // NOLINT
 {
     gc::GC::finish();
 }
@@ -19,7 +20,7 @@ void finish_runtime()
 ObjectLayout *Object_abort(ObjectLayout *receiver) // NOLINT
 {
     auto *const name =
-        reinterpret_cast<StringLayout *>(((void **)&ClassNameTab)[receiver->_tag - 1]); // because tag 0 is reserved
+        reinterpret_cast<StringLayout *>(((void **)&class_nameTab)[receiver->_tag - 1]); // because tag 0 is reserved
 
     printf("Abort called from class %s", name->_string);
 
@@ -37,7 +38,7 @@ ObjectLayout *IO_out_string(ObjectLayout *receiver, StringLayout *str) // NOLINT
 
 StringLayout *Object_type_name(ObjectLayout *receiver) // NOLINT
 {
-    return reinterpret_cast<StringLayout *>(((void **)&ClassNameTab)[receiver->_tag - 1]); // because tag 0 is reserved
+    return reinterpret_cast<StringLayout *>(((void **)&class_nameTab)[receiver->_tag - 1]); // because tag 0 is reserved
 }
 
 ObjectLayout *Object_copy(ObjectLayout *receiver) // NOLINT
@@ -52,7 +53,7 @@ IntLayout *String_length(StringLayout *receiver) // NOLINT
 
 IntLayout *make_int(const int &value, void *int_disp_tab)
 {
-    auto *const int_obj = reinterpret_cast<IntLayout *>(gc_alloc(IntTag, sizeof(IntLayout), int_disp_tab));
+    auto *const int_obj = reinterpret_cast<IntLayout *>(_gc_alloc(_int_tag, sizeof(IntLayout), int_disp_tab));
     int_obj->_value = value;
 
     return int_obj;
@@ -61,7 +62,7 @@ IntLayout *make_int(const int &value, void *int_disp_tab)
 StringLayout *String_concat(StringLayout *receiver, StringLayout *str) // NOLINT
 {
     int size = str->_string_size->_value + receiver->_string_size->_value + sizeof(StringLayout);
-    auto *const new_string = (StringLayout *)gc_alloc(StringTag, size, str->_dispatch_table);
+    auto *const new_string = (StringLayout *)_gc_alloc(_string_tag, size, str->_dispatch_table);
 
     // set size
     new_string->_string_size =
@@ -78,7 +79,7 @@ StringLayout *String_concat(StringLayout *receiver, StringLayout *str) // NOLINT
 StringLayout *String_substr(StringLayout *receiver, IntLayout *index, IntLayout *len) // NOLINT
 {
     auto *const new_string =
-        (StringLayout *)gc_alloc(StringTag, len->_value + sizeof(StringLayout), receiver->_dispatch_table);
+        (StringLayout *)_gc_alloc(_string_tag, len->_value + sizeof(StringLayout), receiver->_dispatch_table);
 
     new_string->_string_size = len;
 
@@ -90,29 +91,48 @@ StringLayout *String_substr(StringLayout *receiver, IntLayout *index, IntLayout 
 
 IntLayout *IO_in_int(ObjectLayout *receiver) // NOLINT
 {
+    // TODO: any problems here?
+    long long int value;
+
+    scanf("%lld", &value);
+
+    return make_int(value, Int_dispTab);
 }
 
 StringLayout *IO_in_string(ObjectLayout *receiver) // NOLINT
 {
+    // TODO: any problems here?
+    char str[1025];
+
+    scanf("%s", str);
+    int len = strlen(str);
+
+    StringLayout *obj = (StringLayout *)_gc_alloc(_string_tag, sizeof(StringLayout) + len, &String_dispTab);
+    obj->_string_size = make_int(len, &Int_dispTab);
+    memcpy(obj->_string, str, len);
+    obj->_string[len] = '\0';
+
+    return obj;
 }
 
 ObjectLayout *IO_out_int(ObjectLayout *receiver, IntLayout *integer) // NOLINT
 {
-    assert(integer->_tag == IntTag);
+    assert(integer->_tag == _int_tag);
     printf("%lld", integer->_value);
 
     return receiver;
 }
 
-void case_abort(int tag)
+void _case_abort(int tag) // NOLINT
 {
-    auto *const name = reinterpret_cast<StringLayout *>(((void **)&ClassNameTab)[tag - 1]); // because tag 0 is reserved
+    auto *const name =
+        reinterpret_cast<StringLayout *>(((void **)&class_nameTab)[tag - 1]); // because tag 0 is reserved
     printf("No match in case statement for Class %s", name->_string);
 
     exit(-1);
 }
 
-int equals(ObjectLayout *lo, ObjectLayout *ro)
+int _equals(ObjectLayout *lo, ObjectLayout *ro) // NOLINT
 {
     if (!lo || !ro)
     {
@@ -127,19 +147,19 @@ int equals(ObjectLayout *lo, ObjectLayout *ro)
         return FalseValue;
     }
 
-    if (lo_tag == BoolTag)
+    if (lo_tag == _bool_tag)
     {
         return reinterpret_cast<BoolLayout *>(lo)->_value == reinterpret_cast<BoolLayout *>(ro)->_value ? TrueValue
                                                                                                         : FalseValue;
     }
 
-    if (lo_tag == IntTag)
+    if (lo_tag == _int_tag)
     {
         return reinterpret_cast<IntLayout *>(lo)->_value == reinterpret_cast<IntLayout *>(ro)->_value ? TrueValue
                                                                                                       : FalseValue;
     }
 
-    if (lo_tag == StringTag)
+    if (lo_tag == _string_tag)
     {
         auto *const str1 = reinterpret_cast<StringLayout *>(lo);
         auto *const str2 = reinterpret_cast<StringLayout *>(ro);
@@ -155,21 +175,21 @@ int equals(ObjectLayout *lo, ObjectLayout *ro)
     return FalseValue;
 }
 
-void dispatch_abort(StringLayout *filename, int linenumber)
+void _dispatch_abort(StringLayout *filename, int linenumber) // NOLINT
 {
     printf("%s:%d: Dispatch to void.", filename->_string, linenumber);
 
     exit(-1);
 }
 
-void case_abort_2(StringLayout *filename, int linenumber)
+void _case_abort_2(StringLayout *filename, int linenumber) // NOLINT
 {
     printf("%s:%dMatch on void in case statement.", filename->_string, linenumber);
 
     exit(-1);
 }
 
-ObjectLayout *gc_alloc(int tag, size_t size, void *disp_tab) // NOLINT
+ObjectLayout *_gc_alloc(int tag, size_t size, void *disp_tab) // NOLINT
 {
     return gc::GC::gc()->allocate(tag, size, disp_tab);
 }

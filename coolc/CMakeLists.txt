@@ -3,7 +3,7 @@ project(coolc)
 
 option(ASAN "Build with AddressSanitizer" OFF)
 option(UBSAN "Build with UndefinedBehaviorSanitizer" OFF)
-set(ARCH "MIPS" CACHE STRING "Target architecture")
+set(ARCH "LLVM" CACHE STRING "Target architecture")
 
 execute_process (
     COMMAND sh -c "rm -rf ${PROJECT_SOURCE_DIR}/bin"

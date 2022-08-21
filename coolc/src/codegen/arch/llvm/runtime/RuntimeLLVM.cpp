@@ -38,7 +38,7 @@ RuntimeLLVM::RuntimeLLVM(llvm::Module &module)
 }
 
 const std::string RuntimeLLVM::SYMBOLS[RuntimeLLVMSymbolsSize] = {
-    "equals",         "case_abort",   "case_abort_2", "gc_alloc", "dispatch_abort", "init_runtime",
-    "finish_runtime", "ClassNameTab", "ClassObjTab",  "IntTag",   "BoolTag",        "StringTag"};
+    "_equals",         "_case_abort",   "_case_abort_2", "_gc_alloc", "_dispatch_abort", "_init_runtime",
+    "_finish_runtime", "class_nameTab", "class_objTab",  "_int_tag",  "_bool_tag",       "_string_tag"};
 
 const std::string RuntimeLLVM::GC_STRATEGIES[RuntimeLLVMGCStrategySize] = {"shadow-stack"};
