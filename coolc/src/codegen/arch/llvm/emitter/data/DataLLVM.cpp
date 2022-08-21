@@ -164,7 +164,6 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
             const auto &method_formals = std::get<ast::MethodFeature>(method.second->_base);
             for (const auto &formal : method_formals._formals)
             {
-                // TODO: can be SELF_TYPE here?
                 const auto &formal_type = formal->_type->_string;
                 CODEGEN_VERBOSE_ONLY(LOG("Formal of type \"" + formal_type + "\""));
                 args.push_back(class_struct(_builder->klass(formal_type))->getPointerTo());

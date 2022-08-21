@@ -214,7 +214,9 @@ class Klass
         return _child_max_tag;
     }
 
-    // TODO: virtual destructor?
+    virtual ~Klass()
+    {
+    }
 };
 
 /**

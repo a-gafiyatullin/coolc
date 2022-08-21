@@ -1,4 +1,4 @@
-// TODO: maybe pragma once?
+#pragma once
 #include "Data.h"
 
 using namespace codegen;

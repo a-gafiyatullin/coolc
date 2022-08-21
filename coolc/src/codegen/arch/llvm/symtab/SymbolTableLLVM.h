@@ -46,7 +46,6 @@ struct Symbol
 
     operator std::string() const
     {
-        // TODO: maybe add more info fo local
         return _type == SymbolType::FIELD ? "FIELD with index " + std::to_string(_value._offset) : "LOCAL";
     }
 };

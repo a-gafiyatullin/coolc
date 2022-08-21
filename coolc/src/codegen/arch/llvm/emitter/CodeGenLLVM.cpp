@@ -384,7 +384,7 @@ llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &ex
                     return __ CreateAdd(lv, rv, Names::comment(Names::Comment::ADD));
                 },
                 [&](const ast::DivExpression &div) {
-                    return __ CreateSDiv(lv, rv, Names::comment(Names::Comment::DIV)); /* TODO: SDiv? */
+                    return __ CreateSDiv(lv, rv, Names::comment(Names::Comment::DIV));
                 },
                 [&](const ast::MulExpression &mul) {
                     return __ CreateMul(lv, rv, Names::comment(Names::Comment::MUL));
@@ -395,7 +395,6 @@ llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &ex
                                                  _true_obj, _false_obj, _true_obj->getType());
                 },
                 [&](const ast::LEExpression &le) {
-                    // TODO: check this twice!
                     logical_result = true;
                     return emit_ternary_operator(__ CreateICmpSLE(lv, rv, Names::comment(Names::Comment::CMP_SLE)),
                                                  _true_obj, _false_obj, _true_obj->getType());
@@ -628,7 +627,6 @@ llvm::Value *CodeGenLLVM::emit_cases_expr_inner(const ast::CaseExpression &expr,
     auto *const pred = emit_expr(expr._expr);
 
     // we want to generate code for the the most precise cases first, so sort cases by tag
-    // TODO: can be SELF_TYPE here?
     auto cases = expr._cases;
     std::sort(cases.begin(), cases.end(), [&](const auto &case_a, const auto &case_b) {
         return _builder->tag(case_b->_type->_string) < _builder->tag(case_a->_type->_string);
@@ -656,16 +654,14 @@ llvm::Value *CodeGenLLVM::emit_cases_expr_inner(const ast::CaseExpression &expr,
     // Last case is a special case: branch to abort
     for (auto i = 0; i < cases.size(); i++)
     {
-        // TODO: can be SELF_TYPE here?
         const auto &klass = _builder->klass(cases[i]->_type->_string);
 
         auto *const tag_type = _runtime.header_elem_type(HeaderLayout::Tag);
-        // TODO: signed?
+
         // if object tag lower than the lowest tag for this branch, jump to next case
         auto *const less = __ CreateICmpSLT(tag, llvm::ConstantInt::get(tag_type, klass->tag()),
                                             Names::comment(Names::Comment::CMP_SLT));
 
-        // TODO: signed?
         // if object tag higher that the highest tag for this branch, jump to next case
         auto *const higher = __ CreateICmpSGT(tag, llvm::ConstantInt::get(tag_type, klass->child_max_tag()),
                                               Names::comment(Names::Comment::CMP_SGT));
@@ -857,7 +853,6 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
                                      Names::name(Names::Comment::CALL, method_name));
             },
             [&](const ast::StaticDispatchExpression &disp) {
-                // TODO: can be SELF_TYPE here?
                 auto *const method =
                     _module.getFunction(_builder->klass(disp._type->_string)->method_full_name(method_name));
 
@@ -925,7 +920,6 @@ llvm::Value *CodeGenLLVM::emit_assign_expr_inner(const ast::AssignExpression &ex
 
     __ CreateStore(maybe_cast(value, cast_type), store_dst);
 
-    // TODO: is it correct?
     return value;
 }
 
