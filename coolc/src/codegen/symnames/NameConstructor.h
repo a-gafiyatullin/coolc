@@ -22,34 +22,9 @@ class Names
         LOOP_BODY,
         LOOP_TAIL,
 
-        CHAR_STRING,
         CONST_BOOL,
         CONST_INT,
         CONST_STRING,
-
-        CALL,
-        ALLOCA,
-        SUB,
-        ADD,
-        MUL,
-        DIV,
-        CMP_SLT,
-        CMP_SGT,
-        CMP_SLE,
-        CMP_EQ,
-        OR,
-        PHI,
-        XOR,
-        NEG,
-        NOT,
-        NOT_NULL,
-
-        OBJ_TAG,
-        OBJ_SIZE,
-        OBJ_DISP_TAB,
-
-        VALUE,
-        STACK_SLOT,
 
         CommentsNumber
     };

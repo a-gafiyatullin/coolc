@@ -128,8 +128,7 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     // helpers
     llvm::Value *emit_new_inner(const std::shared_ptr<ast::Type> &klass);
     llvm::Value *emit_load_self();
-    llvm::Value *emit_ternary_operator(llvm::Value *pred, llvm::Value *true_val, llvm::Value *false_val,
-                                       llvm::Type *type);
+    llvm::Value *emit_ternary_operator(llvm::Value *pred, llvm::Value *true_val, llvm::Value *false_val);
     void make_control_flow(llvm::Value *pred, llvm::BasicBlock *&true_block, llvm::BasicBlock *&false_block,
                            llvm::BasicBlock *&merge_block);
 
@@ -141,9 +140,9 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     void execute_linker(const std::string &object_file_name, const std::string &out_file_name);
     std::pair<std::string, std::string> find_best_vec_ext();
 
-#ifdef DEBUG
+#if defined(DEBUG) && defined(__APPLE__)
     void verify(llvm::Function *func);
-#endif // DEBUG
+#endif // DEBUG && __APPLE__
   public:
     explicit CodeGenLLVM(const std::shared_ptr<semant::ClassNode> &root);
 
