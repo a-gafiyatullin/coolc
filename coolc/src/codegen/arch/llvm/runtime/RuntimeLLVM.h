@@ -93,6 +93,9 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
     llvm::Type *const _default_int;
     llvm::Type *const _void_type;
 
+    llvm::PointerType *const _stack_slot_type;
+    llvm::PointerType *const _void_ptr_type;
+
     llvm::Type *_header_layout_types[HeaderLayoutElemets];
 
     const RuntimeMethod _equals;
@@ -159,6 +162,16 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
     }
 
     /**
+     * @brief Get type for void pointer
+     *
+     * @return Type of void pointer
+     */
+    inline llvm::PointerType *void_ptr_type() const
+    {
+        return _void_ptr_type;
+    }
+
+    /**
      * @brief Get type for 8 bit int
      *
      * @return Type of 8 bit int
@@ -166,6 +179,16 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
     inline llvm::Type *int8_type() const
     {
         return _int8_type;
+    }
+
+    /**
+     * @brief Get type of stack slot
+     *
+     * @return Type of stack slot
+     */
+    inline llvm::PointerType *stack_slot_type() const
+    {
+        return _stack_slot_type;
     }
 
     /**

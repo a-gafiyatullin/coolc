@@ -2,17 +2,17 @@
 #include "codegen/arch/llvm/klass/KlassLLVM.h"
 #include "codegen/arch/llvm/symtab/SymbolTableLLVM.h"
 #include "codegen/emitter/CodeGen.h"
-#include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/LegacyPassManager.h>
-//#include <llvm/IR/Verifier.h>
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/filesystem.hpp>
 #include <filesystem>
 #include <iostream>
+#include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Intrinsics.h>
+#include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Support/Host.h>
 #include <llvm/Support/Program.h>
 #ifdef __APPLE__
+#include <llvm/IR/Verifier.h> // TODO: verifier works only with MacOS
 #include <llvm/MC/TargetRegistry.h>
 #else
 #include <llvm/Support/TargetRegistry.h>
@@ -57,6 +57,8 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     llvm::Value *const _int0_32;
     llvm::Value *const _int0_8;
 
+    llvm::Value *const _int0_8_ptr;
+
     void add_fields() override;
 
     void emit_class_method_inner(const std::shared_ptr<ast::Feature> &method) override;
@@ -64,7 +66,11 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     void emit_class_init_method_inner() override;
 
     void preserve_value_for_gc(llvm::Value *value);
+
     void pop_dead_value(int slots = 1);
+
+    llvm::Value *maybe_cast(llvm::Value *val, llvm::Type *type);
+    void maybe_cast(std::vector<llvm::Value *> &args, llvm::FunctionType *func);
 
     llvm::Value *emit_binary_expr_inner(const ast::BinaryExpression &expr,
                                         const std::shared_ptr<ast::Type> &expr_type) override;
@@ -135,6 +141,9 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     void execute_linker(const std::string &object_file_name, const std::string &out_file_name);
     std::pair<std::string, std::string> find_best_vec_ext();
 
+#ifdef DEBUG
+    void verify(llvm::Function *func);
+#endif // DEBUG
   public:
     explicit CodeGenLLVM(const std::shared_ptr<semant::ClassNode> &root);
 
