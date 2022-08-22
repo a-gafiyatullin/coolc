@@ -5,11 +5,11 @@ option(ASAN "Build with AddressSanitizer" OFF)
 option(UBSAN "Build with UndefinedBehaviorSanitizer" OFF)
 set(ARCH "LLVM" CACHE STRING "Target architecture")
 
-execute_process (
+execute_process(
     COMMAND sh -c "rm -rf ${PROJECT_SOURCE_DIR}/bin"
 )
 
-execute_process (
+execute_process(
     COMMAND sh -c "rm -rf ${PROJECT_SOURCE_DIR}/lib"
 )
 
@@ -54,8 +54,13 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
-find_package(Boost 1.61 COMPONENTS filesystem REQUIRED)
-include_directories(${Boost_INCLUDE_DIR})
+if(ARCH STREQUAL "LLVM")
+    find_package(Boost 1.61 COMPONENTS filesystem REQUIRED)
+    include_directories(${Boost_INCLUDE_DIR})
+
+    set(ADDITIONAL_LIBS "${Boost_LIBRARIES}")
+    message(STATUS "ADDITIONAL_LIBS = ${ADDITIONAL_LIBS} -ldl")
+endif()
 
 add_subdirectory(src/lexer)
 add_subdirectory(src/parser)
@@ -66,13 +71,16 @@ add_subdirectory(src/decls)
 add_subdirectory(src/codegen)
 add_executable(coolc src/coolc.cpp)
 
-target_link_libraries(coolc lexer parser semant utils ast codegen decls ${LIBS} ${Boost_LIBRARIES} -ldl)
+target_link_libraries(coolc lexer parser semant utils ast codegen decls ${LIBS} ${ADDITIONAL_LIBS})
 
-if(APPLE)
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
-    set(CMAKE_SHARED_LIBRARY_SUFFIX .so)
+if(ARCH STREQUAL "LLVM")
+    if(APPLE)
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
+        set(CMAKE_SHARED_LIBRARY_SUFFIX .so)
+    endif()
+
+    add_subdirectory(src/codegen/runtime)
 endif()
-add_subdirectory(src/codegen/runtime)
 
 enable_testing()
 
@@ -81,11 +89,11 @@ include_directories(tests/src)
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_test(PrepareLexerTestsResults
         ${PROJECT_SOURCE_DIR}/tests/lexer/make_results.sh
         ${EXECUTABLE_OUTPUT_PATH}
-        )
+    )
     add_executable(lexer_tests tests/src/test.cpp tests/src/lexer/test.cpp)
     target_link_libraries(lexer_tests ${GTEST_LIBRARIES} pthread ${GTEST_MAIN_LIBRARIES})
     add_test(LexerTests ${EXECUTABLE_OUTPUT_PATH}/lexer_tests)
@@ -93,7 +101,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_test(PrepareParserSemantTestsResults
         ${PROJECT_SOURCE_DIR}/tests/parser-semant/make_results.sh
         ${EXECUTABLE_OUTPUT_PATH}
-        )
+    )
     add_executable(parser_semant_tests tests/src/test.cpp tests/src/parser-semant/test.cpp)
     target_link_libraries(parser_semant_tests ${GTEST_LIBRARIES} pthread ${GTEST_MAIN_LIBRARIES})
     add_test(ParserSemantTests ${EXECUTABLE_OUTPUT_PATH}/parser_semant_tests)
@@ -105,12 +113,12 @@ else()
     set(RUN_DIR llvm)
 endif()
 
-if ((CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)" AND ARCH STREQUAL "MIPS") OR ARCH STREQUAL "LLVM")
+if((CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)" AND ARCH STREQUAL "MIPS") OR ARCH STREQUAL "LLVM")
     add_test(PrepareCodegenTestsResults
         ${PROJECT_SOURCE_DIR}/tests/codegen/make_results.sh
         ${EXECUTABLE_OUTPUT_PATH}
         ${PROJECT_SOURCE_DIR}/tests/codegen/arch/${RUN_DIR}/run.sh
-        )
+    )
     add_executable(codegen_tests tests/src/test.cpp tests/src/codegen/test.cpp)
     target_link_libraries(codegen_tests ${GTEST_LIBRARIES} pthread ${GTEST_MAIN_LIBRARIES})
     add_test(CodegenTests ${EXECUTABLE_OUTPUT_PATH}/codegen_tests)

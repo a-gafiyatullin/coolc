@@ -46,7 +46,7 @@ void Allocator::dump()
 {
     if (PrintGCStatistics)
     {
-        fprintf(stderr, "Allocated bytes: %lu\nFreed bytes: %lu\n", _allocated_size, _freed_size);
+        fprintf(stderr, "Allocated bytes: %llu\nFreed bytes: %llu\n", _allocated_size, _freed_size);
     }
 }
 #endif // DEBUG
