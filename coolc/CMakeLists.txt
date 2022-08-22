@@ -59,7 +59,7 @@ if(ARCH STREQUAL "LLVM")
     include_directories(${Boost_INCLUDE_DIR})
 
     set(ADDITIONAL_LIBS "${Boost_LIBRARIES}")
-    message(STATUS "ADDITIONAL_LIBS = ${ADDITIONAL_LIBS} -ldl")
+    message(STATUS "ADDITIONAL_LIBS = ${ADDITIONAL_LIBS}")
 endif()
 
 add_subdirectory(src/lexer)
@@ -71,7 +71,7 @@ add_subdirectory(src/decls)
 add_subdirectory(src/codegen)
 add_executable(coolc src/coolc.cpp)
 
-target_link_libraries(coolc lexer parser semant utils ast codegen decls ${LIBS} ${ADDITIONAL_LIBS})
+target_link_libraries(coolc lexer parser semant utils ast codegen decls ${LIBS} ${ADDITIONAL_LIBS} -ldl)
 
 if(ARCH STREQUAL "LLVM")
     if(APPLE)

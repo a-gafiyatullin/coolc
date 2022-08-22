@@ -15,14 +15,33 @@ CodeGenLLVM::CodeGenLLVM(const std::shared_ptr<semant::ClassNode> &root)
       _int0_64(llvm::ConstantInt::get(_runtime.int64_type(), 0, true)),
       _int0_32(llvm::ConstantInt::get(_runtime.int32_type(), 0, true)),
       _int0_8(llvm::ConstantInt::get(_runtime.int8_type(), 0, true)),
-      _int0_8_ptr(llvm::ConstantPointerNull::get(_runtime.stack_slot_type()))
+      _int0_8_ptr(llvm::ConstantPointerNull::get(_runtime.stack_slot_type())), _optimizer(&_module)
 {
     GUARANTEE_DEBUG(_true_obj);
     GUARANTEE_DEBUG(_false_obj);
 
+    init_optimizer();
+
     DEBUG_ONLY(_table.set_printer([](const std::string &name, const Symbol &s) {
         LOG("Added symbol \"" + name + "\": " + static_cast<std::string>(s))
     }));
+}
+
+void CodeGenLLVM::init_optimizer()
+{
+    // Do simple "peephole" optimizations and bit-twiddling optzns.
+    _optimizer.add(llvm::createInstructionCombiningPass());
+
+    // Reassociate expressions.
+    _optimizer.add(llvm::createReassociatePass());
+
+    // Eliminate Common SubExpressions.
+    _optimizer.add(llvm::createGVNPass());
+
+    // Simplify the control flow graph (deleting unreachable blocks, etc).
+    _optimizer.add(llvm::createCFGSimplificationPass());
+
+    _optimizer.doInitialization();
 }
 
 void CodeGenLLVM::add_fields()
@@ -115,9 +134,11 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
 
     __ CreateRet(maybe_cast(emit_expr(method->_expr), func->getReturnType()));
 
-#if defined(__APPLE__) && defined(DEBUG)
+#ifdef DEBUG
     verify(func);
-#endif // __APPLE__ && DEBUG
+#endif // DEBUG
+
+    _optimizer.run(*func);
 
     GUARANTEE_DEBUG(_max_stack_size == _stack.size());
     _table.pop_scope();
@@ -158,7 +179,7 @@ void CodeGenLLVM::maybe_cast(std::vector<llvm::Value *> &args, llvm::FunctionTyp
     }
 }
 
-#if defined(DEBUG) && defined(__APPLE__)
+#ifdef DEBUG
 void CodeGenLLVM::verify(llvm::Function *func)
 {
     std::string error;
@@ -170,7 +191,7 @@ void CodeGenLLVM::verify(llvm::Function *func)
         GUARANTEE_DEBUG(!has_error);
     }
 }
-#endif // DEBUG && __APPLE__
+#endif // DEBUG
 
 void CodeGenLLVM::emit_class_init_method_inner()
 {
@@ -309,9 +330,11 @@ void CodeGenLLVM::emit_class_init_method_inner()
 
     _table.pop_scope();
 
-#if defined(__APPLE__) && defined(DEBUG)
+#ifdef DEBUG
     verify(func);
-#endif // __APPLE__ && DEBUG
+#endif // DEBUG
+
+    _optimizer.run(*func);
 
     GUARANTEE_DEBUG(_max_stack_size == _stack.size());
 }
@@ -596,6 +619,7 @@ llvm::Value *CodeGenLLVM::emit_load_dispatch_table(llvm::Value *obj, const std::
 llvm::Value *CodeGenLLVM::emit_cases_expr_inner(const ast::CaseExpression &expr,
                                                 const std::shared_ptr<ast::Type> &expr_type)
 {
+    // TODO: maybe use SwitchInst?
     auto *const pred = emit_expr(expr._expr);
 
     // we want to generate code for the the most precise cases first, so sort cases by tag
@@ -981,9 +1005,11 @@ void CodeGenLLVM::emit_runtime_main()
 
     __ CreateRet(_int0_32);
 
-#if defined(__APPLE__) && defined(DEBUG)
+#ifdef DEBUG
     verify(runtime_main);
-#endif // __APPLE__ && DEBUG
+#endif // DEBUG
+
+    _optimizer.run(*runtime_main);
 }
 
 #define EXIT_ON_ERROR(cond, error)                                                                                     \

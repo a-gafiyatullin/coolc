@@ -9,10 +9,10 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/LegacyPassManager.h>
+#include <llvm/IR/Verifier.h>
 #include <llvm/Support/Host.h>
 #include <llvm/Support/Program.h>
 #ifdef __APPLE__
-#include <llvm/IR/Verifier.h> // TODO: verifier works only with MacOS
 #include <llvm/MC/TargetRegistry.h>
 #else
 #include <llvm/Support/TargetRegistry.h>
@@ -20,6 +20,9 @@
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#include <llvm/Transforms/Scalar.h>
+#include <llvm/Transforms/Scalar/GVN.h>
 
 namespace codegen
 {
@@ -46,6 +49,10 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     int _max_stack_size;
 #endif // DEBUG
 
+    // optimizations
+    llvm::legacy::FunctionPassManager _optimizer;
+    void init_optimizer();
+
     // helper values
     llvm::Value *const _true_obj;
     llvm::Value *const _false_obj;
@@ -65,10 +72,11 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
 
     void emit_class_init_method_inner() override;
 
+    // gc stack support
     void preserve_value_for_gc(llvm::Value *value);
-
     void pop_dead_value(int slots = 1);
 
+    // cast values helpers
     llvm::Value *maybe_cast(llvm::Value *val, llvm::Type *type);
     void maybe_cast(std::vector<llvm::Value *> &args, llvm::FunctionType *func);
 
@@ -140,9 +148,9 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     void execute_linker(const std::string &object_file_name, const std::string &out_file_name);
     std::pair<std::string, std::string> find_best_vec_ext();
 
-#if defined(DEBUG) && defined(__APPLE__)
+#ifdef DEBUG
     void verify(llvm::Function *func);
-#endif // DEBUG && __APPLE__
+#endif // DEBUG
   public:
     explicit CodeGenLLVM(const std::shared_ptr<semant::ClassNode> &root);
 
