@@ -13,16 +13,18 @@
 
 // ---------------------------- Flags ----------------------------
 #ifdef DEBUG
-bool PrintGCStatistics = false;
 bool PrintAllocatedObjects = false;
 #endif // DEBUG
+
+bool PrintGCStatistics = false;
 
 size_t MaxHeapSize = 6 * KB;
 size_t GCAlgo = 1; // gc::GC::MARKSWEEPGC
 
 const std::unordered_map<std::string, bool *> BoolFlags = {
+    {flag_name(PrintGCStatistics), &PrintGCStatistics}
 #ifdef DEBUG
-    {flag_name(PrintGCStatistics), &PrintGCStatistics},
+    ,
     {flag_name(PrintAllocatedObjects), &PrintAllocatedObjects},
 #endif // DEBUG
 };

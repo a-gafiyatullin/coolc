@@ -2,9 +2,47 @@
 
 #include "Allocator.hpp"
 #include "Marker.hpp"
+#include <chrono>
+#include <string>
 
 namespace gc
 {
+class GCStats
+{
+  public:
+    enum GCPhase
+    {
+        ALLOCATE,
+        MARK,
+        COLLECT, // Compact/Sweep and etc
+
+        GCPhaseCount
+    };
+
+  private:
+    static std::chrono::milliseconds Phases[GCPhaseCount];
+    static std::string PhasesNames[GCPhaseCount];
+
+    std::chrono::milliseconds _local_start; // start of the period
+    GCPhase _phase;
+
+  public:
+    /**
+     * @brief Create a local time measurement
+     *
+     * @param phase Phase to measure
+     */
+    GCStats(GCPhase phase);
+
+    ~GCStats();
+
+    /**
+     * @brief Print timers
+     *
+     */
+    static void dump();
+};
+
 /**
  * @brief Base class for all GCs
  *

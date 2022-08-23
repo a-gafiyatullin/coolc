@@ -1,17 +1,51 @@
 #include "GC.hpp"
+#include <cstdio>
 #include <cstring>
 
 using namespace gc;
 
 GC *GC::Gc = nullptr;
 
+std::chrono::milliseconds GCStats::Phases[GCPhaseCount];
+std::string GCStats::PhasesNames[GCPhaseCount] = {"ALLOCATE", "MARK", "COLLECT"};
+
+GCStats::GCStats(GCPhase phase)
+    : _phase(phase),
+      _local_start(duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()))
+{
+}
+
+GCStats::~GCStats()
+{
+    Phases[_phase] +=
+        (duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) - _local_start);
+}
+
+void GCStats::dump()
+{
+    for (int i = 0; i < GCPhaseCount; i++)
+    {
+        fprintf(stderr, "GC Phase %s : %ld\n", PhasesNames[i].c_str(), Phases[i].count());
+    }
+}
+
 ObjectLayout *GC::allocate(int tag, size_t size, void *disp_tab)
 {
-    ObjectLayout *object = _allocator->allocate(tag, size, disp_tab);
+    ObjectLayout *object = nullptr;
+
+    {
+        GCStats phase(GCStats::GCPhase::ALLOCATE);
+        object = _allocator->allocate(tag, size, disp_tab);
+    }
+
     if (object == nullptr)
     {
         collect();
-        object = _allocator->allocate(tag, size, disp_tab);
+
+        {
+            GCStats phase(GCStats::GCPhase::ALLOCATE);
+            object = _allocator->allocate(tag, size, disp_tab);
+        }
     }
 
     if (object == nullptr)
@@ -53,6 +87,11 @@ void GC::finish()
 {
     delete Gc;
     Gc = nullptr;
+
+    if (PrintGCStatistics)
+    {
+        GCStats::dump();
+    }
 }
 
 // -------------------------------------- ZeroGC --------------------------------------

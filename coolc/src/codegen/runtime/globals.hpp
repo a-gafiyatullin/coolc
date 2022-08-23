@@ -3,9 +3,10 @@
 #include <cstddef>
 
 #ifdef DEBUG
-extern bool PrintGCStatistics;
 extern bool PrintAllocatedObjects;
 #endif // DEBUG
+
+extern bool PrintGCStatistics;
 
 extern size_t MaxHeapSize;
 extern size_t GCAlgo;

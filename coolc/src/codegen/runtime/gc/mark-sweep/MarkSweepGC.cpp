@@ -17,7 +17,12 @@ MarkSweepGC::MarkSweepGC(const size_t &heap_size)
 
 void MarkSweepGC::collect()
 {
-    ((ShadowStackMarkerFIFO *)_marker)->mark_from_roots();
+    {
+        GCStats phase(GCStats::GCPhase::MARK);
+        ((ShadowStackMarkerFIFO *)_marker)->mark_from_roots();
+    }
+
+    GCStats phase(GCStats::GCPhase::COLLECT);
     sweep();
 }
 
