@@ -24,7 +24,7 @@ assistance with **coolc**.
         - `-llvm` --- build with **LLVM** for host architecture.
 
 3. Some usefull runtime options for **LLVM**-based build (pass them as argument to executable):
-   1. `MaxHeapSize` --- maximal heap size in bytes (e.g. `MaxHeapSize=1024`).
+   1. `MaxHeapSize` --- maximal heap size (e.g. `MaxHeapSize=1024[Gb/Mb/Kb/no specifier for bytes]`).
    2. `GCAlgo` --- GC algorithm (e.g. `GCAlgo=1`):
       1. `ZeroGC` (code **0**) --- just allocate memory without collecting.
       2. `MarkSweepGC` (code **1**) --- use Mark-and-Sweep Garbage Collector.

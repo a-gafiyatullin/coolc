@@ -819,6 +819,9 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
         args[i] = reload_value_from_stack(_current_stack_size - (slots_num - i + 1), args.at(i)->getType());
     }
 
+    // pop stack slots now to reduce roots number for mark phase
+    pop_dead_value(slots_num);
+
     auto *const phi_type =
         _data.class_struct(_builder->klass(semant::Semant::exact_type(expr_type, _current_class->_type)->_string))
             ->getPointerTo();
@@ -884,7 +887,6 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
     phi->addIncoming(casted_call, true_block);
     phi->addIncoming(llvm::ConstantPointerNull::get(phi_type), false_block);
 
-    pop_dead_value(slots_num);
     return phi;
 }
 

@@ -13,12 +13,12 @@ namespace gc
 class Marker
 {
   protected:
-    gc_address _heap_start;
-    gc_address _heap_end;
+    address _heap_start;
+    address _heap_end;
 
     virtual void mark() = 0;
 
-    inline bool is_heap_addr(gc_address addr) const
+    inline bool is_heap_addr(address addr) const
     {
         return addr >= _heap_start && addr <= _heap_end;
     }
@@ -30,7 +30,7 @@ class Marker
      * @param heap_start Start of the heap to be marked
      * @param heap_end End of the heap to be marked
      */
-    Marker(gc_address heap_start, gc_address heap_end);
+    Marker(address heap_start, address heap_end);
 
     virtual ~Marker()
     {
@@ -40,7 +40,7 @@ class Marker
 class ShadowStackMarker : public Marker
 {
   public:
-    ShadowStackMarker(gc_address heap_start, gc_address heap_end) : Marker(heap_start, heap_end)
+    ShadowStackMarker(address heap_start, address heap_end) : Marker(heap_start, heap_end)
     {
     }
 
@@ -63,7 +63,7 @@ class ShadowStackMarkerFIFO : public ShadowStackMarker
     void mark() override;
 
   public:
-    ShadowStackMarkerFIFO(gc_address heap_start, gc_address heap_end) : ShadowStackMarker(heap_start, heap_end)
+    ShadowStackMarkerFIFO(address heap_start, address heap_end) : ShadowStackMarker(heap_start, heap_end)
     {
     }
 

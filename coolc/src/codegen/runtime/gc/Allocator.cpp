@@ -14,7 +14,7 @@ Allocator::Allocator(const size_t &size)
       _allocated_size(0), _freed_size(0)
 #endif // DEBUG
 {
-    _start = (gc_address)malloc(_size);
+    _start = (address)malloc(_size);
     if (_start == nullptr)
     {
         exit_with_error("cannot allocate memory for heap!");
@@ -84,7 +84,7 @@ ObjectLayout *Allocator::allocate_inner(int tag, size_t size, void *disp_tab)
         exit_with_error("cannot allocate memory for object!");
     }
 
-    gc_address object = _pos;
+    address object = _pos;
     _pos += size;
 
     ObjectLayout *obj_header = (ObjectLayout *)object;
@@ -120,7 +120,7 @@ ObjectLayout *NextFitAllocator::allocate_inner(int tag, size_t size, void *disp_
     ObjectLayout *current_chunk = (ObjectLayout *)(_pos ? _pos : _start);
 
     size_t current_chunk_size = 0;
-    while ((gc_address)current_chunk < _end)
+    while ((address)current_chunk < _end)
     {
         if (current_chunk->_tag != 0)
         {
@@ -138,7 +138,7 @@ ObjectLayout *NextFitAllocator::allocate_inner(int tag, size_t size, void *disp_
             // remember the first free chunk
             if (_pos == nullptr)
             {
-                _pos = (gc_address)current_chunk;
+                _pos = (address)current_chunk;
             }
             // first free chunk
             chunk = current_chunk;
@@ -149,7 +149,7 @@ ObjectLayout *NextFitAllocator::allocate_inner(int tag, size_t size, void *disp_
             // remember the first free chunk
             if (_pos == nullptr)
             {
-                _pos = (gc_address)current_chunk;
+                _pos = (address)current_chunk;
             }
             // not the first free contiguous chunk
             // merge previous chunks
@@ -164,7 +164,7 @@ ObjectLayout *NextFitAllocator::allocate_inner(int tag, size_t size, void *disp_
         }
 
         // go to next chunk
-        current_chunk = (ObjectLayout *)((gc_address)current_chunk + current_chunk->_size);
+        current_chunk = (ObjectLayout *)((address)current_chunk + current_chunk->_size);
     }
 
     if (!chunk || chunk->_size < size)
@@ -186,9 +186,9 @@ ObjectLayout *NextFitAllocator::allocate_inner(int tag, size_t size, void *disp_
         // adjust next chunk
         // at least have memory for the header
 
-        ObjectLayout *next_free = (ObjectLayout *)((gc_address)chunk + size);
+        ObjectLayout *next_free = (ObjectLayout *)((address)chunk + size);
         next_free->set_unused(current_chunk_size - size);
-        _pos = (gc_address)next_free;
+        _pos = (address)next_free;
     }
 
     chunk->_mark = MarkWordUnsetValue;
@@ -218,22 +218,22 @@ void NextFitAllocator::free_inner(ObjectLayout *obj)
     assert(obj->_size != 0);
 
     // update the first free pos
-    if ((gc_address)obj < _pos)
+    if ((address)obj < _pos)
     {
-        _pos = (gc_address)obj;
+        _pos = (address)obj;
     }
 }
 
-void NextFitAllocator::move(const ObjectLayout *src, gc_address dst)
+void NextFitAllocator::move(const ObjectLayout *src, address dst)
 {
-    if (dst != (gc_address)src)
+    if (dst != (address)src)
     {
-        assert(dst >= (gc_address)src + src->_size || dst + src->_size <= (gc_address)src);
-        memcpy(dst, (gc_address)src, src->_size);
+        assert(dst >= (address)src + src->_size || dst + src->_size <= (address)src);
+        memcpy(dst, (address)src, src->_size);
     }
 }
 
-void NextFitAllocator::force_alloc_pos(gc_address pos)
+void NextFitAllocator::force_alloc_pos(address pos)
 {
     // create an artificial object with tag 0 and size heap_size
     ObjectLayout *aobj = (ObjectLayout *)pos;
@@ -242,18 +242,18 @@ void NextFitAllocator::force_alloc_pos(gc_address pos)
     _pos = pos;
 }
 
-gc_address NextFitAllocator::next_object(gc_address obj)
+address NextFitAllocator::next_object(address obj)
 {
     ObjectLayout *hdr = (ObjectLayout *)obj;
     assert(hdr->_size != 0);
     ObjectLayout *possible_object = (ObjectLayout *)(obj + hdr->_size);
 
     // search for the first object with non-zero tag
-    while ((gc_address)possible_object < _end && possible_object->_tag == 0)
+    while ((address)possible_object < _end && possible_object->_tag == 0)
     {
         // assuming size is correct for dead objects
-        possible_object = (ObjectLayout *)((gc_address)possible_object + possible_object->_size);
+        possible_object = (ObjectLayout *)((address)possible_object + possible_object->_size);
     }
 
-    return (gc_address)possible_object;
+    return (address)possible_object;
 }

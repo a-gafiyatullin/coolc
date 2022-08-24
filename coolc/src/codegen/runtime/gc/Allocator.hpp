@@ -17,10 +17,10 @@ class Allocator
   protected:
     const size_t _size;
 
-    gc_address _start; // heap start
-    gc_address _end;   // heap end
+    address _start; // heap start
+    address _end;   // heap end
 
-    gc_address _pos; // current allocation position
+    address _pos; // current allocation position
 
 #ifdef DEBUG
     uint64_t _allocated_size; // collect allocated size
@@ -60,7 +60,7 @@ class Allocator
      *
      * @return address of the start of the heap
      */
-    inline gc_address start() const
+    inline address start() const
     {
         return _start;
     }
@@ -70,7 +70,7 @@ class Allocator
      *
      * @return address of the end of the heap
      */
-    inline gc_address end() const
+    inline address end() const
     {
         return _end;
     }
@@ -97,7 +97,7 @@ class Allocator
      * @return true if addr is from the heap
      * @return false if addr isn't from the heap
      */
-    inline bool is_heap_addr(gc_address addr) const
+    inline bool is_heap_addr(address addr) const
     {
         return addr >= _start && addr <= _end;
     }
@@ -120,14 +120,14 @@ class NextFitAllocator : public Allocator
      * @param src Source object
      * @param dst New location
      */
-    void move(const ObjectLayout *src, gc_address dst);
+    void move(const ObjectLayout *src, address dst);
 
     /**
      * @brief Hint for allocation
      *
      * @param pos Heap position
      */
-    void force_alloc_pos(gc_address pos);
+    void force_alloc_pos(address pos);
 
     /**
      * @brief Get next object
@@ -135,6 +135,6 @@ class NextFitAllocator : public Allocator
      * @param obj Current object start
      * @return Next object
      */
-    gc_address next_object(gc_address obj);
+    address next_object(address obj);
 };
 }; // namespace gc

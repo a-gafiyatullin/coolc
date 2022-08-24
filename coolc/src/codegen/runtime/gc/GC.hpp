@@ -61,8 +61,8 @@ class GC
     Allocator *_allocator;
     Marker *_marker;
 
-    gc_address _heap_start;
-    gc_address _heap_end;
+    address _heap_start;
+    address _heap_end;
 
     static GC *Gc;
 

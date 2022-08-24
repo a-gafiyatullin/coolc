@@ -53,7 +53,7 @@ std::string printable_size(unsigned long long size_in_bytes)
     }
 
     size += std::to_string(kbytes) + "Kb ";
-    size += std::to_string(bytes % 1000) + "B";
+    size += std::to_string(bytes % 1000) + "b";
 
     return size;
 }

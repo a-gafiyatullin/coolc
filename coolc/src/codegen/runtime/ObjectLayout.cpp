@@ -10,7 +10,7 @@ void ObjectLayout::zero_fields(int val)
 
 void ObjectLayout::zero_appendix(int appendix_size)
 {
-    memset((gc_address)this + _size - appendix_size, 0, appendix_size);
+    memset((address)this + _size - appendix_size, 0, appendix_size);
 }
 
 #ifdef DEBUG

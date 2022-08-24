@@ -2,7 +2,7 @@
 
 using namespace gc;
 
-Marker::Marker(gc_address heap_start, gc_address heap_end) : _heap_start(heap_start), _heap_end(heap_end)
+Marker::Marker(address heap_start, address heap_end) : _heap_start(heap_start), _heap_end(heap_end)
 {
 }
 
@@ -57,7 +57,7 @@ void ShadowStackMarkerFIFO::mark()
         }
 
         int fields_cnt = hdr->field_cnt();
-        gc_address *fields = hdr->fields_base();
+        address *fields = hdr->fields_base();
 
         for (int j = 0; j < fields_cnt; j++)
         {

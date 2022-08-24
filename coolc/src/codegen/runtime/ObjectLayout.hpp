@@ -3,8 +3,8 @@
 #include "codegen/constants/Constants.h"
 #include "globals.hpp"
 
-#define gc_address char *
-#define FIELD_SIZE sizeof(gc_address)
+#define address char *
+#define FIELD_SIZE sizeof(address)
 
 extern "C"
 {
@@ -93,10 +93,10 @@ struct ObjectLayout
      *
      * @return address * Fields base address
      */
-    inline gc_address *fields_base() const
+    inline address *fields_base() const
     {
         static const int HEADER_SIZE = sizeof(ObjectLayout);
-        return (gc_address *)((gc_address)this + HEADER_SIZE);
+        return (address *)((address)this + HEADER_SIZE);
     }
 
     /**

@@ -30,7 +30,7 @@ void MarkSweepGC::sweep()
 {
     NextFitAllocator *nxtf_alloca = (NextFitAllocator *)_allocator;
 
-    gc_address scan = _heap_start;
+    address scan = _heap_start;
     while (scan < _heap_end)
     {
         ObjectLayout *obj = (ObjectLayout *)scan;
