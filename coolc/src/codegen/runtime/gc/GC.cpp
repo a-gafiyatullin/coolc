@@ -1,4 +1,5 @@
 #include "GC.hpp"
+#include "Utils.hpp"
 #include <cstdio>
 #include <cstring>
 
@@ -7,7 +8,7 @@ using namespace gc;
 GC *GC::Gc = nullptr;
 
 std::chrono::milliseconds GCStats::Phases[GCPhaseCount];
-std::string GCStats::PhasesNames[GCPhaseCount] = {"ALLOCATE", "MARK", "COLLECT"};
+std::string GCStats::PhasesNames[GCPhaseCount] = {"ALLOCATE", "MARK    ", "COLLECT "};
 
 GCStats::GCStats(GCPhase phase)
     : _phase(phase),
@@ -25,7 +26,7 @@ void GCStats::dump()
 {
     for (int i = 0; i < GCPhaseCount; i++)
     {
-        fprintf(stderr, "GC Phase %s : %ld\n", PhasesNames[i].c_str(), Phases[i].count());
+        fprintf(stderr, "GC Phase %s: %s\n", PhasesNames[i].c_str(), printable_time(Phases[i].count()).c_str());
     }
 }
 

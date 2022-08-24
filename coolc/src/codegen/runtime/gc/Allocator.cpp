@@ -1,4 +1,5 @@
 #include "Allocator.hpp"
+#include "Utils.hpp"
 #include "codegen/runtime/globals.hpp"
 #include <cstdio>
 #include <cstdlib>
@@ -46,7 +47,8 @@ void Allocator::dump()
 {
     if (PrintGCStatistics)
     {
-        fprintf(stderr, "Allocated bytes: %llu\nFreed bytes: %llu\n", _allocated_size, _freed_size);
+        fprintf(stderr, "Allocated bytes: %s\n", printable_size(_allocated_size).c_str());
+        fprintf(stderr, "Freed bytes:     %s\n\n", printable_size(_freed_size).c_str());
     }
 }
 #endif // DEBUG

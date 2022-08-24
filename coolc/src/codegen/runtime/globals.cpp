@@ -18,7 +18,7 @@ bool PrintAllocatedObjects = false;
 
 bool PrintGCStatistics = false;
 
-size_t MaxHeapSize = 6 * KB;
+std::string MaxHeapSize = "6KB";
 size_t GCAlgo = 1; // gc::GC::MARKSWEEPGC
 
 const std::unordered_map<std::string, bool *> BoolFlags = {
@@ -29,8 +29,9 @@ const std::unordered_map<std::string, bool *> BoolFlags = {
 #endif // DEBUG
 };
 
-const std::unordered_map<std::string, size_t *> IntFlags = {{flag_name(MaxHeapSize), &MaxHeapSize},
-                                                            {flag_name(GCAlgo), &GCAlgo}};
+const std::unordered_map<std::string, std::string *> StringFlags = {{flag_name(MaxHeapSize), &MaxHeapSize}};
+
+const std::unordered_map<std::string, size_t *> IntFlags = {{flag_name(GCAlgo), &GCAlgo}};
 
 // ---------------------------- Flags Settings ----------------------------
 bool maybe_set(const char *arg, const char *flag_name)
@@ -50,6 +51,13 @@ bool maybe_set(const char *arg, const char *flag_name)
         if (int_flag != IntFlags.end())
         {
             *(int_flag->second) = std::stoi(int_flag_str.substr(delim_pos + 1));
+            return true;
+        }
+
+        auto str_flag = StringFlags.find(int_flag_str.substr(0, delim_pos));
+        if (str_flag != StringFlags.end())
+        {
+            *(str_flag->second) = int_flag_str.substr(delim_pos + 1);
             return true;
         }
     }

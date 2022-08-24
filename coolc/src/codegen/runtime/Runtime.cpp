@@ -1,6 +1,7 @@
 #include "Runtime.h"
-#include "codegen/runtime/ObjectLayout.hpp"
+#include "ObjectLayout.hpp"
 #include "gc/GC.hpp"
+#include "gc/Utils.hpp"
 #include "globals.hpp"
 #include <cstdio>
 #include <cstring>
@@ -9,7 +10,7 @@ void _init_runtime(int argc, char **argv) // NOLINT
 {
     process_runtime_args(argc, argv);
 
-    gc::GC::init((gc::GC::GcType)GCAlgo, std::max(MaxHeapSize, sizeof(ObjectLayout)));
+    gc::GC::init((gc::GC::GcType)GCAlgo, std::max(str_to_size(MaxHeapSize), sizeof(ObjectLayout)));
 }
 
 void _finish_runtime() // NOLINT
