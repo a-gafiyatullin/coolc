@@ -75,6 +75,7 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     // gc stack support
     void preserve_value_for_gc(llvm::Value *value);
     void pop_dead_value(int slots = 1);
+    llvm::Value *reload_value_from_stack(int slot_num, llvm::Type *type);
 
     // cast values helpers
     llvm::Value *maybe_cast(llvm::Value *val, llvm::Type *type);

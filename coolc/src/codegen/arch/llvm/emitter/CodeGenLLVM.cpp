@@ -161,6 +161,11 @@ void CodeGenLLVM::pop_dead_value(int slots)
     }
 }
 
+llvm::Value *CodeGenLLVM::reload_value_from_stack(int slot_num, llvm::Type *type)
+{
+    return __ CreateLoad(type, _stack.at(slot_num));
+}
+
 llvm::Value *CodeGenLLVM::maybe_cast(llvm::Value *val, llvm::Type *type)
 {
     if (val->getType() != type)
@@ -382,12 +387,13 @@ llvm::Value *CodeGenLLVM::emit_ternary_operator(llvm::Value *pred, llvm::Value *
 llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &expr,
                                                  const std::shared_ptr<ast::Type> &expr_type)
 {
-    auto *const lhs = emit_expr(expr._lhs);
+    auto *lhs = emit_expr(expr._lhs);
 
     // preserve lhs on stack for gc
     preserve_value_for_gc(lhs);
 
     auto *const rhs = emit_expr(expr._rhs);
+    lhs = reload_value_from_stack(_current_stack_size - 1, lhs->getType());
 
     auto logical_result = false;
     llvm::Value *op_result = nullptr;
@@ -522,7 +528,7 @@ llvm::Value *CodeGenLLVM::emit_object_expr_inner(const ast::ObjectExpression &ex
         type = object._value_type;
     }
 
-    return __ CreateLoad(_data.class_struct(_builder->klass(type->_string))->getPointerTo(), ptr, expr._object);
+    return __ CreateLoad(_data.class_struct(_builder->klass(type->_string))->getPointerTo(), ptr);
 }
 
 llvm::Value *CodeGenLLVM::emit_load_self()
@@ -530,7 +536,7 @@ llvm::Value *CodeGenLLVM::emit_load_self()
     const auto &self_val = _table.symbol(SelfObject);
 
     return __ CreateLoad(_data.class_struct(_builder->klass(self_val._value_type->_string))->getPointerTo(),
-                         self_val._value._ptr, SelfObject);
+                         self_val._value._ptr);
 }
 
 llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass_type)
@@ -573,13 +579,12 @@ llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass
     auto *const class_obj_tab =
         _module.getNamedGlobal(_runtime.symbol_name(RuntimeLLVM::RuntimeLLVMSymbols::CLASS_OBJ_TAB));
 
-    const auto init_method_name = klass->init_method();
     auto *const init_method_ptr = __ CreateGEP(class_obj_tab->getValueType(), class_obj_tab, {_int0_64, tag});
 
     // load init method and call
     // init method has the same type as for Object class
-    auto *const object_init = _module.getFunction(init_method_name);
-    auto *const init_method = __ CreateLoad(object_init->getType(), init_method_ptr, init_method_name);
+    auto *const object_init = _module.getFunction(klass->init_method());
+    auto *const init_method = __ CreateLoad(object_init->getType(), init_method_ptr);
 
     // call this init method
     __ CreateCall(object_init->getFunctionType(), init_method,
@@ -807,6 +812,13 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
     auto *const receiver = emit_expr(expr._expr);
     args[0] = receiver;
 
+    // reload args after possible relocation
+    int slots_num = expr._args.size();
+    for (int i = 1; i < args.size(); i++)
+    {
+        args[i] = reload_value_from_stack(_current_stack_size - (slots_num - i + 1), args.at(i)->getType());
+    }
+
     auto *const phi_type =
         _data.class_struct(_builder->klass(semant::Semant::exact_type(expr_type, _current_class->_type)->_string))
             ->getPointerTo();
@@ -833,7 +845,7 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
                                                             dispatch_table_ptr, klass->method_index(method_name));
 
                 // load method
-                auto *const method = __ CreateLoad(base_method->getType(), method_ptr, method_name);
+                auto *const method = __ CreateLoad(base_method->getType(), method_ptr);
 
                 maybe_cast(args, base_method->getFunctionType());
 
@@ -872,7 +884,7 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
     phi->addIncoming(casted_call, true_block);
     phi->addIncoming(llvm::ConstantPointerNull::get(phi_type), false_block);
 
-    pop_dead_value(expr._args.size());
+    pop_dead_value(slots_num);
     return phi;
 }
 

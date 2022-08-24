@@ -5,9 +5,6 @@
 #include <string>
 #include <unordered_map>
 
-#define KB 1024
-#define MB 1024 * KB
-
 #define flag_name(flag) #flag
 #define int_flag_delim '='
 
@@ -18,7 +15,7 @@ bool PrintAllocatedObjects = false;
 
 bool PrintGCStatistics = false;
 
-std::string MaxHeapSize = "6KB";
+std::string MaxHeapSize = "6Kb";
 size_t GCAlgo = 1; // gc::GC::MARKSWEEPGC
 
 const std::unordered_map<std::string, bool *> BoolFlags = {
