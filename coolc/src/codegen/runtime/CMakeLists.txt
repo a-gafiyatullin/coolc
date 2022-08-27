@@ -6,6 +6,7 @@ add_library(cool-rt SHARED Runtime.cpp
                            gc/Marker.cpp
                            
                            gc/mark-sweep/MarkSweepGC.cpp
+                           gc/mark-compact/MarkCompactGC.cpp
 
                            globals.cpp
                            

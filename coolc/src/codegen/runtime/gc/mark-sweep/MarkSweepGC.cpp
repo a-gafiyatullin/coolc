@@ -1,7 +1,4 @@
-#include "codegen/runtime/ObjectLayout.hpp"
 #include "codegen/runtime/gc/GC.hpp"
-#include <cassert>
-#include <cstdio>
 
 using namespace gc;
 
@@ -42,7 +39,7 @@ void MarkSweepGC::sweep()
         {
             _allocator->free(obj);
         }
-        scan = nxtf_alloca->next_object(scan);
+        scan = nxtf_alloca->next_object(scan + obj->_size); // it's ok to use size after free
     }
 }
 

@@ -16,7 +16,7 @@ bool PrintAllocatedObjects = false;
 bool PrintGCStatistics = false;
 
 std::string MaxHeapSize = "6Kb";
-size_t GCAlgo = 1; // gc::GC::MARKSWEEPGC
+size_t GCAlgo = 2; // ThreadedCompactionGC
 
 const std::unordered_map<std::string, bool *> BoolFlags = {
     {flag_name(PrintGCStatistics), &PrintGCStatistics}

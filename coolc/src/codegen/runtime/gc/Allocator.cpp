@@ -196,6 +196,10 @@ ObjectLayout *NextFitAllocator::allocate_inner(int tag, size_t size, void *disp_
     chunk->_tag = tag;
     chunk->_dispatch_table = disp_tab;
 
+#ifdef DEBUG
+    chunk->zero_fields(0xBADBABE);
+#endif // DEBUG
+
     if (appendix_size != 0)
     {
         chunk->zero_appendix(appendix_size);
@@ -228,7 +232,6 @@ void NextFitAllocator::move(const ObjectLayout *src, address dst)
 {
     if (dst != (address)src)
     {
-        assert(dst >= (address)src + src->_size || dst + src->_size <= (address)src);
         memcpy(dst, (address)src, src->_size);
     }
 }
@@ -244,9 +247,7 @@ void NextFitAllocator::force_alloc_pos(address pos)
 
 address NextFitAllocator::next_object(address obj)
 {
-    ObjectLayout *hdr = (ObjectLayout *)obj;
-    assert(hdr->_size != 0);
-    ObjectLayout *possible_object = (ObjectLayout *)(obj + hdr->_size);
+    ObjectLayout *possible_object = (ObjectLayout *)(obj);
 
     // search for the first object with non-zero tag
     while ((address)possible_object < _end && possible_object->_tag == 0)

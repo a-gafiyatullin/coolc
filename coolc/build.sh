@@ -74,7 +74,13 @@ cmake --build build --config $config --target all -j 10 --
 
 ln -sf build/compile_commands.json compile_commands.json
 
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/$PWD/bin/
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/$PWD/bin/
+    echo "Added runtime lib to your LD_LIBRARY_PATH = " $LD_LIBRARY_PATH
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    export DYLD_LIBRARY_PATH=$LD_LIBRARY_PATH:/$PWD/bin/
+    echo "Added runtime lib to your DYLD_LIBRARY_PATH = " $DYLD_LIBRARY_PATH
+fi
 
 if [ $test -eq 1 ]; then
     make -C build test

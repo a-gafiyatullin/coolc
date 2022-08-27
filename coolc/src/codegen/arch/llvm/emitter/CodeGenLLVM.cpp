@@ -223,7 +223,7 @@ void CodeGenLLVM::emit_class_init_method_inner()
     _table.push_scope();
 
     auto *const self_formal = func->getArg(0);
-    const auto &local = __ CreateAlloca(self_formal->getType());
+    const auto &self_local = __ CreateAlloca(self_formal->getType());
 
     for (int i = 0; i < _stack.size(); i++)
     {
@@ -233,15 +233,15 @@ void CodeGenLLVM::emit_class_init_method_inner()
     // register slots
     auto *const gcroot = llvm::Intrinsic::getDeclaration(&_module, llvm::Intrinsic::gcroot);
 
-    __ CreateCall(gcroot, {__ CreateBitCast(local, gcroot->getArg(0)->getType()), _int0_8_ptr});
+    __ CreateCall(gcroot, {__ CreateBitCast(self_local, gcroot->getArg(0)->getType()), _int0_8_ptr});
 
     for (int i = 0; i < _stack.size(); i++)
     {
         __ CreateCall(gcroot, {_stack[i], _int0_8_ptr});
     }
 
-    __ CreateStore(self_formal, local);
-    _table.add_symbol(SelfObject, Symbol(local, _current_class->_type));
+    __ CreateStore(self_formal, self_local);
+    _table.add_symbol(SelfObject, Symbol(self_local, _current_class->_type));
 
     // initialize temporaries
     for (int i = 0; i < _stack.size(); i++)
@@ -262,6 +262,7 @@ void CodeGenLLVM::emit_class_init_method_inner()
             GUARANTEE_DEBUG(this_field._type == Symbol::FIELD); // impossible
 
             auto *const pointee_type = klass_struct->getTypeAtIndex(this_field._value._offset);
+            // it's ok to use getArg(0) here, because safepoint is impossible
             auto *const field_ptr = __ CreateStructGEP(klass_struct, func->getArg(0), this_field._value._offset);
 
             if (semant::Semant::is_trivial_type(this_field._value_type))
@@ -310,6 +311,7 @@ void CodeGenLLVM::emit_class_init_method_inner()
         auto *const parent_struct = _data.class_struct(parent);
 
         __ CreateCall(_module.getFunction(parent->init_method()),
+                      // it's ok to use getArg(0) here, because safepoint is impossible
                       __ CreateBitCast(func->getArg(0), parent_struct->getPointerTo()));
     }
 
@@ -323,10 +325,13 @@ void CodeGenLLVM::emit_class_init_method_inner()
                 const auto &this_field = _table.symbol(feature->_object->_object);
                 GUARANTEE_DEBUG(this_field._type == Symbol::FIELD); // impossible
 
-                auto *const field_ptr = __ CreateStructGEP(klass_struct, func->getArg(0), this_field._value._offset);
+                auto *const value = emit_expr(feature->_expr);
+
+                // we have to reload self object every time because feature->_expr can contain safepoints
+                auto *const field_ptr = __ CreateStructGEP(klass_struct, emit_load_self(), this_field._value._offset);
                 auto *const pointee_type = klass_struct->getTypeAtIndex(this_field._value._offset);
 
-                __ CreateStore(maybe_cast(emit_expr(feature->_expr), pointee_type), field_ptr);
+                __ CreateStore(maybe_cast(value, pointee_type), field_ptr);
             }
         }
     }
@@ -539,28 +544,47 @@ llvm::Value *CodeGenLLVM::emit_load_self()
                          self_val._value._ptr);
 }
 
+llvm::Value *CodeGenLLVM::emit_new_inner_helper(const std::shared_ptr<ast::Type> &klass_type, bool preserve_before_init)
+{
+    auto *const func = _runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::GC_ALLOC)->_func;
+
+    const auto &klass = _builder->klass(klass_type->_string);
+
+    // prepare tag, size and dispatch table
+    auto *const tag = llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag());
+    auto *const size = llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size());
+    auto *const disp_tab = __ CreateBitCast(_data.class_disp_tab(klass), _runtime.void_ptr_type());
+
+    // call allocation and cast to this klass pointer
+    auto *const raw_object = __ CreateCall(func, {tag, size, disp_tab});
+    auto *object = __ CreateBitCast(raw_object, _data.class_struct(klass)->getPointerTo());
+
+    if (preserve_before_init)
+    {
+        preserve_value_for_gc(object); // init call cause GC
+    }
+
+    // call init
+    __ CreateCall(_module.getFunction(klass->init_method()), {object});
+
+    if (preserve_before_init)
+    {
+        object = reload_value_from_stack(_current_stack_size - 1, object->getType());
+        pop_dead_value();
+    }
+
+    // object is ready
+    return object;
+}
+
 llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass_type)
 {
     auto *const func = _runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::GC_ALLOC)->_func;
 
     if (!semant::Semant::is_self_type(klass_type))
     {
-        const auto &klass = _builder->klass(klass_type->_string);
-
-        // prepare tag, size and dispatch table
-        auto *const tag = llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag());
-        auto *const size = llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size());
-        auto *const disp_tab = __ CreateBitCast(_data.class_disp_tab(klass), _runtime.void_ptr_type());
-
-        // call allocation and cast to this klass pointer
-        auto *const raw_object = __ CreateCall(func, {tag, size, disp_tab});
-        auto *const object = __ CreateBitCast(raw_object, _data.class_struct(klass)->getPointerTo());
-
-        // call init
-        __ CreateCall(_module.getFunction(klass->init_method()), {object});
-
-        // object is ready
-        return object;
+        // in common case we need preserve object before init call
+        return emit_new_inner_helper(klass_type);
     }
 
     auto *const self_val = emit_load_self();
@@ -573,7 +597,9 @@ llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass
     auto *const disp_tab = __ CreateBitCast(emit_load_dispatch_table(self_val, klass), _runtime.void_ptr_type());
 
     // allocate memory
-    auto *const raw_object = __ CreateCall(func, {tag, size, disp_tab});
+    llvm::Value *raw_object = __ CreateCall(func, {tag, size, disp_tab});
+
+    preserve_value_for_gc(raw_object); // init call cause GC
 
     // lookup init method
     auto *const class_obj_tab =
@@ -590,6 +616,9 @@ llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass
     __ CreateCall(object_init->getFunctionType(), init_method,
                   {maybe_cast(raw_object, object_init->getArg(0)->getType())});
 
+    raw_object = reload_value_from_stack(_current_stack_size - 1, raw_object->getType());
+
+    pop_dead_value();
     return raw_object;
 }
 
@@ -940,7 +969,8 @@ llvm::Value *CodeGenLLVM::emit_load_primitive(llvm::Value *obj, llvm::Type *obj_
 llvm::Value *CodeGenLLVM::emit_allocate_primitive(llvm::Value *val, const std::shared_ptr<Klass> &klass)
 {
     // allocate
-    auto *const obj = emit_new_inner(klass->klass());
+    // primitive init cannot cause GC
+    auto *const obj = emit_new_inner_helper(klass->klass(), false /* don't preserve */);
 
     // record value
     auto *const val_ptr = __ CreateStructGEP(_data.class_struct(klass), obj, HeaderLayout::DispatchTable + 1);
@@ -1000,12 +1030,22 @@ void CodeGenLLVM::emit_runtime_main()
                                                        },
                                                        false),
                                llvm::Function::ExternalLinkage, static_cast<std::string>(RUNTIME_MAIN_FUNC), &_module);
+    runtime_main->setGC(_runtime.gc_strategy(RuntimeLLVM::SHADOW_STACK));
 
     auto *entry = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::ENTRY_BLOCK), runtime_main);
     __ SetInsertPoint(entry);
 
+    auto *const gcroot = llvm::Intrinsic::getDeclaration(&_module, llvm::Intrinsic::gcroot);
+
+    // need at least one slot for main object
+    _stack.resize(1);
+    _stack[0] = __ CreateAlloca(_runtime.stack_slot_type());
+    __ CreateCall(gcroot, {_stack.at(0), _int0_8_ptr});
+    _current_stack_size = 0;
+
     // first init runtime
     auto *const init_rt = _runtime.symbol_by_id(RuntimeLLVM::INIT_RUNTIME)->_func;
+    // this objects will be preserved in a callee frame
     __ CreateCall(init_rt, {runtime_main->getArg(0), runtime_main->getArg(1)});
 
     const auto main_klass = _builder->klass(MainClassName);

@@ -54,10 +54,14 @@ class GC
     {
         ZEROGC, // Dummy GC that don't really collect garbage
         MARKSWEEPGC,
+        THREADED_MC_GC,
+
         GcTypeNumber
     };
 
   protected:
+    static const int HEADER_SIZE = sizeof(ObjectLayout);
+
     Allocator *_allocator;
     Marker *_marker;
 
@@ -160,5 +164,52 @@ class MarkSweepGC : public GC
     void collect() override;
 
     ~MarkSweepGC();
+};
+
+// --------------------------------------- Mark-Compact ---------------------------------------
+class MarkCompactGC : public GC
+{
+  protected:
+    virtual void compact() = 0;
+
+  public:
+    MarkCompactGC(const size_t &heap_size);
+
+    void collect() override;
+
+    ~MarkCompactGC();
+};
+
+// The Garbage Collection Handbook, Richard Jones: 3.3 Jonkers’s threaded compactor
+class ThreadedCompactionGC : public MarkCompactGC
+{
+  protected:
+    // fast check on stack roots
+    address _stack_start;
+    address _stack_end;
+
+    // Jonkers requires two passes over the heap:
+
+    // 1. phase updateForwardReferences
+    // the first to thread references that point forward in the heap
+    void update_forward_references();
+
+    // 2. phase updateBackwardReferences
+    // and the second to thread backward pointers
+    void update_backward_references();
+
+    // main compaction routine
+    void compact() override;
+
+    // thread a reference
+    void thread(address *ref);
+
+    // unthread all references, replacing with addr
+    void update(address *obj, address addr);
+
+  public:
+    ThreadedCompactionGC(const size_t &heap_size) : MarkCompactGC(heap_size)
+    {
+    }
 };
 }; // namespace gc

@@ -78,6 +78,9 @@ void GC::init(const GcType &type, const size_t &heap_size)
     case MARKSWEEPGC:
         Gc = new MarkSweepGC(heap_size);
         break;
+    case THREADED_MC_GC:
+        Gc = new ThreadedCompactionGC(heap_size);
+        break;
     default:
         Gc = new MarkSweepGC(heap_size);
         break;

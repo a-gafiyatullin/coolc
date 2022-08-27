@@ -136,6 +136,7 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
 
     // helpers
     llvm::Value *emit_new_inner(const std::shared_ptr<ast::Type> &klass);
+    llvm::Value *emit_new_inner_helper(const std::shared_ptr<ast::Type> &klass, bool preserve_before_init = true);
     llvm::Value *emit_load_self();
     llvm::Value *emit_ternary_operator(llvm::Value *pred, llvm::Value *true_val, llvm::Value *false_val);
     void make_control_flow(llvm::Value *pred, llvm::BasicBlock *&true_block, llvm::BasicBlock *&false_block,

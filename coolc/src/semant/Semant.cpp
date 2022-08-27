@@ -611,6 +611,8 @@ std::shared_ptr<ast::Type> Semant::infer_new_type(const ast::NewExpression &allo
 {
     const auto &type = alloc._type;
 
+    _expression_stack++; // need at least one slot, because init can cause GC
+
     SEMANT_VERBOSE_ONLY(LOG_ENTER("INFER NEW TYPE"));
 
     // type if defined
