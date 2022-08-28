@@ -1,1 +1,0 @@
-add_library(gc STATIC gc-impl/globals.cpp)
