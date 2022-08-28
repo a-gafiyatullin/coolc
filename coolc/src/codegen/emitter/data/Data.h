@@ -95,6 +95,10 @@ template <class Value, class ClassDesc = Value> class Data
      * @param out_file Output file name
      */
     void emit(const std::string &out_file);
+
+    virtual ~Data()
+    {
+    }
 };
 
 }; // namespace codegen

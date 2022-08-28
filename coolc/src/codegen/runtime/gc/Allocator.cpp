@@ -232,7 +232,16 @@ void NextFitAllocator::move(const ObjectLayout *src, address dst)
 {
     if (dst != (address)src)
     {
-        memcpy(dst, (address)src, src->_size);
+        // non-overlapping memory regions
+        if (dst >= (address)src + src->_size || dst <= (address)src - src->_size)
+        {
+            memcpy(dst, (address)src, src->_size);
+        }
+        else
+        {
+            // overlapping memory regions
+            memmove(dst, (address)src, src->_size);
+        }
     }
 }
 

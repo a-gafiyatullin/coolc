@@ -32,6 +32,13 @@ class Marker
      */
     Marker(address heap_start, address heap_end);
 
+    /**
+     * @brief Mark arbitrary object
+     *
+     * @param root Object's address
+     */
+    virtual void mark_runtime_root(address root) = 0;
+
     virtual ~Marker()
     {
     }
@@ -68,5 +75,7 @@ class ShadowStackMarkerFIFO : public ShadowStackMarker
     }
 
     void mark_from_roots() override;
+
+    void mark_runtime_root(address root) override;
 };
 } // namespace gc

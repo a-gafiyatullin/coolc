@@ -32,6 +32,17 @@ void ShadowStackMarkerFIFO::mark_from_roots()
     }
 }
 
+void ShadowStackMarkerFIFO::mark_runtime_root(address root)
+{
+    ObjectLayout *obj = (ObjectLayout *)root;
+    if (obj && !obj->is_marked())
+    {
+        obj->set_marked();
+        _worklist.push(obj);
+        mark();
+    }
+}
+
 void ShadowStackMarkerFIFO::mark()
 {
     while (!_worklist.empty())
@@ -46,8 +57,7 @@ void ShadowStackMarkerFIFO::mark()
             {
                 StringLayout *str = (StringLayout *)hdr;
                 IntLayout *size = str->_string_size;
-                assert(size); // cannot be null
-                if (!size->is_marked())
+                if (size && !size->is_marked())
                 {
                     size->set_marked();
                     _worklist.push(size);

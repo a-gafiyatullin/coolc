@@ -17,6 +17,7 @@ void MarkSweepGC::collect()
     {
         GCStats phase(GCStats::GCPhase::MARK);
         ((ShadowStackMarkerFIFO *)_marker)->mark_from_roots();
+        _marker->mark_runtime_root(_runtime_root);
     }
 
     GCStats phase(GCStats::GCPhase::COLLECT);

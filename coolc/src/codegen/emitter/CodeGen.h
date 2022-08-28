@@ -95,6 +95,10 @@ template <class Value, class Symbol> class CodeGen
      * @param out_file Result file name
      */
     virtual void emit(const std::string &out_file) = 0;
+
+    virtual ~CodeGen()
+    {
+    }
 };
 
 }; // namespace codegen

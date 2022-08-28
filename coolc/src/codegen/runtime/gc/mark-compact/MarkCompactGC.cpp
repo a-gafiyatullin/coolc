@@ -17,6 +17,7 @@ void MarkCompactGC::collect()
     {
         GCStats phase(GCStats::GCPhase::MARK);
         ((ShadowStackMarkerFIFO *)_marker)->mark_from_roots();
+        _marker->mark_runtime_root(_runtime_root);
     }
 
     GCStats phase(GCStats::GCPhase::COLLECT);
@@ -53,7 +54,8 @@ void ThreadedCompactionGC::update(address *obj, address addr)
     address temp = (address)((ObjectLayout *)obj)->_size;
 
     // if _size field contains a heap pointer - it is a start of the list
-    while (_allocator->is_heap_addr(temp) || (temp >= _stack_start && temp <= _stack_end))
+    while (_allocator->is_heap_addr(temp) || (temp >= _stack_start && temp <= _stack_end) ||
+           (temp == (address)&_runtime_root))
     {
         // we points to fields
         address next = *(address *)temp;
@@ -91,6 +93,11 @@ void ThreadedCompactionGC::update_forward_references()
         r = r->_next;
     }
 
+    if (_runtime_root)
+    {
+        thread(&_runtime_root);
+    }
+
     NextFitAllocator *nxtf_alloca = (NextFitAllocator *)_allocator;
 
     address free = _heap_start;
@@ -125,8 +132,6 @@ void ThreadedCompactionGC::update_forward_references()
                 if (obj->is_string())
                 {
                     StringLayout *str = (StringLayout *)obj;
-                    IntLayout *size = str->_string_size;
-                    assert(size); // cannot be null
                     thread((address *)((address)str + HEADER_SIZE));
                 }
             }

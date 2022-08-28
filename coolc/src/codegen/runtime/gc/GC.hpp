@@ -68,13 +68,15 @@ class GC
     address _heap_start;
     address _heap_end;
 
+    address _runtime_root; // need it to preserve allocations in runtime routines
+
     static GC *Gc;
 
   public:
     /**
      * @brief Construct a new GC
      */
-    GC()
+    GC() : _runtime_root(NULL)
     {
     }
 
@@ -125,6 +127,26 @@ class GC
      *
      */
     virtual void collect() = 0;
+
+    /**
+     * @brief Preserve temporary allocation
+     *
+     * @param root Address of an object
+     */
+    void set_runtime_root(address root)
+    {
+        _runtime_root = root;
+    }
+
+    /**
+     * @brief Get preserved allocation address
+     *
+     * @return address of the preserved object
+     */
+    address runtime_root() const
+    {
+        return _runtime_root;
+    }
 
     virtual ~GC()
     {

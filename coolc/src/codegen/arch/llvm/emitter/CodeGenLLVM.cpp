@@ -1199,4 +1199,6 @@ void CodeGenLLVM::emit(const std::string &out_file)
     CODEGEN_VERBOSE_ONLY(LOG("Finished llvm emitter."));
 
     execute_linker(obj_file, out_file);
+
+    delete target_machine;
 }
