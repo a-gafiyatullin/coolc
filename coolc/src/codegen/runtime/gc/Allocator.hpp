@@ -15,6 +15,8 @@ class Allocator
     static const int HEADER_SIZE = sizeof(ObjectLayout);
 
   protected:
+    static Allocator *AllocatorObj;
+
     const size_t _size;
 
     address _start; // heap start
@@ -36,6 +38,11 @@ class Allocator
     } // TODO: should not reach here
 
   public:
+    /**
+     * @brief Create a new Allocator with given heap size
+     *
+     * @param size Heap Size
+     */
     Allocator(const size_t &size);
 
     /**
@@ -100,6 +107,29 @@ class Allocator
     inline bool is_heap_addr(address addr) const
     {
         return addr >= _start && addr <= _end;
+    }
+
+    /**
+     * @brief Initialize global allocator
+     *
+     * @param size Heap Size
+     */
+    static void init(const size_t &size);
+
+    /**
+     * @brief Destruct the allocator
+     *
+     */
+    static void release();
+
+    /**
+     * @brief Get the global allocator
+     *
+     * @return Allocator* Global allocator
+     */
+    inline static Allocator *allocator()
+    {
+        return AllocatorObj;
     }
 
     virtual ~Allocator();

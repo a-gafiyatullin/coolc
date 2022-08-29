@@ -1,11 +1,11 @@
 #include "globals.hpp"
-#include <cstddef>
-#include <cstdio>
-#include <cstring>
-#include <string>
 #include <unordered_map>
 
-#define flag_name(flag) #flag
+#define flag_pair(flag)                                                                                                \
+    {                                                                                                                  \
+#flag, &flag                                                                                                   \
+    }
+
 #define int_flag_delim '='
 
 // ---------------------------- Flags ----------------------------
@@ -16,22 +16,20 @@ bool PrintAllocatedObjects = false;
 bool PrintGCStatistics = false;
 
 std::string MaxHeapSize = "6Kb";
-size_t GCAlgo = 2; // ThreadedCompactionGC
+int GCAlgo = 2; // ThreadedCompactionGC
 
 const std::unordered_map<std::string, bool *> BoolFlags = {
-    {flag_name(PrintGCStatistics), &PrintGCStatistics}
 #ifdef DEBUG
-    ,
-    {flag_name(PrintAllocatedObjects), &PrintAllocatedObjects},
+    flag_pair(PrintAllocatedObjects),
 #endif // DEBUG
-};
+    flag_pair(PrintGCStatistics)};
 
-const std::unordered_map<std::string, std::string *> StringFlags = {{flag_name(MaxHeapSize), &MaxHeapSize}};
+const std::unordered_map<std::string, std::string *> StringFlags = {flag_pair(MaxHeapSize)};
 
-const std::unordered_map<std::string, size_t *> IntFlags = {{flag_name(GCAlgo), &GCAlgo}};
+const std::unordered_map<std::string, int *> IntFlags = {flag_pair(GCAlgo)};
 
 // ---------------------------- Flags Settings ----------------------------
-bool maybe_set(const char *arg, const char *flag_name)
+bool maybe_set(const char *arg)
 {
     auto bool_flags = BoolFlags.find(arg + 1);
     if (bool_flags != BoolFlags.end())
@@ -62,20 +60,10 @@ bool maybe_set(const char *arg, const char *flag_name)
     return false;
 }
 
-#define check_flag(flag)                                                                                               \
-    if (maybe_set(argv[i], #flag))                                                                                     \
-    {                                                                                                                  \
-        continue;                                                                                                      \
-    }
-
 void process_runtime_args(int argc, char **argv)
 {
     for (int i = 1; i < argc; i++)
     {
-#ifdef DEBUG
-        check_flag(PrintGCStatistics);
-        check_flag(PrintAllocatedObjects);
-#endif // DEBUG
-        check_flag(MaxHeapSize);
+        maybe_set(argv[i]);
     }
 }

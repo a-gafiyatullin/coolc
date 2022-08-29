@@ -2,22 +2,14 @@
 
 using namespace gc;
 
-MarkSweepGC::MarkSweepGC(const size_t &heap_size)
-{
-    _allocator = new NextFitAllocator(heap_size);
-
-    _heap_start = _allocator->start();
-    _heap_end = _allocator->end();
-
-    _marker = new ShadowStackMarkerFIFO(_heap_start, _heap_end);
-}
-
 void MarkSweepGC::collect()
 {
     {
         GCStats phase(GCStats::GCPhase::MARK);
-        ((ShadowStackMarkerFIFO *)_marker)->mark_from_roots();
-        _marker->mark_runtime_root(_runtime_root);
+
+        Marker *marker = Marker::marker();
+        marker->mark_from_roots();
+        marker->mark_root(&_runtime_root);
     }
 
     GCStats phase(GCStats::GCPhase::COLLECT);
@@ -26,10 +18,11 @@ void MarkSweepGC::collect()
 
 void MarkSweepGC::sweep()
 {
-    NextFitAllocator *nxtf_alloca = (NextFitAllocator *)_allocator;
+    NextFitAllocator *nxtf_alloca = (NextFitAllocator *)Allocator::allocator();
 
-    address scan = _heap_start;
-    while (scan < _heap_end)
+    address scan = nxtf_alloca->start();
+    address heap_end = nxtf_alloca->end();
+    while (scan < heap_end)
     {
         ObjectLayout *obj = (ObjectLayout *)scan;
         if (obj->is_marked())
@@ -38,14 +31,8 @@ void MarkSweepGC::sweep()
         }
         else
         {
-            _allocator->free(obj);
+            nxtf_alloca->free(obj);
         }
         scan = nxtf_alloca->next_object(scan + obj->_size); // it's ok to use size after free
     }
-}
-
-MarkSweepGC::~MarkSweepGC()
-{
-    delete _allocator;
-    delete _marker;
 }

@@ -1,4 +1,5 @@
 #include "utils/Utils.h"
+#include <unordered_map>
 
 #ifdef DEBUG
 std::string printable_string(const std::string &str)
@@ -44,48 +45,43 @@ std::string printable_string(const std::string &str)
     return str_for_out;
 }
 
-bool TraceLexer;
-bool TokensOnly;
-bool PrintFinalAST;
-bool TraceParser;
-bool TraceSemant;
-bool TraceCodeGen;
+bool TraceLexer = false;
+bool TokensOnly = false;
+bool PrintFinalAST = false;
+bool TraceParser = false;
+bool TraceSemant = false;
+bool TraceCodeGen = false;
 #endif // DEBUG
 
-bool UseArchSpecFeatures;
+bool UseArchSpecFeatures = true;
 
-bool maybe_set(const char *arg, const char *flag_name, bool &flag)
+#define flag_pair(flag)                                                                                                \
+    {                                                                                                                  \
+#flag, &flag                                                                                                   \
+    }
+
+std::unordered_map<std::string, bool *> BoolFlags = {
+#ifdef DEBUG
+    flag_pair(TraceLexer),    flag_pair(TokensOnly),         flag_pair(TraceLexer),
+    flag_pair(PrintFinalAST), flag_pair(TraceParser),        flag_pair(TraceSemant),
+    flag_pair(TraceCodeGen),  flag_pair(UseArchSpecFeatures)
+#endif // DEBUG
+};
+
+bool maybe_set(const char *arg)
 {
-    if (!strcmp(flag_name, arg + 1))
+    auto bool_flags = BoolFlags.find(arg + 1);
+    if (bool_flags != BoolFlags.end())
     {
-        if (arg[0] == '+')
-        {
-            flag = true;
-        }
+        *(bool_flags->second) = arg[0] == '+';
         return true;
     }
 
     return false;
 }
 
-#define check_flag(flag)                                                                                               \
-    if (maybe_set(args[i], #flag, flag))                                                                               \
-    {                                                                                                                  \
-        continue;                                                                                                      \
-    }
-
 std::pair<std::vector<int>, std::string> process_args(char *const args[], const int &args_num)
 {
-#ifdef DEBUG
-    TraceLexer = false;
-    PrintFinalAST = false;
-    TraceParser = false;
-    TraceSemant = false;
-    TraceCodeGen = false;
-    TokensOnly = false;
-#endif // DEBUG
-    UseArchSpecFeatures = true;
-
     std::string out_file_name;
     bool found_out_file_name = false;
 
@@ -94,15 +90,10 @@ std::pair<std::vector<int>, std::string> process_args(char *const args[], const 
     {
         if (args[i][0] == '-' || args[i][0] == '+')
         {
-#ifdef DEBUG
-            check_flag(TraceLexer);
-            check_flag(PrintFinalAST);
-            check_flag(TraceParser);
-            check_flag(TraceSemant);
-            check_flag(TokensOnly);
-            check_flag(TraceCodeGen);
-#endif // DEBUG
-            check_flag(UseArchSpecFeatures);
+            if (maybe_set(args[i]))
+            {
+                continue;
+            }
 
             // output file name
             if (!strcmp(args[i], "-o"))

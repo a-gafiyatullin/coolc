@@ -3,7 +3,6 @@
 #include "Allocator.hpp"
 #include "Marker.hpp"
 #include <chrono>
-#include <string>
 
 namespace gc
 {
@@ -62,36 +61,23 @@ class GC
   protected:
     static const int HEADER_SIZE = sizeof(ObjectLayout);
 
-    Allocator *_allocator;
-    Marker *_marker;
-
-    address _heap_start;
-    address _heap_end;
-
     address _runtime_root; // need it to preserve allocations in runtime routines
 
     static GC *Gc;
 
   public:
     /**
-     * @brief Construct a new GC
-     */
-    GC() : _runtime_root(NULL)
-    {
-    }
-
-    /**
      * @brief Initialize GC
      *
      * @param type GC Type
      */
-    static void init(const GcType &type, const size_t &heap_size);
+    static void init(const GcType &type);
 
     /**
      * @brief Finalize GC
      *
      */
-    static void finish();
+    static void release();
 
     /**
      * @brief Get GC
@@ -161,13 +147,9 @@ class GC
 class ZeroGC : public GC
 {
   public:
-    ZeroGC(const size_t &size);
-
     void collect() override
     {
     }
-
-    ~ZeroGC();
 };
 
 // --------------------------------------- Mark-Sweep ---------------------------------------
@@ -181,11 +163,7 @@ class MarkSweepGC : public GC
     void sweep();
 
   public:
-    MarkSweepGC(const size_t &heap_size);
-
     void collect() override;
-
-    ~MarkSweepGC();
 };
 
 // --------------------------------------- Mark-Compact ---------------------------------------
@@ -195,11 +173,7 @@ class MarkCompactGC : public GC
     virtual void compact() = 0;
 
   public:
-    MarkCompactGC(const size_t &heap_size);
-
     void collect() override;
-
-    ~MarkCompactGC();
 };
 
 // The Garbage Collection Handbook, Richard Jones: 3.3 Jonkers’s threaded compactor
@@ -229,9 +203,7 @@ class ThreadedCompactionGC : public MarkCompactGC
     // unthread all references, replacing with addr
     void update(address *obj, address addr);
 
-  public:
-    ThreadedCompactionGC(const size_t &heap_size) : MarkCompactGC(heap_size)
-    {
-    }
+    // stack walker helpers
+    static void thread_root(void *obj, address *root, const address *meta);
 };
 }; // namespace gc

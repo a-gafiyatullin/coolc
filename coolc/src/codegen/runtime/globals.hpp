@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstddef>
 #include <string>
 
 #ifdef DEBUG
@@ -8,9 +7,8 @@ extern bool PrintAllocatedObjects;
 #endif // DEBUG
 
 extern bool PrintGCStatistics;
-
 extern std::string MaxHeapSize;
-extern size_t GCAlgo;
+extern int GCAlgo;
 
 /**
  * @brief Process arguments were passed to executable

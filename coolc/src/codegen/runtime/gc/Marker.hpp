@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ShadowStack.hpp"
+#include "StackWalker.hpp"
 #include "codegen/runtime/ObjectLayout.hpp"
 #include <queue>
 
@@ -13,6 +14,8 @@ namespace gc
 class Marker
 {
   protected:
+    static Marker *MarkerObj;
+
     address _heap_start;
     address _heap_end;
 
@@ -37,19 +40,7 @@ class Marker
      *
      * @param root Object's address
      */
-    virtual void mark_runtime_root(address root) = 0;
-
-    virtual ~Marker()
-    {
-    }
-};
-
-class ShadowStackMarker : public Marker
-{
-  public:
-    ShadowStackMarker(address heap_start, address heap_end) : Marker(heap_start, heap_end)
-    {
-    }
+    virtual void mark_root(address *root) = 0;
 
     /**
      * @brief Mark live objects from roots
@@ -57,25 +48,47 @@ class ShadowStackMarker : public Marker
      */
     virtual void mark_from_roots() = 0;
 
-    ~ShadowStackMarker()
+    /**
+     * @brief Initialize global marker
+     *
+     */
+    static void init();
+
+    /**
+     * @brief Destruct the global marker
+     *
+     */
+    static void release();
+
+    /**
+     * @brief Get the global marker
+     *
+     * @return Marker* Global Marker
+     */
+    inline static Marker *marker()
     {
+        return MarkerObj;
     }
+
+    virtual ~Marker();
 };
 
-class ShadowStackMarkerFIFO : public ShadowStackMarker
+class MarkerFIFO : public Marker
 {
   protected:
     std::queue<ObjectLayout *> _worklist;
 
     void mark() override;
 
+    static void mark_root(void *obj, address *root, const address *meta);
+
   public:
-    ShadowStackMarkerFIFO(address heap_start, address heap_end) : ShadowStackMarker(heap_start, heap_end)
+    MarkerFIFO(address heap_start, address heap_end) : Marker(heap_start, heap_end)
     {
     }
 
     void mark_from_roots() override;
 
-    void mark_runtime_root(address root) override;
+    void mark_root(address *root) override;
 };
 } // namespace gc

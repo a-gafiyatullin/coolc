@@ -2,32 +2,18 @@
 
 using namespace gc;
 
-MarkCompactGC::MarkCompactGC(const size_t &heap_size)
-{
-    _allocator = new NextFitAllocator(heap_size);
-
-    _heap_start = _allocator->start();
-    _heap_end = _allocator->end();
-
-    _marker = new ShadowStackMarkerFIFO(_heap_start, _heap_end);
-}
-
 void MarkCompactGC::collect()
 {
     {
         GCStats phase(GCStats::GCPhase::MARK);
-        ((ShadowStackMarkerFIFO *)_marker)->mark_from_roots();
-        _marker->mark_runtime_root(_runtime_root);
+
+        Marker *marker = Marker::marker();
+        marker->mark_from_roots();
+        marker->mark_root(&_runtime_root);
     }
 
     GCStats phase(GCStats::GCPhase::COLLECT);
     compact();
-}
-
-MarkCompactGC::~MarkCompactGC()
-{
-    delete _allocator;
-    delete _marker;
 }
 
 // --------------------------------------- Jonkers’s threaded compactor ---------------------------------------
@@ -36,8 +22,8 @@ void ThreadedCompactionGC::thread(address *ref)
     // we will use size field to thread
     static_assert(sizeof(ObjectLayout::_size) == sizeof(address), "sanity");
 
-    address obj = *ref;                               // address of the object
-    if (obj != NULL && _allocator->is_heap_addr(obj)) // constant objects are not relocatable
+    address obj = *ref;                                           // address of the object
+    if (obj != NULL && Allocator::allocator()->is_heap_addr(obj)) // constant objects are not relocatable
     {
         ObjectLayout *hdr = (ObjectLayout *)obj;
 
@@ -48,13 +34,27 @@ void ThreadedCompactionGC::thread(address *ref)
     }
 }
 
+void ThreadedCompactionGC::thread_root(void *obj, address *root, const address *meta)
+{
+    ThreadedCompactionGC *gc = (ThreadedCompactionGC *)obj;
+
+    // hack to check for in update
+    gc->_stack_start = (address)std::min((address *)gc->_stack_start, root);
+    gc->_stack_end = (address)std::max((address *)gc->_stack_end, root);
+
+    // book suggests "thread(*fld)". Mistake?
+    gc->thread(root);
+}
+
 void ThreadedCompactionGC::update(address *obj, address addr)
 {
+    Allocator *alloca = Allocator::allocator();
+
     // if it is threaded object, so all references to it was orginized to linked list
     address temp = (address)((ObjectLayout *)obj)->_size;
 
     // if _size field contains a heap pointer - it is a start of the list
-    while (_allocator->is_heap_addr(temp) || (temp >= _stack_start && temp <= _stack_end) ||
+    while (alloca->is_heap_addr(temp) || (temp >= _stack_start && temp <= _stack_end) ||
            (temp == (address)&_runtime_root))
     {
         // we points to fields
@@ -68,43 +68,25 @@ void ThreadedCompactionGC::update(address *obj, address addr)
 void ThreadedCompactionGC::update_forward_references()
 {
     // thread roots
-    StackEntry *r = llvm_gc_root_chain;
-
     _stack_start = (address)-1;
     _stack_end = 0;
 
-    while (r)
-    {
-        assert(r->_map->_num_meta == 0); // we don't use metadata
-
-        int num_roots = r->_map->_num_roots;
-        for (int i = 0; i < num_roots; i++)
-        {
-            address *root = (address *)(r->_roots + i);
-
-            // hack to check for in update
-            _stack_start = (address)std::min((address *)_stack_start, root);
-            _stack_end = (address)std::max((address *)_stack_end, root);
-
-            // book suggests "thread(*fld)". Mistake?
-            thread(root);
-        }
-
-        r = r->_next;
-    }
+    StackWalker::walker()->process_roots(this, &ThreadedCompactionGC::thread_root);
 
     if (_runtime_root)
     {
         thread(&_runtime_root);
     }
 
-    NextFitAllocator *nxtf_alloca = (NextFitAllocator *)_allocator;
+    NextFitAllocator *nxtf_alloca = (NextFitAllocator *)Allocator::allocator();
 
-    address free = _heap_start;
+    address free = nxtf_alloca->start();
     address scan = free;
 
+    address heap_end = nxtf_alloca->end();
+
     // book suggests scan <= end. Mistake?
-    while (scan < _heap_end)
+    while (scan < heap_end)
     {
         ObjectLayout *obj = (ObjectLayout *)scan;
         size_t obj_size = obj->_size; // can be wrong for marked objects after threading
@@ -146,12 +128,14 @@ void ThreadedCompactionGC::update_forward_references()
 
 void ThreadedCompactionGC::update_backward_references()
 {
-    NextFitAllocator *nxtf_alloca = (NextFitAllocator *)_allocator;
+    NextFitAllocator *nxtf_alloca = (NextFitAllocator *)Allocator::allocator();
 
-    address free = _heap_start;
+    address free = nxtf_alloca->start();
     address scan = free;
 
-    while (scan < _heap_end)
+    address heap_end = nxtf_alloca->end();
+
+    while (scan < heap_end)
     {
         ObjectLayout *obj = (ObjectLayout *)scan;
         size_t obj_size = obj->_size; // can be wrong for marked objects after threading

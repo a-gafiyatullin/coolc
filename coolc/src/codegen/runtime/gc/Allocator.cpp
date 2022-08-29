@@ -7,6 +7,8 @@
 
 using namespace gc;
 
+Allocator *Allocator::AllocatorObj = nullptr;
+
 Allocator::Allocator(const size_t &size)
     : _size(size)
 #ifdef DEBUG
@@ -21,6 +23,17 @@ Allocator::Allocator(const size_t &size)
     }
     _end = _start + _size;
     _pos = _start;
+}
+
+void Allocator::init(const size_t &size)
+{
+    AllocatorObj = new NextFitAllocator(size);
+}
+
+void Allocator::release()
+{
+    delete AllocatorObj;
+    AllocatorObj = nullptr;
 }
 
 void Allocator::exit_with_error(const char *error)
@@ -48,7 +61,7 @@ void Allocator::dump()
     if (PrintGCStatistics)
     {
         fprintf(stderr, "Allocated bytes: %s\n", printable_size(_allocated_size).c_str());
-        fprintf(stderr, "Freed bytes:     %s\n\n", printable_size(_freed_size).c_str());
+        fprintf(stderr, "Freed bytes:     %s\n", printable_size(_freed_size).c_str());
     }
 }
 #endif // DEBUG

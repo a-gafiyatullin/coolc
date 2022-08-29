@@ -1,21 +1,25 @@
 #include "Runtime.h"
-#include "ObjectLayout.hpp"
 #include "gc/GC.hpp"
 #include "gc/Utils.hpp"
 #include "globals.hpp"
-#include <cstdio>
 #include <cstring>
 
 void _init_runtime(int argc, char **argv) // NOLINT
 {
     process_runtime_args(argc, argv);
 
-    gc::GC::init((gc::GC::GcType)GCAlgo, std::max(str_to_size(MaxHeapSize), sizeof(ObjectLayout)));
+    gc::Allocator::init(std::max(str_to_size(MaxHeapSize), sizeof(ObjectLayout)));
+    gc::StackWalker::init();
+    gc::Marker::init();
+    gc::GC::init((gc::GC::GcType)GCAlgo);
 }
 
 void _finish_runtime() // NOLINT
 {
-    gc::GC::finish();
+    gc::GC::release();
+    gc::Marker::release();
+    gc::StackWalker::release();
+    gc::Allocator::release();
 }
 
 ObjectLayout *Object_abort(ObjectLayout *receiver) // NOLINT

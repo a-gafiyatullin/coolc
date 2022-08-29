@@ -32,11 +32,13 @@ void GCStats::dump()
 
 ObjectLayout *GC::allocate(int tag, size_t size, void *disp_tab)
 {
+    Allocator *alloca = Allocator::allocator();
+
     ObjectLayout *object = nullptr;
 
     {
         GCStats phase(GCStats::GCPhase::ALLOCATE);
-        object = _allocator->allocate(tag, size, disp_tab);
+        object = alloca->allocate(tag, size, disp_tab);
     }
 
     if (object == nullptr)
@@ -45,13 +47,13 @@ ObjectLayout *GC::allocate(int tag, size_t size, void *disp_tab)
 
         {
             GCStats phase(GCStats::GCPhase::ALLOCATE);
-            object = _allocator->allocate(tag, size, disp_tab);
+            object = alloca->allocate(tag, size, disp_tab);
         }
     }
 
     if (object == nullptr)
     {
-        _allocator->exit_with_error("cannot allocate memory for object!");
+        alloca->exit_with_error("cannot allocate memory for object!");
     }
 
     return object;
@@ -68,26 +70,26 @@ ObjectLayout *GC::copy(const ObjectLayout *obj)
     return new_obj;
 }
 
-void GC::init(const GcType &type, const size_t &heap_size)
+void GC::init(const GcType &type)
 {
     switch (type)
     {
     case ZEROGC:
-        Gc = new ZeroGC(heap_size);
+        Gc = new ZeroGC();
         break;
     case MARKSWEEPGC:
-        Gc = new MarkSweepGC(heap_size);
+        Gc = new MarkSweepGC();
         break;
     case THREADED_MC_GC:
-        Gc = new ThreadedCompactionGC(heap_size);
+        Gc = new ThreadedCompactionGC();
         break;
     default:
-        Gc = new MarkSweepGC(heap_size);
+        Gc = new MarkSweepGC();
         break;
     };
 }
 
-void GC::finish()
+void GC::release()
 {
     delete Gc;
     Gc = nullptr;
@@ -96,21 +98,4 @@ void GC::finish()
     {
         GCStats::dump();
     }
-}
-
-// -------------------------------------- ZeroGC --------------------------------------
-ZeroGC::ZeroGC(const size_t &size) : GC()
-{
-    _allocator = new Allocator(size);
-
-    _heap_start = _allocator->start();
-    _heap_end = _allocator->end();
-
-    _marker = new ShadowStackMarkerFIFO(_heap_start, _heap_end);
-}
-
-ZeroGC::~ZeroGC()
-{
-    delete _allocator;
-    delete _marker;
 }
