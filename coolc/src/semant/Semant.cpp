@@ -578,16 +578,65 @@ bool Semant::infer_expression_type(const std::shared_ptr<ast::Expression> &expr,
                         [&](const ast::StringExpression &str) { return String; },
                         [&](const ast::IntExpression &number) { return Int; },
                         [&](const ast::ObjectExpression &object) { return infer_object_type(object, scope); },
-                        [&](const ast::BinaryExpression &binary_expr) { return infer_binary_type(binary_expr, scope); },
-                        [&](const ast::UnaryExpression &unary_expr) { return infer_unary_type(unary_expr, scope); },
-                        [&](const ast::NewExpression &alloc) { return infer_new_type(alloc); },
-                        [&](const ast::CaseExpression &branch) { return infer_cases_type(branch, scope); },
-                        [&](const ast::LetExpression &let) { return infer_let_type(let, scope); },
-                        [&](const ast::ListExpression &list) { return infer_sequence_type(list, scope); },
-                        [&](const ast::WhileExpression &loop) { return infer_loop_type(loop, scope); },
-                        [&](const ast::IfExpression &branch) { return infer_if_type(branch, scope); },
-                        [&](const ast::DispatchExpression &dispatch) { return infer_dispatch_type(dispatch, scope); },
-                        [&](const ast::AssignExpression &assign) { return infer_assign_type(assign, scope); }},
+                        [&](const ast::BinaryExpression &binary_expr) {
+                            expr->_can_allocate = true;
+                            return infer_binary_type(binary_expr, scope);
+                        },
+                        [&](const ast::UnaryExpression &unary_expr) {
+                            const auto res = infer_unary_type(unary_expr, scope);
+                            expr->_can_allocate = std::holds_alternative<ast::NegExpression>(unary_expr._base) ||
+                                                  unary_expr._expr->_can_allocate;
+                            return res;
+                        },
+                        [&](const ast::NewExpression &alloc) {
+                            expr->_can_allocate = true;
+                            return infer_new_type(alloc);
+                        },
+                        [&](const ast::CaseExpression &branch) {
+                            const auto res = infer_cases_type(branch, scope);
+                            expr->_can_allocate = branch._expr->_can_allocate;
+                            expr->_can_allocate |= std::any_of(
+                                branch._cases.begin(), branch._cases.end(),
+                                [](const std::shared_ptr<ast::Case> &c) { return c->_expr->_can_allocate; });
+                            return res;
+                        },
+                        [&](const ast::LetExpression &let) {
+                            const auto res = infer_let_type(let, scope);
+                            if (let._expr)
+                            {
+                                expr->_can_allocate = let._expr->_can_allocate;
+                            }
+                            expr->_can_allocate |= let._body_expr->_can_allocate;
+                            return res;
+                        },
+                        [&](const ast::ListExpression &list) {
+                            const auto res = infer_sequence_type(list, scope);
+                            expr->_can_allocate =
+                                std::any_of(list._exprs.begin(), list._exprs.end(),
+                                            [](const std::shared_ptr<ast::Expression> &c) { return c->_can_allocate; });
+                            return res;
+                        },
+                        [&](const ast::WhileExpression &loop) {
+                            const auto res = infer_loop_type(loop, scope);
+                            expr->_can_allocate = loop._body_expr->_can_allocate | loop._predicate->_can_allocate;
+                            return res;
+                        },
+                        [&](const ast::IfExpression &branch) {
+                            const auto res = infer_if_type(branch, scope);
+                            expr->_can_allocate = branch._false_path_expr->_can_allocate |
+                                                  branch._true_path_expr->_can_allocate |
+                                                  branch._predicate->_can_allocate;
+                            return res;
+                        },
+                        [&](const ast::DispatchExpression &dispatch) {
+                            expr->_can_allocate = true;
+                            return infer_dispatch_type(dispatch, scope);
+                        },
+                        [&](const ast::AssignExpression &assign) {
+                            const auto res = infer_assign_type(assign, scope);
+                            expr->_can_allocate = assign._expr->_can_allocate;
+                            return res;
+                        }},
         expr->_data);
 
     if (_error_line_number == -1)

@@ -6,7 +6,10 @@
 #include <utility>
 #include <vector>
 
+#ifdef LLVM
 extern bool UseArchSpecFeatures;
+extern bool ReduceGCSpills;
+#endif // LLVM
 
 /**
  * @brief Process command line arguments

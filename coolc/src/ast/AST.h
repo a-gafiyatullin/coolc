@@ -236,6 +236,7 @@ struct Expression
     int _line_number;
 
     std::shared_ptr<Type> _type;
+    bool _can_allocate = false;
 };
 
 template <class... Ts> struct overloaded : Ts...

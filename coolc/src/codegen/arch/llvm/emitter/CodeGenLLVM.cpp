@@ -56,6 +56,55 @@ void CodeGenLLVM::add_fields()
     }
 }
 
+void CodeGenLLVM::allocate_shadow_stack(int max_stack)
+{
+    if (_runtime.gc_strategy() == RuntimeLLVM::SHADOW_STACK)
+    {
+        _stack.resize(max_stack);
+        _current_stack_size = 0;
+        _need_reload = false;
+#ifdef DEBUG
+        _max_stack_size = 0;
+#endif // DEBUG
+    }
+}
+
+void CodeGenLLVM::set_need_reload(bool need_reload)
+{
+    _need_reload = need_reload;
+}
+
+void CodeGenLLVM::init_shadow_stack(const std::vector<llvm::Value *> &args)
+{
+    if (_runtime.gc_strategy() == RuntimeLLVM::SHADOW_STACK)
+    {
+        // stack slots for temporaries
+        for (int i = 0; i < _stack.size(); i++)
+        {
+            _stack[i] = __ CreateAlloca(_runtime.stack_slot_type());
+        }
+
+        auto *const gcroot = llvm::Intrinsic::getDeclaration(&_module, llvm::Intrinsic::gcroot);
+
+        // now register this slots
+        for (int i = 0; i < args.size(); i++)
+        {
+            __ CreateCall(gcroot, {__ CreateBitCast(args.at(i), gcroot->getArg(0)->getType()), _int0_8_ptr});
+        }
+
+        for (int i = 0; i < _stack.size(); i++)
+        {
+            __ CreateCall(gcroot, {_stack[i], _int0_8_ptr});
+        }
+
+        // empty stack slots
+        for (int i = 0; i < _stack.size(); i++)
+        {
+            __ CreateStore(_int0_8_ptr, _stack[i]);
+        }
+    }
+}
+
 void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &method)
 {
     // it is dummies for basic classes. There are external symbols
@@ -83,46 +132,17 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
     const auto &m = std::get<ast::MethodFeature>(method->_base);
     const auto &formals = m._formals;
 
-    std::vector<llvm::Value *> args_stack;
-
-    const auto gc_strategy = _runtime.gc_strategy();
-    if (gc_strategy == RuntimeLLVM::SHADOW_STACK)
-    {
-        _stack.resize(m._expression_stack);
-        _current_stack_size = 0;
-#ifdef DEBUG
-        _max_stack_size = 0;
-#endif // DEBUG
-    }
+    allocate_shadow_stack(m._expression_stack);
 
     // stack slots for args
+    std::vector<llvm::Value *> args_stack;
     for (int i = 0; i < func->arg_size(); i++)
     {
         auto *const arg = func->getArg(i);
         args_stack.push_back(__ CreateAlloca(arg->getType()));
     }
 
-    if (gc_strategy == RuntimeLLVM::SHADOW_STACK)
-    {
-        // stack slots for temporaries
-        for (int i = 0; i < _stack.size(); i++)
-        {
-            _stack[i] = __ CreateAlloca(_runtime.stack_slot_type());
-        }
-
-        auto *const gcroot = llvm::Intrinsic::getDeclaration(&_module, llvm::Intrinsic::gcroot);
-
-        // now register this slots
-        for (int i = 0; i < args_stack.size(); i++)
-        {
-            __ CreateCall(gcroot, {__ CreateBitCast(args_stack.at(i), gcroot->getArg(0)->getType()), _int0_8_ptr});
-        }
-
-        for (int i = 0; i < _stack.size(); i++)
-        {
-            __ CreateCall(gcroot, {_stack[i], _int0_8_ptr});
-        }
-    }
+    init_shadow_stack(args_stack);
 
     for (auto i = 0; i < func->arg_size(); i++)
     {
@@ -133,51 +153,48 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
                           Symbol(args_stack[i], i != 0 ? formals[i - 1]->_type : _current_class->_type));
     }
 
-    if (gc_strategy == RuntimeLLVM::SHADOW_STACK)
-    {
-        // empty stack slots
-        for (int i = 0; i < _stack.size(); i++)
-        {
-            __ CreateStore(_int0_8_ptr, _stack[i]);
-        }
-    }
-
     __ CreateRet(maybe_cast(emit_expr(method->_expr), func->getReturnType()));
+
+    _table.pop_scope();
+
+    _optimizer.run(*func);
 
 #ifdef DEBUG
     verify(func);
 #endif // DEBUG
 
-    _optimizer.run(*func);
-
-    if (gc_strategy == RuntimeLLVM::SHADOW_STACK)
-    {
-        GUARANTEE_DEBUG(_max_stack_size == _stack.size());
-    }
-
-    _table.pop_scope();
+    GUARANTEE_DEBUG(ReduceGCSpills || _runtime.gc_strategy() != RuntimeLLVM::SHADOW_STACK ||
+                    _max_stack_size == _stack.size());
 }
 
 void CodeGenLLVM::preserve_value_for_gc(llvm::Value *value)
 {
-    __ CreateStore(__ CreateBitCast(value, _runtime.stack_slot_type()), _stack.at(_current_stack_size++));
+    if (_runtime.gc_strategy() == RuntimeLLVM::SHADOW_STACK)
+    {
+        __ CreateStore(__ CreateBitCast(value, _runtime.stack_slot_type()), _stack.at(_current_stack_size++));
 #ifdef DEBUG
-    _max_stack_size = std::max(_current_stack_size, _max_stack_size);
+        _max_stack_size = std::max(_current_stack_size, _max_stack_size);
 #endif // DEBUG
+    }
 }
 
 void CodeGenLLVM::pop_dead_value(int slots)
 {
-    for (int i = 0; i < slots; i++)
+    if (_runtime.gc_strategy() == RuntimeLLVM::SHADOW_STACK)
     {
-        _current_stack_size--;
-        __ CreateStore(_int0_8_ptr, _stack.at(_current_stack_size));
+        for (int i = 0; i < slots; i++)
+        {
+            _current_stack_size--;
+            __ CreateStore(_int0_8_ptr, _stack.at(_current_stack_size));
+        }
     }
 }
 
-llvm::Value *CodeGenLLVM::reload_value_from_stack(int slot_num, llvm::Type *type)
+llvm::Value *CodeGenLLVM::reload_value_from_stack(int slot_num, llvm::Value *orig_value)
 {
-    return __ CreateLoad(type, _stack.at(slot_num));
+    return _runtime.gc_strategy() == RuntimeLLVM::SHADOW_STACK
+               ? __ CreateLoad(orig_value->getType(), _stack.at(slot_num))
+               : orig_value;
 }
 
 llvm::Value *CodeGenLLVM::maybe_cast(llvm::Value *val, llvm::Type *type)
@@ -216,12 +233,6 @@ void CodeGenLLVM::emit_class_init_method_inner()
 {
     const auto &klass = _builder->klass(_current_class->_type->_string);
 
-    _stack.resize(_current_class->_expression_stack);
-    _current_stack_size = 0;
-#ifdef DEBUG
-    _max_stack_size = 0;
-#endif // DEBUG
-
     // Note, that init method don't init header
     auto *const func = _module.getFunction(klass->init_method());
 
@@ -236,32 +247,17 @@ void CodeGenLLVM::emit_class_init_method_inner()
     // self is visible
     _table.push_scope();
 
-    auto *const self_formal = func->getArg(0);
-    const auto &self_local = __ CreateAlloca(self_formal->getType());
+    allocate_shadow_stack(_current_class->_expression_stack);
 
-    for (int i = 0; i < _stack.size(); i++)
-    {
-        _stack[i] = __ CreateAlloca(_runtime.stack_slot_type());
-    }
+    // stack slots for args
+    std::vector<llvm::Value *> args_stack;
+    args_stack.push_back(__ CreateAlloca(func->getArg(0)->getType()));
 
-    // register slots
-    auto *const gcroot = llvm::Intrinsic::getDeclaration(&_module, llvm::Intrinsic::gcroot);
+    init_shadow_stack(args_stack);
 
-    __ CreateCall(gcroot, {__ CreateBitCast(self_local, gcroot->getArg(0)->getType()), _int0_8_ptr});
-
-    for (int i = 0; i < _stack.size(); i++)
-    {
-        __ CreateCall(gcroot, {_stack[i], _int0_8_ptr});
-    }
-
-    __ CreateStore(self_formal, self_local);
-    _table.add_symbol(SelfObject, Symbol(self_local, _current_class->_type));
-
-    // initialize temporaries
-    for (int i = 0; i < _stack.size(); i++)
-    {
-        __ CreateStore(_int0_8_ptr, _stack[i]);
-    }
+    // initialize slot with self object
+    __ CreateStore(func->getArg(0), args_stack.at(0));
+    _table.add_symbol(SelfObject, Symbol(args_stack.at(0), _current_class->_type));
 
     auto *const klass_struct = _data.class_struct(klass);
 
@@ -354,13 +350,14 @@ void CodeGenLLVM::emit_class_init_method_inner()
 
     _table.pop_scope();
 
+    _optimizer.run(*func);
+
 #ifdef DEBUG
     verify(func);
 #endif // DEBUG
 
-    _optimizer.run(*func);
-
-    GUARANTEE_DEBUG(_max_stack_size == _stack.size());
+    GUARANTEE_DEBUG(ReduceGCSpills || _runtime.gc_strategy() != RuntimeLLVM::SHADOW_STACK ||
+                    _max_stack_size == _stack.size());
 }
 
 void CodeGenLLVM::make_control_flow(llvm::Value *pred, llvm::BasicBlock *&true_block, llvm::BasicBlock *&false_block,
@@ -409,10 +406,18 @@ llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &ex
     auto *lhs = emit_expr(expr._lhs);
 
     // preserve lhs on stack for gc
-    preserve_value_for_gc(lhs);
+    bool cannot_allocate = ReduceGCSpills && !expr._rhs->_can_allocate;
+    if (!cannot_allocate)
+    {
+        preserve_value_for_gc(lhs);
+    }
 
     auto *const rhs = emit_expr(expr._rhs);
-    lhs = reload_value_from_stack(_current_stack_size - 1, lhs->getType());
+
+    if (!cannot_allocate)
+    {
+        lhs = reload_value_from_stack(_current_stack_size - 1, lhs);
+    }
 
     auto logical_result = false;
     llvm::Value *op_result = nullptr;
@@ -480,7 +485,10 @@ llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &ex
         static_cast<llvm::PHINode *>(op_result)->addIncoming(false_branch_res, false_block);
     }
 
-    pop_dead_value();
+    if (!cannot_allocate)
+    {
+        pop_dead_value();
+    }
 
     return logical_result ? op_result : emit_allocate_int(op_result);
 }
@@ -583,7 +591,7 @@ llvm::Value *CodeGenLLVM::emit_new_inner_helper(const std::shared_ptr<ast::Type>
 
     if (preserve_before_init)
     {
-        object = reload_value_from_stack(_current_stack_size - 1, object->getType());
+        object = reload_value_from_stack(_current_stack_size - 1, object);
         pop_dead_value();
     }
 
@@ -630,7 +638,7 @@ llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass
     __ CreateCall(object_init->getFunctionType(), init_method,
                   {maybe_cast(raw_object, object_init->getArg(0)->getType())});
 
-    raw_object = reload_value_from_stack(_current_stack_size - 1, raw_object->getType());
+    raw_object = reload_value_from_stack(_current_stack_size - 1, raw_object);
 
     pop_dead_value();
     return raw_object;
@@ -840,15 +848,36 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
 {
     auto *const func = __ GetInsertBlock()->getParent();
 
+    int slots_num = 0;
+    int expr_args_size = expr._args.size();
+    bool cannot_allocate = false;
+
     // prepare args
     std::vector<llvm::Value *> args;
     args.push_back(nullptr); // dummy for the first arg
-    for (const auto &arg : expr._args)
+    for (int i = 0; i < expr_args_size - 1; i++)
     {
-        args.push_back(emit_expr(arg));
+        args.push_back(emit_expr(expr._args.at(i)));
 
-        // preserve args for GC
-        preserve_value_for_gc(args.back());
+        cannot_allocate = ReduceGCSpills && !expr._args.at(i + 1)->_can_allocate;
+        if (!cannot_allocate)
+        {
+            // preserve args for GC
+            preserve_value_for_gc(args.back());
+            slots_num++;
+        }
+    }
+
+    if (!expr._args.empty())
+    {
+        args.push_back(emit_expr(expr._args.back()));
+        cannot_allocate = ReduceGCSpills && !expr._expr->_can_allocate;
+        if (!cannot_allocate)
+        {
+            // preserve args for GC
+            preserve_value_for_gc(args.back());
+            slots_num++;
+        }
     }
 
     // get receiver
@@ -856,13 +885,30 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
     args[0] = receiver;
 
     // reload args after possible relocation
-    int slots_num = expr._args.size();
-    for (int i = 1; i < args.size(); i++)
+    int n = 0;
+    for (int i = 0; i < expr_args_size - 1; i++)
     {
-        args[i] = reload_value_from_stack(_current_stack_size - (slots_num - i + 1), args.at(i)->getType());
+        cannot_allocate = ReduceGCSpills && !expr._args.at(i + 1)->_can_allocate;
+        if (!cannot_allocate)
+        {
+            args[i + 1] = reload_value_from_stack(_current_stack_size - (slots_num - n), args.at(i + 1));
+            n++;
+        }
+    }
+
+    if (!expr._args.empty())
+    {
+        cannot_allocate = ReduceGCSpills && !expr._expr->_can_allocate;
+        if (!cannot_allocate)
+        {
+            args[expr_args_size + 1] = reload_value_from_stack(_current_stack_size - (slots_num - n), args.back());
+            n++;
+        }
     }
 
     // pop stack slots now to reduce roots number for mark phase
+    assert(ReduceGCSpills || slots_num == expr_args_size);
+    assert(n == slots_num);
     pop_dead_value(slots_num);
 
     auto *const phi_type =
@@ -1049,13 +1095,9 @@ void CodeGenLLVM::emit_runtime_main()
     auto *entry = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::ENTRY_BLOCK), runtime_main);
     __ SetInsertPoint(entry);
 
-    auto *const gcroot = llvm::Intrinsic::getDeclaration(&_module, llvm::Intrinsic::gcroot);
-
     // need at least one slot for main object
-    _stack.resize(1);
-    _stack[0] = __ CreateAlloca(_runtime.stack_slot_type());
-    __ CreateCall(gcroot, {_stack.at(0), _int0_8_ptr});
-    _current_stack_size = 0;
+    allocate_shadow_stack(1);
+    init_shadow_stack({});
 
     // first init runtime
     auto *const init_rt = _runtime.symbol_by_id(RuntimeLLVM::INIT_RUNTIME)->_func;
@@ -1073,11 +1115,11 @@ void CodeGenLLVM::emit_runtime_main()
 
     __ CreateRet(_int0_32);
 
+    _optimizer.run(*runtime_main);
+
 #ifdef DEBUG
     verify(runtime_main);
 #endif // DEBUG
-
-    _optimizer.run(*runtime_main);
 }
 
 #define EXIT_ON_ERROR(cond, error)                                                                                     \

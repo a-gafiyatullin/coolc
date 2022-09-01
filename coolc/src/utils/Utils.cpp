@@ -53,7 +53,10 @@ bool TraceSemant = false;
 bool TraceCodeGen = false;
 #endif // DEBUG
 
+#ifdef LLVM
 bool UseArchSpecFeatures = true;
+bool ReduceGCSpills = false;
+#endif // LLVM
 
 #define flag_pair(flag)                                                                                                \
     {                                                                                                                  \
@@ -62,9 +65,18 @@ bool UseArchSpecFeatures = true;
 
 std::unordered_map<std::string, bool *> BoolFlags = {
 #ifdef DEBUG
-    flag_pair(TraceLexer),    flag_pair(TokensOnly),         flag_pair(TraceLexer),
-    flag_pair(PrintFinalAST), flag_pair(TraceParser),        flag_pair(TraceSemant),
-    flag_pair(TraceCodeGen),  flag_pair(UseArchSpecFeatures)
+    flag_pair(TraceLexer),
+    flag_pair(TokensOnly),
+    flag_pair(TraceLexer),
+    flag_pair(PrintFinalAST),
+    flag_pair(TraceParser),
+    flag_pair(TraceSemant),
+    flag_pair(TraceCodeGen)
+#ifdef LLVM
+        ,
+    flag_pair(UseArchSpecFeatures),
+    flag_pair(ReduceGCSpills)
+#endif // LLVM
 #endif // DEBUG
 };
 
