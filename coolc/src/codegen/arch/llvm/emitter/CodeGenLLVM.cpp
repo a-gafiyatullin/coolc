@@ -8,8 +8,8 @@ using namespace codegen;
 
 CodeGenLLVM::CodeGenLLVM(const std::shared_ptr<semant::ClassNode> &root)
     : CodeGen(std::make_shared<KlassBuilderLLVM>(root)), _ir_builder(_context),
-      _module(root->_class->_file_name, _context), _runtime(_module), _data(_builder, _module, _runtime),
-      _true_obj(_data.bool_const(true)), _false_obj(_data.bool_const(false)),
+      _module(root->_class->_file_name, _context), _runtime(_module, RuntimeLLVM::SHADOW_STACK),
+      _data(_builder, _module, _runtime), _true_obj(_data.bool_const(true)), _false_obj(_data.bool_const(false)),
       _true_val(llvm::ConstantInt::get(_runtime.default_int(), TrueValue)),
       _false_val(llvm::ConstantInt::get(_runtime.default_int(), FalseValue)),
       _int0_64(llvm::ConstantInt::get(_runtime.int64_type(), 0, true)),
@@ -69,7 +69,7 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
 
     GUARANTEE_DEBUG(func);
 
-    func->setGC(_runtime.gc_strategy(RuntimeLLVM::SHADOW_STACK));
+    func->setGC(_runtime.gc_strategy_name());
 
     // Create a new basic block to start insertion into.
     auto *entry = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::ENTRY_BLOCK), func);
@@ -85,11 +85,15 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
 
     std::vector<llvm::Value *> args_stack;
 
-    _stack.resize(m._expression_stack);
-    _current_stack_size = 0;
+    const auto gc_strategy = _runtime.gc_strategy();
+    if (gc_strategy == RuntimeLLVM::SHADOW_STACK)
+    {
+        _stack.resize(m._expression_stack);
+        _current_stack_size = 0;
 #ifdef DEBUG
-    _max_stack_size = 0;
+        _max_stack_size = 0;
 #endif // DEBUG
+    }
 
     // stack slots for args
     for (int i = 0; i < func->arg_size(); i++)
@@ -98,23 +102,26 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
         args_stack.push_back(__ CreateAlloca(arg->getType()));
     }
 
-    // stack slots for temporaries
-    for (int i = 0; i < _stack.size(); i++)
+    if (gc_strategy == RuntimeLLVM::SHADOW_STACK)
     {
-        _stack[i] = __ CreateAlloca(_runtime.stack_slot_type());
-    }
+        // stack slots for temporaries
+        for (int i = 0; i < _stack.size(); i++)
+        {
+            _stack[i] = __ CreateAlloca(_runtime.stack_slot_type());
+        }
 
-    auto *const gcroot = llvm::Intrinsic::getDeclaration(&_module, llvm::Intrinsic::gcroot);
+        auto *const gcroot = llvm::Intrinsic::getDeclaration(&_module, llvm::Intrinsic::gcroot);
 
-    // now register this slots
-    for (int i = 0; i < args_stack.size(); i++)
-    {
-        __ CreateCall(gcroot, {__ CreateBitCast(args_stack.at(i), gcroot->getArg(0)->getType()), _int0_8_ptr});
-    }
+        // now register this slots
+        for (int i = 0; i < args_stack.size(); i++)
+        {
+            __ CreateCall(gcroot, {__ CreateBitCast(args_stack.at(i), gcroot->getArg(0)->getType()), _int0_8_ptr});
+        }
 
-    for (int i = 0; i < _stack.size(); i++)
-    {
-        __ CreateCall(gcroot, {_stack[i], _int0_8_ptr});
+        for (int i = 0; i < _stack.size(); i++)
+        {
+            __ CreateCall(gcroot, {_stack[i], _int0_8_ptr});
+        }
     }
 
     for (auto i = 0; i < func->arg_size(); i++)
@@ -126,10 +133,13 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
                           Symbol(args_stack[i], i != 0 ? formals[i - 1]->_type : _current_class->_type));
     }
 
-    // empty stack slots
-    for (int i = 0; i < _stack.size(); i++)
+    if (gc_strategy == RuntimeLLVM::SHADOW_STACK)
     {
-        __ CreateStore(_int0_8_ptr, _stack[i]);
+        // empty stack slots
+        for (int i = 0; i < _stack.size(); i++)
+        {
+            __ CreateStore(_int0_8_ptr, _stack[i]);
+        }
     }
 
     __ CreateRet(maybe_cast(emit_expr(method->_expr), func->getReturnType()));
@@ -140,7 +150,11 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
 
     _optimizer.run(*func);
 
-    GUARANTEE_DEBUG(_max_stack_size == _stack.size());
+    if (gc_strategy == RuntimeLLVM::SHADOW_STACK)
+    {
+        GUARANTEE_DEBUG(_max_stack_size == _stack.size());
+    }
+
     _table.pop_scope();
 }
 
@@ -213,7 +227,7 @@ void CodeGenLLVM::emit_class_init_method_inner()
 
     GUARANTEE_DEBUG(func);
 
-    func->setGC(_runtime.gc_strategy(RuntimeLLVM::SHADOW_STACK));
+    func->setGC(_runtime.gc_strategy_name());
 
     // Create a new basic block to start insertion into.
     auto *entry = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::ENTRY_BLOCK), func);
@@ -1030,7 +1044,7 @@ void CodeGenLLVM::emit_runtime_main()
                                                        },
                                                        false),
                                llvm::Function::ExternalLinkage, static_cast<std::string>(RUNTIME_MAIN_FUNC), &_module);
-    runtime_main->setGC(_runtime.gc_strategy(RuntimeLLVM::SHADOW_STACK));
+    runtime_main->setGC(_runtime.gc_strategy_name());
 
     auto *entry = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::ENTRY_BLOCK), runtime_main);
     __ SetInsertPoint(entry);

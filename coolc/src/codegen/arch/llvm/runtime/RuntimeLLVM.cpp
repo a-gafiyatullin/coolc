@@ -11,8 +11,8 @@ RuntimeMethod::RuntimeMethod(llvm::Module &module, const std::string &name, llvm
     runtime._symbol_by_name.insert({name, this});
 }
 
-RuntimeLLVM::RuntimeLLVM(llvm::Module &module)
-    : _int32_type(llvm::Type::getInt32Ty(module.getContext())),
+RuntimeLLVM::RuntimeLLVM(llvm::Module &module, const RuntimeLLVMGCStrategy &gc_strategy)
+    : _gc_strategy(gc_strategy), _int32_type(llvm::Type::getInt32Ty(module.getContext())),
       _int64_type(llvm::Type::getInt64Ty(module.getContext())), _void_type(llvm::Type::getVoidTy(module.getContext())),
       _int8_type(llvm::Type::getInt8Ty(module.getContext())), _default_int(_int64_type),
       _stack_slot_type(_int8_type->getPointerTo()), _void_ptr_type(_void_type->getPointerTo()),

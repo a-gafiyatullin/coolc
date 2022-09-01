@@ -107,6 +107,7 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
 
     // GC
     const RuntimeMethod _gc_alloc;
+    const RuntimeLLVMGCStrategy _gc_strategy;
 
     // runtime init
     const RuntimeMethod _init_runtime;
@@ -117,8 +118,9 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
      * @brief Construct a new Runtime object
      *
      * @param module llvm::Module for function declarations
+     * @param gc_strategy chosen GC Strategy
      */
-    explicit RuntimeLLVM(llvm::Module &module);
+    explicit RuntimeLLVM(llvm::Module &module, const RuntimeLLVMGCStrategy &gc_strategy);
 
     /**
      * @brief Get header layout element type
@@ -207,14 +209,23 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
     }
 
     /**
-     * @brief Get gc strategy by id
+     * @brief Get gc strategy name
      *
-     * @param id gc strategy id
      * @return string for this strategy
      */
-    std::string gc_strategy(const RuntimeLLVMGCStrategy &id) const
+    inline std::string gc_strategy_name() const
     {
-        return GC_STRATEGIES[id];
+        return GC_STRATEGIES[_gc_strategy];
+    }
+
+    /**
+     * @brief Get a chosen GC strategy
+     *
+     * @return int Strategy identifier
+     */
+    inline int gc_strategy() const
+    {
+        return _gc_strategy;
     }
 };
 }; // namespace codegen
