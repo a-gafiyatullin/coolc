@@ -901,7 +901,7 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
         cannot_allocate = ReduceGCSpills && !expr._expr->_can_allocate;
         if (!cannot_allocate)
         {
-            args[expr_args_size + 1] = reload_value_from_stack(_current_stack_size - (slots_num - n), args.back());
+            args[expr_args_size] = reload_value_from_stack(_current_stack_size - (slots_num - n), args.back());
             n++;
         }
     }

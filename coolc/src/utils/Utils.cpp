@@ -55,7 +55,7 @@ bool TraceCodeGen = false;
 
 #ifdef LLVM
 bool UseArchSpecFeatures = true;
-bool ReduceGCSpills = false;
+bool ReduceGCSpills = true;
 #endif // LLVM
 
 #define flag_pair(flag)                                                                                                \
