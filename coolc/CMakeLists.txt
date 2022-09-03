@@ -4,6 +4,7 @@ project(coolc)
 option(ASAN "Build with AddressSanitizer" OFF)
 option(UBSAN "Build with UndefinedBehaviorSanitizer" OFF)
 set(ARCH "LLVM" CACHE STRING "Target architecture")
+set(GCTYPE "LLVM_SHADOW_STACK" CACHE STRING "GC")
 
 execute_process(
     COMMAND sh -c "rm -rf ${PROJECT_SOURCE_DIR}/bin"
@@ -32,6 +33,9 @@ if(ARCH STREQUAL "LLVM")
     if (GCTYPE STREQUAL "LLVM_SHADOW_STACK")
       set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DLLVM_SHADOW_STACK")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLLVM_SHADOW_STACK")
+    elseif(GCTYPE STREQUAL "LLVM_STATEPOINT_EXAMPLE")
+      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DLLVM_STATEPOINT_EXAMPLE")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLLVM_STATEPOINT_EXAMPLE")
     endif()
 endif()
 
@@ -129,3 +133,5 @@ if((CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)" AND ARCH STREQU
     target_link_libraries(codegen_tests ${GTEST_LIBRARIES} pthread ${GTEST_MAIN_LIBRARIES})
     add_test(CodegenTests ${EXECUTABLE_OUTPUT_PATH}/codegen_tests)
 endif()
+
+unset(ARCH CACHE)

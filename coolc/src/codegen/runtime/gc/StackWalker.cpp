@@ -2,12 +2,9 @@
 
 using namespace gc;
 
-#ifndef LLVM_SHADOW_STACK
-StackEntry *llvm_gc_root_chain = NULL;
-#endif // !LLVM_SHADOW_STACK
-
 StackWalker *StackWalker::Walker = nullptr;
 
+#ifdef LLVM_SHADOW_STACK
 void ShadowStackWalker::process_roots(void *obj, void (*visitor)(void *obj, address *root, const address *meta))
 {
     StackEntry *r = llvm_gc_root_chain;
@@ -25,14 +22,19 @@ void ShadowStackWalker::process_roots(void *obj, void (*visitor)(void *obj, addr
         r = r->_next;
     }
 }
+#endif // LLVM_SHADOW_STACK
 
 void StackWalker::init()
 {
+#ifdef LLVM_SHADOW_STACK
     Walker = new ShadowStackWalker;
+#endif // LLVM_SHADOW_STACK
 }
 
 void StackWalker::release()
 {
+#if defined(LLVM_SHADOW_STACK) || defined(LLVM_STATEPOINT_EXAMPLE)
     delete Walker;
     Walker = nullptr;
+#endif // LLVM_SHADOW_STACK || LLVM_STATEPOINT_EXAMPLE
 }

@@ -43,8 +43,16 @@ do
         result_args+=" -DARCH:STRING=MIPS"
         shift
     ;;
+    -no-gc)
+        result_args+=" -DGCTYPE:STRING=NO_GC"
+        shift
+    ;;
     -shadow-stack-gc)
         result_args+=" -DGCTYPE:STRING=LLVM_SHADOW_STACK"
+        shift
+    ;;
+    -statepoint-example-gc)
+        result_args+=" -DGCTYPE:STRING=LLVM_STATEPOINT_EXAMPLE"
         shift
     ;;
     -test)
@@ -53,10 +61,6 @@ do
     ;;
     -llvm)
         result_args+=" -DARCH:STRING=LLVM"
-        shift
-    ;;
-    -native)
-        result_args+=" -DNATIVE=ON"
         shift
     ;;
     -*|--*)

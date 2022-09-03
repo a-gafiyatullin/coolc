@@ -15,13 +15,13 @@ bool PrintAllocatedObjects = false;
 
 bool PrintGCStatistics = false;
 
-#ifdef LLVM_SHADOW_STACK
+#if defined(LLVM_SHADOW_STACK) || defined(LLVM_STATEPOINT_EXAMPLE)
 std::string MaxHeapSize = "6Kb";
 int GCAlgo = 2; // ThreadedCompactionGC
 #else
 int GCAlgo = 0; // ZeroGC
 std::string MaxHeapSize = "384Kb";
-#endif // LLVM_SHADOW_STACK
+#endif // LLVM_SHADOW_STACK || LLVM_STATEPOINT_EXAMPLE
 
 const std::unordered_map<std::string, bool *> BoolFlags = {
 #ifdef DEBUG

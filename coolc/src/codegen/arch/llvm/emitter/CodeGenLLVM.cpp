@@ -15,7 +15,8 @@ CodeGenLLVM::CodeGenLLVM(const std::shared_ptr<semant::ClassNode> &root)
       _int0_64(llvm::ConstantInt::get(_runtime.int64_type(), 0, true)),
       _int0_32(llvm::ConstantInt::get(_runtime.int32_type(), 0, true)),
       _int0_8(llvm::ConstantInt::get(_runtime.int8_type(), 0, true)),
-      _int0_8_ptr(llvm::ConstantPointerNull::get(_runtime.stack_slot_type())), _optimizer(&_module)
+      _int0_8_ptr(llvm::ConstantPointerNull::get(_runtime.int8_type()->getPointerTo())),
+      _stack_slot_null(llvm::ConstantPointerNull::get(_runtime.stack_slot_type())), _optimizer(&_module)
 {
     GUARANTEE_DEBUG(_true_obj);
     GUARANTEE_DEBUG(_false_obj);
@@ -96,7 +97,7 @@ void CodeGenLLVM::init_shadow_stack(const std::vector<llvm::Value *> &args)
     // empty stack slots
     for (int i = 0; i < _stack.size(); i++)
     {
-        __ CreateStore(_int0_8_ptr, _stack[i]);
+        __ CreateStore(_stack_slot_null, _stack[i]);
     }
 }
 #endif // LLVM_SHADOW_STACK
@@ -113,8 +114,6 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
         _builder->klass(_current_class->_type->_string)->method_full_name(method->_object->_object));
 
     GUARANTEE_DEBUG(func);
-
-    func->setGC(_runtime.gc_strategy_name());
 
     // Create a new basic block to start insertion into.
     auto *entry = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::ENTRY_BLOCK), func);
@@ -186,7 +185,7 @@ void CodeGenLLVM::pop_dead_value(int slots)
     for (int i = 0; i < slots; i++)
     {
         _current_stack_size--;
-        __ CreateStore(_int0_8_ptr, _stack.at(_current_stack_size));
+        __ CreateStore(_stack_slot_null, _stack.at(_current_stack_size));
     }
 }
 
@@ -268,8 +267,6 @@ void CodeGenLLVM::emit_class_init_method_inner()
     auto *const func = _module.getFunction(klass->init_method());
 
     GUARANTEE_DEBUG(func);
-
-    func->setGC(_runtime.gc_strategy_name());
 
     // Create a new basic block to start insertion into.
     auto *entry = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::ENTRY_BLOCK), func);
@@ -357,7 +354,7 @@ void CodeGenLLVM::emit_class_init_method_inner()
 
         __ CreateCall(_module.getFunction(parent->init_method()),
                       // it's ok to use getArg(0) here, because safepoint is impossible
-                      __ CreateBitCast(func->getArg(0), parent_struct->getPointerTo()));
+                      __ CreateBitCast(func->getArg(0), parent_struct->getPointerTo(_runtime.HEAP_ADDR_SPACE)));
     }
 
     // Now initialize
@@ -483,8 +480,8 @@ llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &ex
         logical_result = true;
 
         // cast to void pointers for compare
-        auto *const raw_lhs = __ CreateBitCast(lhs, _runtime.void_ptr_type());
-        auto *const raw_rhs = __ CreateBitCast(rhs, _runtime.void_ptr_type());
+        auto *const raw_lhs = __ CreateBitCast(lhs, _runtime.heap_ptr_type());
+        auto *const raw_rhs = __ CreateBitCast(rhs, _runtime.heap_ptr_type());
 
         auto *const is_same_ref = __ CreateICmpEQ(raw_lhs, raw_rhs);
 
@@ -566,7 +563,8 @@ llvm::Value *CodeGenLLVM::emit_string_expr(const ast::StringExpression &expr,
                                            const std::shared_ptr<ast::Type> &expr_type)
 {
     static auto *const GENERIC_STRING_TYPE = _data.class_struct(_builder->klass(BaseClassesNames[BaseClasses::STRING]));
-    return __ CreateBitCast(_data.string_const(expr._string), GENERIC_STRING_TYPE->getPointerTo());
+    return __ CreateBitCast(_data.string_const(expr._string),
+                            GENERIC_STRING_TYPE->getPointerTo(_runtime.HEAP_ADDR_SPACE));
 }
 
 llvm::Value *CodeGenLLVM::emit_object_expr_inner(const ast::ObjectExpression &expr,
@@ -592,15 +590,17 @@ llvm::Value *CodeGenLLVM::emit_object_expr_inner(const ast::ObjectExpression &ex
         type = object._value_type;
     }
 
-    return __ CreateLoad(_data.class_struct(_builder->klass(type->_string))->getPointerTo(), ptr);
+    return __ CreateLoad(_data.class_struct(_builder->klass(type->_string))->getPointerTo(_runtime.HEAP_ADDR_SPACE),
+                         ptr);
 }
 
 llvm::Value *CodeGenLLVM::emit_load_self()
 {
     const auto &self_val = _table.symbol(SelfObject);
 
-    return __ CreateLoad(_data.class_struct(_builder->klass(self_val._value_type->_string))->getPointerTo(),
-                         self_val._value._ptr);
+    return __ CreateLoad(
+        _data.class_struct(_builder->klass(self_val._value_type->_string))->getPointerTo(_runtime.HEAP_ADDR_SPACE),
+        self_val._value._ptr);
 }
 
 llvm::Value *CodeGenLLVM::emit_new_inner_helper(const std::shared_ptr<ast::Type> &klass_type, bool preserve_before_init)
@@ -612,11 +612,11 @@ llvm::Value *CodeGenLLVM::emit_new_inner_helper(const std::shared_ptr<ast::Type>
     // prepare tag, size and dispatch table
     auto *const tag = llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag());
     auto *const size = llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size());
-    auto *const disp_tab = __ CreateBitCast(_data.class_disp_tab(klass), _runtime.void_ptr_type());
+    auto *const disp_tab = __ CreateBitCast(_data.class_disp_tab(klass), _runtime.void_type()->getPointerTo());
 
     // call allocation and cast to this klass pointer
     auto *const raw_object = __ CreateCall(func, {tag, size, disp_tab});
-    auto *object = __ CreateBitCast(raw_object, _data.class_struct(klass)->getPointerTo());
+    auto *object = __ CreateBitCast(raw_object, _data.class_struct(klass)->getPointerTo(_runtime.HEAP_ADDR_SPACE));
 
 #ifdef LLVM_SHADOW_STACK
     if (preserve_before_init)
@@ -657,7 +657,8 @@ llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass
     // get info about this object
     auto *const tag = emit_load_tag(self_val, klass_struct);
     auto *const size = emit_load_size(self_val, klass_struct);
-    auto *const disp_tab = __ CreateBitCast(emit_load_dispatch_table(self_val, klass), _runtime.void_ptr_type());
+    auto *const disp_tab =
+        __ CreateBitCast(emit_load_dispatch_table(self_val, klass), _runtime.void_type()->getPointerTo());
 
     // allocate memory
     llvm::Value *raw_object = __ CreateCall(func, {tag, size, disp_tab});
@@ -746,7 +747,7 @@ llvm::Value *CodeGenLLVM::emit_cases_expr_inner(const ast::CaseExpression &expr,
 
     auto *const res_ptr_type =
         _data.class_struct(_builder->klass(semant::Semant::exact_type(expr_type, _current_class->_type)->_string))
-            ->getPointerTo();
+            ->getPointerTo(_runtime.HEAP_ADDR_SPACE);
 
     // no, it is not void
     // Last case is a special case: branch to abort
@@ -800,7 +801,7 @@ llvm::Value *CodeGenLLVM::emit_cases_expr_inner(const ast::CaseExpression &expr,
     __ SetInsertPoint(false_block);
     auto *const case_abort_2_func = _runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::CASE_ABORT_2)->_func;
     __ CreateCall(case_abort_2_func,
-                  {__ CreateBitCast(_data.string_const(_current_class->_file_name), _runtime.void_ptr_type()),
+                  {__ CreateBitCast(_data.string_const(_current_class->_file_name), _runtime.heap_ptr_type()),
                    llvm::ConstantInt::get(_runtime.int32_type(), expr._expr->_line_number)});
     __ CreateBr(merge_block);
     results.push_back({false_block, null_result});
@@ -848,7 +849,8 @@ llvm::Value *CodeGenLLVM::emit_loop_expr_inner(const ast::WhileExpression &expr,
     func->getBasicBlockList().push_back(loop_tail);
     __ SetInsertPoint(loop_tail);
 
-    return llvm::ConstantPointerNull::get(_data.class_struct(_builder->klass(expr_type->_string))->getPointerTo());
+    return llvm::ConstantPointerNull::get(
+        _data.class_struct(_builder->klass(expr_type->_string))->getPointerTo(_runtime.HEAP_ADDR_SPACE));
 }
 
 llvm::Value *CodeGenLLVM::emit_if_expr_inner(const ast::IfExpression &expr, const std::shared_ptr<ast::Type> &expr_type)
@@ -858,7 +860,7 @@ llvm::Value *CodeGenLLVM::emit_if_expr_inner(const ast::IfExpression &expr, cons
 
     auto *const phi_type =
         _data.class_struct(_builder->klass(semant::Semant::exact_type(expr_type, _current_class->_type)->_string))
-            ->getPointerTo();
+            ->getPointerTo(_runtime.HEAP_ADDR_SPACE);
 
     auto *const pred = __ CreateICmpEQ(emit_load_bool(emit_expr(expr._predicate)), _true_val);
 
@@ -937,7 +939,7 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
 
     auto *const phi_type =
         _data.class_struct(_builder->klass(semant::Semant::exact_type(expr_type, _current_class->_type)->_string))
-            ->getPointerTo();
+            ->getPointerTo(_runtime.HEAP_ADDR_SPACE);
 
     // check if receiver is null
     auto *const is_not_null = __ CreateIsNotNull(receiver);
@@ -987,7 +989,7 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
     __ SetInsertPoint(false_block);
     auto *const dispatch_abort_func = _runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::DISPATCH_ABORT)->_func;
     __ CreateCall(dispatch_abort_func,
-                  {__ CreateBitCast(_data.string_const(_current_class->_file_name), _runtime.void_ptr_type()),
+                  {__ CreateBitCast(_data.string_const(_current_class->_file_name), _runtime.heap_ptr_type()),
                    llvm::ConstantInt::get(_runtime.int32_type(), expr._expr->_line_number)});
     __ CreateBr(merge_block);
 
@@ -1013,6 +1015,7 @@ llvm::Value *CodeGenLLVM::emit_assign_expr_inner(const ast::AssignExpression &ex
     llvm::Value *store_dst = nullptr;
     if (symbol._type == Symbol::LOCAL)
     {
+#ifdef LLVM_SHADOW_STACK
         // all locals except arguments are int8*, so cast value to it
         if (symbol._value._ptr->getType() == _runtime.stack_slot_type()->getPointerTo())
         {
@@ -1020,8 +1023,13 @@ llvm::Value *CodeGenLLVM::emit_assign_expr_inner(const ast::AssignExpression &ex
         }
         else
         {
-            cast_type = _data.class_struct(_builder->klass(symbol._value_type->_string))->getPointerTo();
+            cast_type = _data.class_struct(_builder->klass(symbol._value_type->_string))
+                            ->getPointerTo(_runtime.HEAP_ADDR_SPACE);
         }
+#else
+        cast_type =
+            _data.class_struct(_builder->klass(symbol._value_type->_string))->getPointerTo(_runtime.HEAP_ADDR_SPACE);
+#endif // LLVM_SHADOW_STACK
         store_dst = symbol._value._ptr;
     }
     else
@@ -1080,7 +1088,8 @@ llvm::Value *CodeGenLLVM::emit_in_scope(const std::shared_ptr<ast::ObjectExpress
     _table.push_scope();
 
     const auto local_type = semant::Semant::exact_type(object_type, _current_class->_type);
-    auto *const object_ptr_type = _data.class_struct(_builder->klass(local_type->_string))->getPointerTo();
+    auto *const object_ptr_type =
+        _data.class_struct(_builder->klass(local_type->_string))->getPointerTo(_runtime.HEAP_ADDR_SPACE);
 
     if (!initializer)
     {
@@ -1114,15 +1123,20 @@ llvm::Value *CodeGenLLVM::emit_in_scope(const std::shared_ptr<ast::ObjectExpress
 
 void CodeGenLLVM::emit_runtime_main()
 {
-    const auto &runtime_main =
-        llvm::Function::Create(llvm::FunctionType::get(llvm::Type::getInt32Ty(_context),
-                                                       {
-                                                           _runtime.int32_type(),                     // int argc
-                                                           _runtime.stack_slot_type()->getPointerTo() // char** argv
-                                                       },
-                                                       false),
-                               llvm::Function::ExternalLinkage, static_cast<std::string>(RUNTIME_MAIN_FUNC), &_module);
-    runtime_main->setGC(_runtime.gc_strategy_name());
+    const auto &runtime_main = llvm::Function::Create(
+        llvm::FunctionType::get(llvm::Type::getInt32Ty(_context),
+                                {
+                                    _runtime.int32_type(),                               // int argc
+                                    _runtime.int8_type()->getPointerTo()->getPointerTo() // char** argv
+                                },
+                                false),
+        llvm::Function::ExternalLinkage, static_cast<std::string>(RUNTIME_MAIN_FUNC), &_module);
+    // set gc
+    const auto gc_name = _runtime.gc_strategy_name();
+    if (gc_name != _runtime.GC_DEFAULT_NAME)
+    {
+        runtime_main->setGC(gc_name);
+    }
 
     auto *entry = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::ENTRY_BLOCK), runtime_main);
     __ SetInsertPoint(entry);
@@ -1173,11 +1187,27 @@ void CodeGenLLVM::execute_linker(const std::string &object_file_name, const std:
         coolc_path + boost::filesystem::path::preferred_separator + static_cast<std::string>(RUNTIME_LIB_NAME);
     CODEGEN_VERBOSE_ONLY(LOG("Runtime library path: " + rt_lib_path));
 
+    std::string error;
+
+    // TODO: are you serious?
+#ifdef LLVM_STATEPOINT_EXAMPLE
+    CODEGEN_VERBOSE_ONLY(
+        LOG("Globalize " + static_cast<std::string>(STACKMAP_NAME) + " for " + object_file_name + "."));
+    const auto objcopy_path = llvm::sys::findProgramByName(static_cast<std::string>(OBJCOPY_EXE_NAME));
+    EXIT_ON_ERROR(objcopy_path, "Can't find " + static_cast<std::string>(OBJCOPY_EXE_NAME));
+    CODEGEN_VERBOSE_ONLY(LOG(static_cast<std::string>(OBJCOPY_EXE_NAME) + " library path: " + objcopy_path.get()));
+    EXIT_ON_ERROR(
+        (llvm::sys::ExecuteAndWait(objcopy_path.get(),
+                                   {objcopy_path.get(), "--globalize-symbol=" + static_cast<std::string>(STACKMAP_NAME),
+                                    object_file_name, object_file_name}, // first arg is file name
+                                   llvm::None, {}, 0, 0, &error) == 0),
+        error);
+#endif // LLVM_STATEPOINT_EXAMPLE
+
     const auto clang_path = llvm::sys::findProgramByName(static_cast<std::string>(CLANG_EXE_NAME));
     EXIT_ON_ERROR(clang_path, "Can't find " + static_cast<std::string>(CLANG_EXE_NAME));
     CODEGEN_VERBOSE_ONLY(LOG(static_cast<std::string>(CLANG_EXE_NAME) + " library path: " + clang_path.get()));
 
-    std::string error;
     // create executable
     EXIT_ON_ERROR((llvm::sys::ExecuteAndWait(clang_path.get(),
                                              {clang_path.get(), object_file_name, rt_lib_path,
@@ -1238,6 +1268,12 @@ void CodeGenLLVM::emit(const std::string &out_file)
 
     emit_class_code(_builder->root()); // emit
     emit_runtime_main();
+
+#ifdef LLVM_STATEPOINT_EXAMPLE
+    llvm::legacy::PassManager rwstpts;
+    rwstpts.add(llvm::createRewriteStatepointsForGCLegacyPass());
+    rwstpts.run(_module);
+#endif // LLVM_STATEPOINT_EXAMPLE
 
     CODEGEN_VERBOSE_ONLY(_module.print(llvm::errs(), nullptr););
 

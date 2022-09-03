@@ -1,6 +1,9 @@
 #pragma once
 
+#ifdef LLVM_SHADOW_STACK
 #include "ShadowStack.hpp"
+#endif // LLVM_SHADOW_STACK
+
 #include "codegen/runtime/ObjectLayout.hpp"
 
 namespace gc
@@ -49,10 +52,12 @@ class StackWalker
     }
 };
 
+#ifdef LLVM_SHADOW_STACK
 class ShadowStackWalker : public StackWalker
 {
   public:
     void process_roots(void *obj, void (*visitor)(void *obj, address *root, const address *meta)) override;
 };
+#endif // LLVM_SHADOW_STACK
 
 } // namespace gc

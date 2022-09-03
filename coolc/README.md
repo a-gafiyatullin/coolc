@@ -21,10 +21,11 @@ assistance with **coolc**.
         - `-ubsan` --- build with UndefinedBehaviorSanitizer (Debug only).
         - `-test` --- run tests after building.
         - `-mips` --- build for **SPIM** emulator.
-        - `-shadow-stack-gc` --- build with **LLVM Shadow Stack**.
         - `-llvm` --- build with **LLVM** for host architecture.
+        - `-shadow-stack-gc` --- (**llvm build**) build with **LLVM Shadow Stack**.
+        - `-no-gc` --- (**llvm build**) build without GC (**ZeroGC** only).
 
-3. Some usefull runtime options for **LLVM**-based build (pass them as argument to executable):
+3. Some usefull runtime options for **LLVM**-based build with GC (pass them as argument to executable):
    1. `MaxHeapSize` --- maximal heap size (e.g. `MaxHeapSize=1024[Gb/Mb/Kb/no specifier for bytes]`).
    2. `GCAlgo` --- GC algorithm (e.g. `GCAlgo=1`):
       1. `ZeroGC` (code **0**) --- just allocate memory without collecting.

@@ -44,10 +44,11 @@ struct RuntimeMethod
      * @param name Method name
      * @param ret Return type
      * @param args Args types list
+     * @param need_gc Can cause gc
      * @param runtime Runtime info
      */
     RuntimeMethod(llvm::Module &module, const std::string &name, llvm::Type *ret,
-                  const std::initializer_list<llvm::Type *> &args, RuntimeLLVM &runtime);
+                  const std::initializer_list<llvm::Type *> &args, bool need_gc, RuntimeLLVM &runtime);
 };
 
 class RuntimeLLVM : public Runtime<RuntimeMethod>
@@ -76,6 +77,16 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
         RuntimeLLVMSymbolsSize
     };
 
+    static constexpr std::string_view GC_DEFAULT_NAME = "";
+
+#ifdef LLVM_SHADOW_STACK
+    // The garbage collection intrinsics only operate on objects in the generic address space (address space zero).
+    static const int HEAP_ADDR_SPACE = 0;
+#else
+    // addrspace for RewriteStatepointsForGC in statepoint-example gc strategy
+    static const int HEAP_ADDR_SPACE = 1;
+#endif // LLVM_SHADOW_STACK
+
   private:
     static const std::string SYMBOLS[RuntimeLLVMSymbolsSize];
 
@@ -86,7 +97,7 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
     llvm::Type *const _void_type;
 
     llvm::PointerType *const _stack_slot_type;
-    llvm::PointerType *const _void_ptr_type;
+    llvm::PointerType *const _heap_ptr_type;
 
     llvm::Type *_header_layout_types[HeaderLayoutElemets];
 
@@ -155,13 +166,13 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
     }
 
     /**
-     * @brief Get type for void pointer
+     * @brief Get type for heap pointer
      *
-     * @return Type of void pointer
+     * @return Type of heap pointer
      */
-    inline llvm::PointerType *void_ptr_type() const
+    inline llvm::PointerType *heap_ptr_type() const
     {
-        return _void_ptr_type;
+        return _heap_ptr_type;
     }
 
     /**
@@ -209,7 +220,12 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
 #ifdef LLVM_SHADOW_STACK
         return "shadow-stack";
 #endif // LLVM_SHADOW_STACK
+
+#ifdef LLVM_STATEPOINT_EXAMPLE
         return "statepoint-example";
+#endif // LLVM_STATEPOINT_EXAMPLE
+
+        return static_cast<std::string>(GC_DEFAULT_NAME);
     }
 };
 }; // namespace codegen

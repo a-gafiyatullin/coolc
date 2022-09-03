@@ -21,8 +21,9 @@ DataLLVM::DataLLVM(const std::shared_ptr<KlassBuilder> &builder, llvm::Module &m
     // use 64 bit field for allignment
     make_base_class(_builder->klass(BaseClassesNames[BaseClasses::BOOL]), {_runtime.default_int()});
 
-    make_base_class(_builder->klass(BaseClassesNames[BaseClasses::STRING]),
-                    {_classes[BaseClassesNames[BaseClasses::INT]]->getPointerTo(), _runtime.int8_type()});
+    make_base_class(
+        _builder->klass(BaseClassesNames[BaseClasses::STRING]),
+        {_classes[BaseClassesNames[BaseClasses::INT]]->getPointerTo(_runtime.HEAP_ADDR_SPACE), _runtime.int8_type()});
 
     make_base_class(_builder->klass(BaseClassesNames[BaseClasses::IO]), {});
 
@@ -41,16 +42,11 @@ DataLLVM::DataLLVM(const std::shared_ptr<KlassBuilder> &builder, llvm::Module &m
 }
 
 llvm::GlobalVariable *DataLLVM::make_constant_struct(const std::string &name, llvm::StructType *type,
-                                                     const std::vector<llvm::Constant *> &elements)
+                                                     const std::vector<llvm::Constant *> &elements, int addrspace)
 {
-
-    auto *const constant = static_cast<llvm::GlobalVariable *>(_module.getOrInsertGlobal(name, type));
-    constant->setInitializer(llvm::ConstantStruct::get(type, elements));
-    constant->setLinkage(llvm::GlobalValue::ExternalLinkage);
-    constant->setConstant(true);
-
-    // TODO: need allignment?
-    return constant;
+    return new llvm::GlobalVariable(_module, type, true, llvm::GlobalValue::ExternalLinkage,
+                                    llvm::ConstantStruct::get(type, elements), name, nullptr,
+                                    llvm::GlobalValue::NotThreadLocal, addrspace);
 }
 
 llvm::GlobalVariable *DataLLVM::make_constant(const std::string &name, llvm::Type *type, llvm::Constant *element)
@@ -62,7 +58,6 @@ llvm::GlobalVariable *DataLLVM::make_constant(const std::string &name, llvm::Typ
     constant->setLinkage(llvm::GlobalValue::ExternalLinkage);
     constant->setConstant(true);
 
-    // TODO: need allignment?
     return constant;
 }
 
@@ -76,7 +71,6 @@ llvm::GlobalVariable *DataLLVM::make_constant_array(const std::string &name, llv
     constant->setLinkage(llvm::GlobalValue::ExternalLinkage);
     constant->setConstant(true);
 
-    // TODO: need allignment?
     return constant;
 }
 
@@ -86,8 +80,16 @@ void DataLLVM::make_init_method(const std::shared_ptr<Klass> &klass)
     CODEGEN_VERBOSE_ONLY(LOG("Declare init method \"" + init_method_name + "\""));
 
     auto *const init_method = llvm::Function::Create(
-        llvm::FunctionType::get(_runtime.void_type(), {class_struct(klass)->getPointerTo()}, false),
+        llvm::FunctionType::get(_runtime.void_type(), {class_struct(klass)->getPointerTo(_runtime.HEAP_ADDR_SPACE)},
+                                false),
         llvm::Function::ExternalLinkage, init_method_name, &_module);
+
+    // set gc
+    const auto gc_name = _runtime.gc_strategy_name();
+    if (gc_name != _runtime.GC_DEFAULT_NAME)
+    {
+        init_method->setGC(gc_name);
+    }
 
     // set receiver name
     init_method->getArg(0)->setName(SelfObject);
@@ -133,7 +135,7 @@ void DataLLVM::class_struct_inner(const std::shared_ptr<Klass> &klass)
     std::for_each(klass->fields_begin(), klass->fields_end(), [&fields, klass, this](const auto &field) {
         fields.push_back(
             class_struct(_builder->klass(semant::Semant::exact_type(field->_type, klass->klass())->_string))
-                ->getPointerTo());
+                ->getPointerTo(_runtime.HEAP_ADDR_SPACE));
     });
 
     class_structure->setBody(fields);
@@ -158,7 +160,8 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
         if (!func)
         {
             std::vector<llvm::Type *> args;
-            args.push_back(class_struct(_builder->klass(method.first->_string))->getPointerTo()); // this
+            args.push_back(
+                class_struct(_builder->klass(method.first->_string))->getPointerTo(_runtime.HEAP_ADDR_SPACE)); // this
 
             // formals
             const auto &method_formals = std::get<ast::MethodFeature>(method.second->_base);
@@ -166,14 +169,14 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
             {
                 const auto &formal_type = formal->_type->_string;
                 CODEGEN_VERBOSE_ONLY(LOG("Formal of type \"" + formal_type + "\""));
-                args.push_back(class_struct(_builder->klass(formal_type))->getPointerTo());
+                args.push_back(class_struct(_builder->klass(formal_type))->getPointerTo(_runtime.HEAP_ADDR_SPACE));
             }
 
             CODEGEN_VERBOSE_ONLY(LOG("Return type: \"" + return_type->_string + "\""));
 
             const auto return_klass_struct =
                 class_struct(_builder->klass(semant::Semant::exact_type(return_type, klass->klass())->_string))
-                    ->getPointerTo();
+                    ->getPointerTo(_runtime.HEAP_ADDR_SPACE);
 
             // maybe we already created this method in recursive call of class_struct
             func = _module.getFunction(method_full_name);
@@ -181,6 +184,13 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
             {
                 func = llvm::Function::Create(llvm::FunctionType::get(return_klass_struct, args, false),
                                               llvm::Function::ExternalLinkage, method_full_name, &_module);
+
+                // set gc
+                const auto gc_name = _runtime.gc_strategy_name();
+                if (gc_name != _runtime.GC_DEFAULT_NAME)
+                {
+                    func->setGC(gc_name);
+                }
 
                 // set names for args
                 func->arg_begin()->setName(SelfObject);
@@ -202,7 +212,7 @@ void DataLLVM::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
         {klass->name(), make_constant_struct(disp_tab_name,
                                              llvm::StructType::create(_module.getContext(), method_types,
                                                                       Names::name(Names::Comment::TYPE, disp_tab_name)),
-                                             methods)});
+                                             methods, 0)});
 }
 
 void DataLLVM::int_const_inner(const int64_t &value)
@@ -219,7 +229,8 @@ void DataLLVM::int_const_inner(const int64_t &value)
          llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size()),
          _dispatch_tables.at(klass_name),
          llvm::ConstantInt::get(int_struct->getElementType(HeaderLayout::DispatchTable + 1), value,
-                                true)}); // value field
+                                true)}, // value field
+        _runtime.HEAP_ADDR_SPACE);
 
     _int_constants.insert({value, constant_int});
 }
@@ -261,7 +272,8 @@ void DataLLVM::string_const_inner(const std::string &str)
     auto *const string_class = llvm::StructType::create(_module.getContext(), std::string(klass_name) + "_" + str);
     string_class->setBody(fields);
 
-    auto *const constant_str = make_constant_struct(Names::string_constant(), string_class, elements);
+    auto *const constant_str =
+        make_constant_struct(Names::string_constant(), string_class, elements, _runtime.HEAP_ADDR_SPACE);
 
     _string_constants.insert({str, constant_str});
 }
@@ -279,8 +291,9 @@ void DataLLVM::bool_const_inner(const bool &value)
          llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag(), true),
          llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size()),
          _dispatch_tables.at(klass_name),
-         llvm::ConstantInt::get(bool_struct->getElementType(HeaderLayout::DispatchTable + 1), value,
-                                true)}); // value field
+         llvm::ConstantInt::get(bool_struct->getElementType(HeaderLayout::DispatchTable + 1), value, // value field
+                                true)},
+        _runtime.HEAP_ADDR_SPACE);
 
     _bool_constants.insert({value, constant_bool});
 }
@@ -322,11 +335,11 @@ void DataLLVM::gen_class_name_tab()
     }
 
     GUARANTEE_DEBUG(names.size());
-    make_constant_array(
-        _runtime.symbol_name(RuntimeLLVM::RuntimeLLVMSymbols::CLASS_NAME_TAB),
-        llvm::ArrayType::get(class_struct(_builder->klass(BaseClassesNames[BaseClasses::STRING]))->getPointerTo(),
-                             names.size()),
-        names);
+    make_constant_array(_runtime.symbol_name(RuntimeLLVM::RuntimeLLVMSymbols::CLASS_NAME_TAB),
+                        llvm::ArrayType::get(class_struct(_builder->klass(BaseClassesNames[BaseClasses::STRING]))
+                                                 ->getPointerTo(_runtime.HEAP_ADDR_SPACE),
+                                             names.size()),
+                        names);
 }
 
 void DataLLVM::emit_inner(const std::string &out_file)

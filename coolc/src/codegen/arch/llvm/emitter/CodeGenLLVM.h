@@ -34,6 +34,11 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     static constexpr std::string_view RUNTIME_LIB_NAME = "libcool-rt.so";
     static constexpr std::string_view CLANG_EXE_NAME = "clang++";
 
+#ifdef LLVM_STATEPOINT_EXAMPLE
+    static constexpr std::string_view OBJCOPY_EXE_NAME = "objcopy";
+    static constexpr std::string_view STACKMAP_NAME = "__LLVM_StackMaps";
+#endif // LLVM_STATEPOINT_EXAMPLE
+
     // llvm related stuff
     llvm::LLVMContext _context;
     llvm::IRBuilder<> _ir_builder;
@@ -58,6 +63,7 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     llvm::Value *const _int0_8;
 
     llvm::Value *const _int0_8_ptr;
+    llvm::Value *const _stack_slot_null;
 
     void add_fields() override;
 

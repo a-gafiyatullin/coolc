@@ -1,6 +1,5 @@
 #pragma once
 
-#include "ShadowStack.hpp"
 #include "StackWalker.hpp"
 #include "codegen/runtime/ObjectLayout.hpp"
 #include <queue>

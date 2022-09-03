@@ -77,14 +77,14 @@ void GC::init(const GcType &type)
     case ZEROGC:
         Gc = new ZeroGC();
         break;
-#ifdef LLVM_SHADOW_STACK
+#if defined(LLVM_SHADOW_STACK) || defined(LLVM_STATEPOINT_EXAMPLE)
     case MARKSWEEPGC:
         Gc = new MarkSweepGC();
         break;
     case THREADED_MC_GC:
         Gc = new ThreadedCompactionGC();
         break;
-#endif // LLVM_SHADOW_STACK
+#endif // LLVM_SHADOW_STACK || LLVM_STATEPOINT_EXAMPLE
     default:
         fprintf(stderr, "cannot select GC!\n");
         abort();
