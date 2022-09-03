@@ -76,16 +76,8 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
         RuntimeLLVMSymbolsSize
     };
 
-    enum RuntimeLLVMGCStrategy
-    {
-        SHADOW_STACK,
-
-        RuntimeLLVMGCStrategySize
-    };
-
   private:
     static const std::string SYMBOLS[RuntimeLLVMSymbolsSize];
-    static const std::string GC_STRATEGIES[RuntimeLLVMGCStrategySize];
 
     llvm::Type *const _int8_type;
     llvm::Type *const _int32_type;
@@ -107,7 +99,6 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
 
     // GC
     const RuntimeMethod _gc_alloc;
-    const RuntimeLLVMGCStrategy _gc_strategy;
 
     // runtime init
     const RuntimeMethod _init_runtime;
@@ -120,7 +111,7 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
      * @param module llvm::Module for function declarations
      * @param gc_strategy chosen GC Strategy
      */
-    explicit RuntimeLLVM(llvm::Module &module, const RuntimeLLVMGCStrategy &gc_strategy);
+    explicit RuntimeLLVM(llvm::Module &module);
 
     /**
      * @brief Get header layout element type
@@ -215,17 +206,10 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
      */
     inline std::string gc_strategy_name() const
     {
-        return GC_STRATEGIES[_gc_strategy];
-    }
-
-    /**
-     * @brief Get a chosen GC strategy
-     *
-     * @return int Strategy identifier
-     */
-    inline int gc_strategy() const
-    {
-        return _gc_strategy;
+#ifdef LLVM_SHADOW_STACK
+        return "shadow-stack";
+#endif // LLVM_SHADOW_STACK
+        return "statepoint-example";
     }
 };
 }; // namespace codegen

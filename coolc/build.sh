@@ -43,6 +43,10 @@ do
         result_args+=" -DARCH:STRING=MIPS"
         shift
     ;;
+    -shadow-stack-gc)
+        result_args+=" -DGCTYPE:STRING=LLVM_SHADOW_STACK"
+        shift
+    ;;
     -test)
         test=1
         shift

@@ -8,7 +8,11 @@
 
 #ifdef LLVM
 extern bool UseArchSpecFeatures;
+
+#ifdef LLVM_SHADOW_STACK
 extern bool ReduceGCSpills;
+#endif // LLVM_SHADOW_STACK
+
 #endif // LLVM
 
 /**

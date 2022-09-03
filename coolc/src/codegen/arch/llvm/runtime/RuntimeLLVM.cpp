@@ -11,8 +11,8 @@ RuntimeMethod::RuntimeMethod(llvm::Module &module, const std::string &name, llvm
     runtime._symbol_by_name.insert({name, this});
 }
 
-RuntimeLLVM::RuntimeLLVM(llvm::Module &module, const RuntimeLLVMGCStrategy &gc_strategy)
-    : _gc_strategy(gc_strategy), _int32_type(llvm::Type::getInt32Ty(module.getContext())),
+RuntimeLLVM::RuntimeLLVM(llvm::Module &module)
+    : _int32_type(llvm::Type::getInt32Ty(module.getContext())),
       _int64_type(llvm::Type::getInt64Ty(module.getContext())), _void_type(llvm::Type::getVoidTy(module.getContext())),
       _int8_type(llvm::Type::getInt8Ty(module.getContext())), _default_int(_int64_type),
       _stack_slot_type(_int8_type->getPointerTo()), _void_ptr_type(_void_type->getPointerTo()),
@@ -41,5 +41,3 @@ RuntimeLLVM::RuntimeLLVM(llvm::Module &module, const RuntimeLLVMGCStrategy &gc_s
 const std::string RuntimeLLVM::SYMBOLS[RuntimeLLVMSymbolsSize] = {
     "_equals",         "_case_abort",   "_case_abort_2", "_gc_alloc", "_dispatch_abort", "_init_runtime",
     "_finish_runtime", "class_nameTab", "class_objTab",  "_int_tag",  "_bool_tag",       "_string_tag"};
-
-const std::string RuntimeLLVM::GC_STRATEGIES[RuntimeLLVMGCStrategySize] = {"shadow-stack"};

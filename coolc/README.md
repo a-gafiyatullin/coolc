@@ -20,7 +20,8 @@ assistance with **coolc**.
         - `-asan` --- build with AddressSanitizer (Debug only).
         - `-ubsan` --- build with UndefinedBehaviorSanitizer (Debug only).
         - `-test` --- run tests after building.
-        - `-mips` --- build for SPIM emulator.
+        - `-mips` --- build for **SPIM** emulator.
+        - `-shadow-stack-gc` --- build with **LLVM Shadow Stack**.
         - `-llvm` --- build with **LLVM** for host architecture.
 
 3. Some usefull runtime options for **LLVM**-based build (pass them as argument to executable):

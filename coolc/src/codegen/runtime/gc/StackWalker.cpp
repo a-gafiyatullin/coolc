@@ -2,6 +2,10 @@
 
 using namespace gc;
 
+#ifndef LLVM_SHADOW_STACK
+StackEntry *llvm_gc_root_chain = NULL;
+#endif // !LLVM_SHADOW_STACK
+
 StackWalker *StackWalker::Walker = nullptr;
 
 void ShadowStackWalker::process_roots(void *obj, void (*visitor)(void *obj, address *root, const address *meta))

@@ -72,12 +72,17 @@ std::unordered_map<std::string, bool *> BoolFlags = {
     flag_pair(TraceParser),
     flag_pair(TraceSemant),
     flag_pair(TraceCodeGen)
-#ifdef LLVM
-        ,
-    flag_pair(UseArchSpecFeatures),
-    flag_pair(ReduceGCSpills)
-#endif // LLVM
 #endif // DEBUG
+#ifdef LLVM
+#ifdef DEBUG
+        ,
+#endif // DEBUG
+    flag_pair(UseArchSpecFeatures)
+#ifdef LLVM_SHADOW_STACK
+        ,
+    flag_pair(ReduceGCSpills)
+#endif // LLVM_SHADOW_STACK
+#endif // LLVM
 };
 
 bool maybe_set(const char *arg)

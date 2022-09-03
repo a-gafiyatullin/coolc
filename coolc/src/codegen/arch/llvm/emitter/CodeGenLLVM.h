@@ -42,13 +42,6 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     const RuntimeLLVM _runtime;
     DataLLVM _data;
 
-    // control stack
-    std::vector<llvm::Value *> _stack;
-    int _current_stack_size;
-#ifdef DEBUG
-    int _max_stack_size;
-#endif // DEBUG
-
     // optimizations
     llvm::legacy::FunctionPassManager _optimizer;
     void init_optimizer();
@@ -72,16 +65,26 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
 
     void emit_class_init_method_inner() override;
 
-    // gc shadow stack support
+#ifdef LLVM_SHADOW_STACK
+    std::vector<llvm::Value *> _stack;
+    int _current_stack_size;
+#ifdef DEBUG
+    int _max_stack_size;
+#endif // DEBUG
+
     void allocate_shadow_stack(int max_stack);
     void init_shadow_stack(const std::vector<llvm::Value *> &args);
 
-    void preserve_value_for_gc(llvm::Value *value);
+    int preserve_value_for_gc(llvm::Value *value, bool preserve);
     void pop_dead_value(int slots = 1);
-    llvm::Value *reload_value_from_stack(int slot_num, llvm::Value *orig_value);
+    llvm::Value *reload_value_from_stack(int slot_num, llvm::Value *orig_value, bool reload);
+
+    int reload_args(std::vector<llvm::Value *> &args, const std::shared_ptr<ast::Expression> &self,
+                    const std::vector<std::shared_ptr<ast::Expression>> &expr_args, int slots);
 
     bool _need_reload;
     void set_need_reload(bool need_reload);
+#endif // LLVM_SHADOW_STACK
 
     // cast values helpers
     llvm::Value *maybe_cast(llvm::Value *val, llvm::Type *type);
