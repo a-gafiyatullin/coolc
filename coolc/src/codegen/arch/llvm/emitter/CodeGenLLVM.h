@@ -65,6 +65,13 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     llvm::Value *const _int0_8_ptr;
     llvm::Value *const _stack_slot_null;
 
+    // stack
+    std::vector<llvm::Value *> _stack;
+    int _current_stack_size;
+#ifdef DEBUG
+    int _max_stack_size;
+#endif // DEBUG
+
     void add_fields() override;
 
     void emit_class_method_inner(const std::shared_ptr<ast::Feature> &method) override;
@@ -72,12 +79,6 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     void emit_class_init_method_inner() override;
 
 #ifdef LLVM_SHADOW_STACK
-    std::vector<llvm::Value *> _stack;
-    int _current_stack_size;
-#ifdef DEBUG
-    int _max_stack_size;
-#endif // DEBUG
-
     void allocate_shadow_stack(int max_stack);
     void init_shadow_stack(const std::vector<llvm::Value *> &args);
 
@@ -90,6 +91,11 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
 
     bool _need_reload;
     void set_need_reload(bool need_reload);
+#else
+    void allocate_stack(int max_stack);
+    void init_stack();
+    void push(llvm::Value *value);
+    void pop();
 #endif // LLVM_SHADOW_STACK
 
     // cast values helpers

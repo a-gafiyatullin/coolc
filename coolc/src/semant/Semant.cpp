@@ -660,7 +660,10 @@ std::shared_ptr<ast::Type> Semant::infer_new_type(const ast::NewExpression &allo
 {
     const auto &type = alloc._type;
 
+#ifdef LLVM_SHADOW_STACK
     _expression_stack++; // need at least one slot, because init can cause GC
+
+#endif // LLVM_SHADOW_STACK
 
     SEMANT_VERBOSE_ONLY(LOG_ENTER("INFER NEW TYPE"));
 
@@ -775,7 +778,12 @@ std::shared_ptr<ast::Type> Semant::infer_binary_type(const ast::BinaryExpression
     SEMANT_VERBOSE_ONLY(LOG_ENTER("INFER BINARY TYPE"));
 
     int lhs_expr_stack = _expression_stack;
+
+#ifdef LLVM_SHADOW_STACK
     int rhs_expr_stack = _expression_stack + 1;
+#else
+    int rhs_expr_stack = _expression_stack;
+#endif // LLVM_SHADOW_STACK
 
     std::shared_ptr<ast::Type> result;
 
@@ -991,7 +999,12 @@ std::shared_ptr<ast::Type> Semant::infer_dispatch_type(const ast::DispatchExpres
     std::vector<int> stacks(disp._args.size() + 1, _expression_stack);
 
     SEMANT_RETURN_IF_FALSE(infer_expression_type(disp._expr, scope), nullptr);
+
+#ifdef LLVM_SHADOW_STACK
     stacks[0] = _expression_stack + disp._args.size(); // can save all args on stack
+#else
+    stacks[0] = _expression_stack;
+#endif // LLVM_SHADOW_STACK
 
     auto dispatch_expr_type = disp._expr->_type;
     if (is_static)
@@ -1032,8 +1045,11 @@ std::shared_ptr<ast::Type> Semant::infer_dispatch_type(const ast::DispatchExpres
                                               " of parameter " + formal->_object->_object +
                                               " does not conform to declared type " + formal->_type->_string + ".",
                                           arg->_line_number, nullptr);
-
+#ifdef LLVM_SHADOW_STACK
         stacks[i + 1] = _expression_stack + i;
+#else
+        stacks[i + 1] = _expression_stack;
+#endif // LLVM_SHADOW_STACK
     }
 
     _expression_stack = *std::max_element(stacks.begin(), stacks.end());

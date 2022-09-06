@@ -127,6 +127,8 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
 
 #ifdef LLVM_SHADOW_STACK
     allocate_shadow_stack(m._expression_stack);
+#else
+    allocate_stack(m._expression_stack);
 #endif // LLVM_SHADOW_STACK
 
     // stack slots for args
@@ -139,6 +141,8 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
 
 #ifdef LLVM_SHADOW_STACK
     init_shadow_stack(args_stack);
+#else
+    init_stack();
 #endif // LLVM_SHADOW_STACK
 
     for (auto i = 0; i < func->arg_size(); i++)
@@ -162,6 +166,8 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
 
 #ifdef LLVM_SHADOW_STACK
     GUARANTEE_DEBUG(ReduceGCSpills || _max_stack_size == _stack.size());
+#else
+    GUARANTEE_DEBUG(_max_stack_size == _stack.size());
 #endif // LLVM_SHADOW_STACK
 }
 
@@ -224,6 +230,37 @@ int CodeGenLLVM::reload_args(std::vector<llvm::Value *> &args, const std::shared
 
     return n;
 }
+#else
+void CodeGenLLVM::allocate_stack(int max_stack)
+{
+    _stack.resize(max_stack);
+    _current_stack_size = 0;
+#ifdef DEBUG
+    _max_stack_size = 0;
+#endif // DEBUG
+}
+
+void CodeGenLLVM::push(llvm::Value *value)
+{
+    __ CreateStore(__ CreateBitCast(value, _runtime.stack_slot_type()), _stack.at(_current_stack_size++));
+#ifdef DEBUG
+    _max_stack_size = std::max(_current_stack_size, _max_stack_size);
+#endif // DEBUG
+}
+
+void CodeGenLLVM::pop()
+{
+    _current_stack_size--;
+    __ CreateStore(_stack_slot_null, _stack.at(_current_stack_size));
+}
+
+void CodeGenLLVM::init_stack()
+{
+    for (int i = 0; i < _stack.size(); i++)
+    {
+        _stack[i] = __ CreateAlloca(_runtime.stack_slot_type());
+    }
+}
 #endif // LLVM_SHADOW_STACK
 
 llvm::Value *CodeGenLLVM::maybe_cast(llvm::Value *val, llvm::Type *type)
@@ -277,6 +314,8 @@ void CodeGenLLVM::emit_class_init_method_inner()
 
 #ifdef LLVM_SHADOW_STACK
     allocate_shadow_stack(_current_class->_expression_stack);
+#else
+    allocate_stack(_current_class->_expression_stack);
 #endif // LLVM_SHADOW_STACK
 
     // stack slots for args
@@ -285,6 +324,8 @@ void CodeGenLLVM::emit_class_init_method_inner()
 
 #ifdef LLVM_SHADOW_STACK
     init_shadow_stack(args_stack);
+#else
+    init_stack();
 #endif // LLVM_SHADOW_STACK
 
     // initialize slot with self object
@@ -394,6 +435,8 @@ void CodeGenLLVM::emit_class_init_method_inner()
 
 #ifdef LLVM_SHADOW_STACK
     GUARANTEE_DEBUG(ReduceGCSpills || _max_stack_size == _stack.size());
+#else
+    GUARANTEE_DEBUG(_max_stack_size == _stack.size());
 #endif // LLVM_SHADOW_STACK
 }
 
@@ -1015,7 +1058,6 @@ llvm::Value *CodeGenLLVM::emit_assign_expr_inner(const ast::AssignExpression &ex
     llvm::Value *store_dst = nullptr;
     if (symbol._type == Symbol::LOCAL)
     {
-#ifdef LLVM_SHADOW_STACK
         // all locals except arguments are int8*, so cast value to it
         if (symbol._value._ptr->getType() == _runtime.stack_slot_type()->getPointerTo())
         {
@@ -1026,10 +1068,7 @@ llvm::Value *CodeGenLLVM::emit_assign_expr_inner(const ast::AssignExpression &ex
             cast_type = _data.class_struct(_builder->klass(symbol._value_type->_string))
                             ->getPointerTo(_runtime.HEAP_ADDR_SPACE);
         }
-#else
-        cast_type =
-            _data.class_struct(_builder->klass(symbol._value_type->_string))->getPointerTo(_runtime.HEAP_ADDR_SPACE);
-#endif // LLVM_SHADOW_STACK
+
         store_dst = symbol._value._ptr;
     }
     else
@@ -1103,11 +1142,10 @@ llvm::Value *CodeGenLLVM::emit_in_scope(const std::shared_ptr<ast::ObjectExpress
 
 #ifdef LLVM_SHADOW_STACK
     preserve_value_for_gc(initializer, true);
-    auto *const local_val = _stack[_current_stack_size - 1];
 #else
-    auto *const local_val = __ CreateAlloca(object_ptr_type);
-    __ CreateStore(maybe_cast(initializer, object_ptr_type), local_val);
+    push(initializer);
 #endif // LLVM_SHADOW_STACK
+    auto *const local_val = _stack[_current_stack_size - 1];
 
     _table.add_symbol(object->_object, Symbol(local_val, local_type));
 
@@ -1116,6 +1154,8 @@ llvm::Value *CodeGenLLVM::emit_in_scope(const std::shared_ptr<ast::ObjectExpress
 
 #ifdef LLVM_SHADOW_STACK
     pop_dead_value();
+#else
+    pop();
 #endif // LLVM_SHADOW_STACK
 
     return result;
