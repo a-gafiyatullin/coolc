@@ -152,6 +152,7 @@ class ZeroGC : public GC
     }
 };
 
+#if defined(LLVM_SHADOW_STACK) || defined(LLVM_STATEPOINT_EXAMPLE)
 // --------------------------------------- Mark-Sweep ---------------------------------------
 /**
  * @brief Mark-and-Sweep GC
@@ -206,4 +207,7 @@ class ThreadedCompactionGC : public MarkCompactGC
     // stack walker helpers
     static void thread_root(void *obj, address *root, const address *meta);
 };
+
+#endif // LLVM_SHADOW_STACK || LLVM_STATEPOINT_EXAMPLE
+
 }; // namespace gc

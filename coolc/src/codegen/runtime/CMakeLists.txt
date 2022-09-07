@@ -1,15 +1,19 @@
-add_library(cool-rt SHARED Runtime.cpp
-                           ObjectLayout.cpp
-                           
-                           gc/Allocator.cpp
-                           
-                           gc/Marker.cpp
-                           gc/StackWalker.cpp
-                           
-                           gc/GC.cpp
-                           gc/mark-sweep/MarkSweepGC.cpp
-                           gc/mark-compact/MarkCompactGC.cpp
+set(COMMON_SRC Runtime.cpp
+               ObjectLayout.cpp
+              
+               gc/Allocator.cpp
+              
+               gc/Marker.cpp
+               gc/StackWalker.cpp
+              
+               gc/GC.cpp
+              
+               globals.cpp
+               gc/Utils.cpp)
 
-                           globals.cpp
-                           
-                           gc/Utils.cpp)
+if(GCTYPE STREQUAL "LLVM_SHADOW_STACK" OR GCTYPE STREQUAL "LLVM_STATEPOINT_EXAMPLE")
+    set(GC_SRC gc/mark-sweep/MarkSweepGC.cpp
+               gc/mark-compact/MarkCompactGC.cpp)
+endif()
+
+add_library(cool-rt SHARED ${COMMON_SRC} ${GC_SRC})
