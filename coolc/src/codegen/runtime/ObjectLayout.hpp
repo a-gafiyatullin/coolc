@@ -3,7 +3,6 @@
 #include "codegen/constants/Constants.h"
 #include "globals.hpp"
 
-#define address char *
 #define FIELD_SIZE sizeof(address)
 
 extern "C"

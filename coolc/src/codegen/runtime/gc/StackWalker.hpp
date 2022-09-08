@@ -4,6 +4,10 @@
 #include "ShadowStack.hpp"
 #endif // LLVM_SHADOW_STACK
 
+#ifdef LLVM_STATEPOINT_EXAMPLE
+#include "stack-map/StackMap.hpp"
+#endif // LLVM_STATEPOINT_EXAMPLE
+
 #include "codegen/runtime/ObjectLayout.hpp"
 
 namespace gc
@@ -59,5 +63,17 @@ class ShadowStackWalker : public StackWalker
     void process_roots(void *obj, void (*visitor)(void *obj, address *root, const address *meta)) override;
 };
 #endif // LLVM_SHADOW_STACK
+
+#ifdef LLVM_STATEPOINT_EXAMPLE
+class StackMapWalker : public StackWalker
+{
+  public:
+    StackMapWalker();
+
+    void process_roots(void *obj, void (*visitor)(void *obj, address *root, const address *meta)) override;
+
+    ~StackMapWalker();
+};
+#endif // LLVM_STATEPOINT_EXAMPLE
 
 } // namespace gc

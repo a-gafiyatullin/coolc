@@ -29,6 +29,10 @@ void StackWalker::init()
 #ifdef LLVM_SHADOW_STACK
     Walker = new ShadowStackWalker;
 #endif // LLVM_SHADOW_STACK
+
+#ifdef LLVM_STATEPOINT_EXAMPLE
+    Walker = new StackMapWalker;
+#endif // LLVM_STATEPOINT_EXAMPLE
 }
 
 void StackWalker::release()
@@ -38,3 +42,19 @@ void StackWalker::release()
     Walker = nullptr;
 #endif // LLVM_SHADOW_STACK || LLVM_STATEPOINT_EXAMPLE
 }
+
+#ifdef LLVM_STATEPOINT_EXAMPLE
+StackMapWalker::StackMapWalker() : StackWalker()
+{
+    stackmap::StackMap::init();
+}
+
+StackMapWalker::~StackMapWalker()
+{
+    stackmap::StackMap::release();
+}
+
+void StackMapWalker::process_roots(void *obj, void (*visitor)(void *obj, address *root, const address *meta))
+{
+}
+#endif // LLVM_STATEPOINT_EXAMPLE

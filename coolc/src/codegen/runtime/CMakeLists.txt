@@ -16,4 +16,8 @@ if(GCTYPE STREQUAL "LLVM_SHADOW_STACK" OR GCTYPE STREQUAL "LLVM_STATEPOINT_EXAMP
                gc/mark-compact/MarkCompactGC.cpp)
 endif()
 
-add_library(cool-rt SHARED ${COMMON_SRC} ${GC_SRC})
+if(GCTYPE STREQUAL "LLVM_STATEPOINT_EXAMPLE")
+    set(STACKMAP_SRC gc/stack-map/StackMap.cpp)
+endif()
+
+add_library(cool-rt SHARED ${COMMON_SRC} ${GC_SRC} ${STACKMAP_SRC})
