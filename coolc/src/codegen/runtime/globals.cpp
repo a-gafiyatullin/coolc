@@ -11,12 +11,19 @@
 // ---------------------------- Flags ----------------------------
 #ifdef DEBUG
 bool PrintAllocatedObjects = false;
+bool TraceMarking = false;
+bool TraceStackSlotUpdate = false;
+bool TraceObjectFieldUpdate = false;
+bool TraceObjectMoving = false;
 #endif // DEBUG
 
 bool PrintGCStatistics = false;
 
 #ifdef LLVM_STATEPOINT_EXAMPLE
+#ifdef DEBUG
 bool PrintStackMaps = false;
+bool TraceStackWalker = false;
+#endif // DEBUG
 #endif // LLVM_STATEPOINT_EXAMPLE
 
 #if defined(LLVM_SHADOW_STACK) || defined(LLVM_STATEPOINT_EXAMPLE)
@@ -29,10 +36,13 @@ std::string MaxHeapSize = "384Kb";
 
 const std::unordered_map<std::string, bool *> BoolFlags = {
 #ifdef LLVM_STATEPOINT_EXAMPLE
-    flag_pair(PrintStackMaps),
+#ifdef DEBUG
+    flag_pair(PrintStackMaps),         flag_pair(TraceStackWalker),
+#endif // DEBUG
 #endif // LLVM_STATEPOINT_EXAMPLE
 #ifdef DEBUG
-    flag_pair(PrintAllocatedObjects),
+    flag_pair(PrintAllocatedObjects),  flag_pair(TraceMarking),      flag_pair(TraceStackSlotUpdate),
+    flag_pair(TraceObjectFieldUpdate), flag_pair(TraceObjectMoving),
 #endif // DEBUG
     flag_pair(PrintGCStatistics)};
 

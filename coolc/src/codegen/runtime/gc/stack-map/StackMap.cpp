@@ -1,4 +1,5 @@
 #include "StackMap.hpp"
+#include <cassert>
 #include <cstdio>
 
 using namespace gc::stackmap;
@@ -8,136 +9,116 @@ StackMap *StackMap::Map = nullptr;
 StackMap::StackMap()
 {
     Header *hdr = (Header *)&__LLVM_StackMaps;
-    if (PrintStackMaps)
-    {
-        fprintf(stderr, "StackMaps:\n");
-        fprintf(stderr, "Version     : %d\n", hdr->_version);
-        fprintf(stderr, "Reserved    : %d\n", hdr->_reserved0);
-        fprintf(stderr, "Reserved    : %d\n", hdr->_reserved1);
-        fprintf(stderr, "NumFunctions: %d\n", hdr->_num_functions);
-        fprintf(stderr, "NumConstants: %d\n", hdr->_num_constants);
-        fprintf(stderr, "NumRecords  : %d\n", hdr->_num_records);
-        fprintf(stderr, "----------------\n\n");
-    }
 
-    address start = (address)&__LLVM_StackMaps + sizeof(Header);
+    assert(hdr->_version == 3);
+    assert(hdr->_num_constants == 0);
+    assert(hdr->_reserved0 == 0);
+    assert(hdr->_reserved1 == 0);
+
+    StkSizeRecord *funcs = (StkSizeRecord *)((address)&__LLVM_StackMaps + sizeof(Header));
+    address recrds = (address)(funcs + hdr->_num_functions);
 
     for (int i = 0; i < hdr->_num_functions; i++)
     {
-        StkSizeRecord *rec = (StkSizeRecord *)start;
+        StkSizeRecord &func = funcs[i];
 
-        if (PrintStackMaps)
+        for (int j = 0; j < func._record_count; j++)
         {
-            fprintf(stderr, "StkSizeRecord %d:\n", i);
-            fprintf(stderr, "Function Address : %p\n", rec->_func_address);
-            fprintf(stderr, "Stack Size       : %lu\n", rec->_stack_size);
-            fprintf(stderr, "Record Count     : %lu\n\n", rec->_record_count);
-        }
+            StkMapRecord *stkmap = (StkMapRecord *)recrds;
 
-        start += sizeof(StkSizeRecord);
+            assert(stkmap->_reserved == 0);
+            recrds += sizeof(StkMapRecord);
+
+            AddrInfo &info = _stack_maps[func._func_address + stkmap->_instruction_offset];
+            info._stack_size = func._stack_size;
+
+            assert(stkmap->_num_locations >= 3); // skip the first three locs
+
+            for (int k = 0; k < 3; k++)
+            {
+                Location *lock = (Location *)recrds;
+
+                assert(lock->_reserved1 == 0);
+                assert(lock->_type == LocationType::Constant);
+                assert(lock->_offset_or_small_constant == 0);
+
+                recrds += sizeof(Location);
+            }
+
+            assert((stkmap->_num_locations - 3) % 2 == 0);
+            for (int k = 3; k < stkmap->_num_locations; k += 2)
+            {
+                Location *lock1 = (Location *)recrds;
+                Location *lock2 = (Location *)(recrds + sizeof(Location));
+
+                assert(lock1->_reserved1 == 0);
+                assert(lock1->_type == LocationType::Indirect);
+                assert(lock1->_dwarf_reg_num == DWARFRegNum::SP);
+                assert(lock1->_location_size == 8);
+
+                assert(lock2->_reserved1 == 0);
+                assert(lock2->_type == LocationType::Indirect);
+                assert(lock2->_dwarf_reg_num == DWARFRegNum::SP);
+                assert(lock2->_location_size == 8);
+
+                LocInfo info1;
+
+                info1._base_offset = lock1->_offset_or_small_constant;
+                info1._offset = lock1->_offset_or_small_constant;
+
+                info._offsets.push_back(info1);
+
+                if (lock1->_offset_or_small_constant != lock2->_offset_or_small_constant)
+                {
+                    LocInfo info2;
+
+                    info2._base_offset = lock1->_offset_or_small_constant;
+                    info2._offset = lock2->_offset_or_small_constant;
+
+                    info._offsets.push_back(info2);
+                }
+
+                recrds += 2 * sizeof(Location);
+            }
+
+            recrds = (address)(((uint64_t)recrds + 0x7) & ~0x7);
+
+            StkMapRecordTail *tail = (StkMapRecordTail *)(recrds);
+            assert(tail->_num_live_outs == 0); // skip all LiveOuts
+            recrds += sizeof(StkMapRecordTail);
+
+            recrds = (address)(((uint64_t)recrds + 0x7) & ~0x7);
+        }
     }
 
+#ifdef DEBUG
     if (PrintStackMaps)
     {
-        fprintf(stderr, "----------------------------\n\n");
+        for (const auto &safepoint : _stack_maps)
+        {
+            fprintf(stderr, "Safepoint address: %p\n", safepoint.first);
+            fprintf(stderr, "Stack size: %d\n", safepoint.second._stack_size);
+            int i = 0;
+            for (const auto &offset : safepoint.second._offsets)
+            {
+                fprintf(stderr, "Offset %d: 0x%x, base offset = 0x%x\n", i, offset._offset, offset._base_offset);
+                i++;
+            }
+            fprintf(stderr, "\n");
+        }
     }
+#endif // DEBUG
+}
 
-    for (int i = 0; i < hdr->_num_constants; i++)
+const AddrInfo *StackMap::info(address ret) const
+{
+    const auto info = _stack_maps.find(ret);
+    if (info != _stack_maps.end())
     {
-        Constant *con = (Constant *)start;
-
-        if (PrintStackMaps)
-        {
-            fprintf(stderr, "Constant %d:\n", i);
-            fprintf(stderr, "LargeConstant    : %lu\n", con->_large_constant);
-        }
-
-        start += sizeof(Constant);
+        return &info->second;
     }
 
-    if (PrintStackMaps)
-    {
-        fprintf(stderr, "----------------------------\n\n");
-    }
-
-    for (int i = 0; i < hdr->_num_records; i++)
-    {
-        StkMapRecord *stkmap = (StkMapRecord *)start;
-
-        if (PrintStackMaps)
-        {
-            fprintf(stderr, "StkMapRecord %d:\n", i);
-            fprintf(stderr, "PatchPoint ID     : %lu\n", stkmap->_patch_point_id);
-            fprintf(stderr, "Instruction Offset: %d\n", stkmap->_instruction_offset);
-            fprintf(stderr, "Reserved          : %d\n", stkmap->_reserved);
-            fprintf(stderr, "NumLocations      : %d\n\n", stkmap->_num_locations);
-        }
-
-        start += sizeof(StkMapRecord);
-
-        for (int i = 0; i < stkmap->_num_locations; i++)
-        {
-            Location *lock = (Location *)start;
-
-            if (PrintStackMaps)
-            {
-                fprintf(stderr, "   Location %d:\n", i);
-                fprintf(stderr, "   Type                   : %d\n", lock->_type);
-                fprintf(stderr, "   Reserved               : %d\n", lock->_reserved0);
-                fprintf(stderr, "   Location Size          : %d\n", lock->_location_size);
-                fprintf(stderr, "   Dwarf RegNum           : %d\n", lock->_dwarf_reg_num);
-                fprintf(stderr, "   Reserved               : %d\n", lock->_reserved1);
-                fprintf(stderr, "   Offset or SmallConstant: %d\n\n", lock->_offset_or_small_constant);
-            }
-
-            start += sizeof(Location);
-        }
-
-        if (((uint64_t)start & 0x7) != 0)
-        {
-            if (PrintStackMaps)
-            {
-                fprintf(stderr, "Padding    : %d\n", *((uint32_t *)start));
-            }
-
-            start += sizeof(uint32_t);
-        }
-
-        StkMapRecordTail *tail = (StkMapRecordTail *)(start);
-
-        if (PrintStackMaps)
-        {
-            fprintf(stderr, "Padding    : %d\n", tail->_padding);
-            fprintf(stderr, "NumLiveOuts: %d\n\n", tail->_num_live_outs);
-        }
-
-        start += sizeof(StkMapRecordTail);
-
-        for (int i = 0; i < tail->_num_live_outs; i++)
-        {
-            LiveOuts *live = (LiveOuts *)start;
-
-            if (PrintStackMaps)
-            {
-                fprintf(stderr, "   LiveOut %d:\n", i);
-                fprintf(stderr, "   Dwarf RegNum : %d\n", live->_dwarf_reg_num);
-                fprintf(stderr, "   Reserved     : %d\n", live->_reserved);
-                fprintf(stderr, "   Size in Bytes: %d\n\n", live->_sizein_bytes);
-            }
-
-            start += sizeof(LiveOuts);
-        }
-
-        if (((uint64_t)start & 0x7) != 0)
-        {
-            if (PrintStackMaps)
-            {
-                fprintf(stderr, "Padding    : %d\n", *((uint32_t *)start));
-            }
-
-            start += sizeof(uint32_t);
-        }
-    }
+    return nullptr;
 }
 
 void StackMap::init()

@@ -102,6 +102,17 @@ void CodeGenLLVM::init_shadow_stack(const std::vector<llvm::Value *> &args)
 }
 #endif // LLVM_SHADOW_STACK
 
+#ifdef LLVM_STATEPOINT_EXAMPLE
+void CodeGenLLVM::save_sp()
+{
+    // stack was wet up -> save rsp
+    auto *const read_reg_func =
+        llvm::Intrinsic::getDeclaration(&_module, llvm::Intrinsic::read_register, {_int0_64->getType()});
+    auto *sp = __ CreateCall(read_reg_func, {_runtime.sp_name()});
+    __ CreateStore(sp, _runtime.stack_pointer());
+}
+#endif // LLVM_STATEPOINT_EXAMPLE
+
 void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &method)
 {
     // it is dummies for basic classes. There are external symbols
@@ -657,6 +668,10 @@ llvm::Value *CodeGenLLVM::emit_new_inner_helper(const std::shared_ptr<ast::Type>
     auto *const size = llvm::ConstantInt::get(_runtime.header_elem_type(HeaderLayout::Size), klass->size());
     auto *const disp_tab = __ CreateBitCast(_data.class_disp_tab(klass), _runtime.void_type()->getPointerTo());
 
+#ifdef LLVM_STATEPOINT_EXAMPLE
+    save_sp();
+#endif // LLVM_STATEPOINT_EXAMPLE
+
     // call allocation and cast to this klass pointer
     auto *const raw_object = __ CreateCall(func, {tag, size, disp_tab});
     auto *object = __ CreateBitCast(raw_object, _data.class_struct(klass)->getPointerTo(_runtime.HEAP_ADDR_SPACE));
@@ -702,6 +717,10 @@ llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass
     auto *const size = emit_load_size(self_val, klass_struct);
     auto *const disp_tab =
         __ CreateBitCast(emit_load_dispatch_table(self_val, klass), _runtime.void_type()->getPointerTo());
+
+#ifdef LLVM_STATEPOINT_EXAMPLE
+    save_sp();
+#endif // LLVM_STATEPOINT_EXAMPLE
 
     // allocate memory
     llvm::Value *raw_object = __ CreateCall(func, {tag, size, disp_tab});
@@ -989,6 +1008,11 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
 
     llvm::BasicBlock *true_block = nullptr, *false_block = nullptr, *merge_block = nullptr;
     make_control_flow(is_not_null, true_block, false_block, merge_block);
+
+#ifdef LLVM_STATEPOINT_EXAMPLE
+    // some runtime calls allocate memory, so we have to save sp
+    save_sp();
+#endif // LLVM_STATEPOINT_EXAMPLE
 
     const auto &method_name = expr._object->_object;
     auto *const call = std::visit(

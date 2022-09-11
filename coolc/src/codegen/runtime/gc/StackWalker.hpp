@@ -15,6 +15,14 @@ namespace gc
 
 class Marker;
 
+// info to relocate derived pointers
+struct DeriviedPtrRelocInfo
+{
+    address *_base_ptr_slot;    // where to find a new address of the base pointer
+    address *_derived_ptr_slot; // where to write a new derived ptr
+    int _offset;                // offset from the base pointer
+};
+
 class StackWalker
 {
   protected:
@@ -22,12 +30,14 @@ class StackWalker
 
   public:
     /**
-     * @brief Visit stack roots
+     * @brief Visit stack roots (base pointers only)
      *
      * @param obj Arbitrray object for visitor
      * @param visitor Visistor func
+     * @param record_derived_ptrs Record derived pointer to fix them further
      */
-    virtual void process_roots(void *obj, void (*visitor)(void *obj, address *root, const address *meta)) = 0;
+    virtual void process_roots(void *obj, void (*visitor)(void *obj, address *root, const address *meta),
+                               bool records_derived_ptrs = false) = 0;
 
     /**
      * @brief Initialize global stack walker
@@ -51,6 +61,12 @@ class StackWalker
         return Walker;
     }
 
+    /**
+     * @brief Apply relocations to derived pointers
+     * Uses relocation info from the last process_roots
+     */
+    virtual void fix_derived_pointers() = 0;
+
     virtual ~StackWalker()
     {
     }
@@ -60,17 +76,29 @@ class StackWalker
 class ShadowStackWalker : public StackWalker
 {
   public:
-    void process_roots(void *obj, void (*visitor)(void *obj, address *root, const address *meta)) override;
+    void process_roots(void *obj, void (*visitor)(void *obj, address *root, const address *meta),
+                       bool records_derived_ptrs = false) override;
+
+    // shadow stack don't create derived pointer
+    void fix_derived_pointers() override
+    {
+    }
 };
 #endif // LLVM_SHADOW_STACK
 
 #ifdef LLVM_STATEPOINT_EXAMPLE
 class StackMapWalker : public StackWalker
 {
+  private:
+    std::vector<DeriviedPtrRelocInfo> _derived_ptrs;
+
   public:
     StackMapWalker();
 
-    void process_roots(void *obj, void (*visitor)(void *obj, address *root, const address *meta)) override;
+    void process_roots(void *obj, void (*visitor)(void *obj, address *root, const address *meta),
+                       bool records_derived_ptrs = false) override;
+
+    void fix_derived_pointers() override;
 
     ~StackMapWalker();
 };

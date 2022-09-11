@@ -6,6 +6,10 @@
 
 #ifdef DEBUG
 extern bool PrintAllocatedObjects;
+extern bool TraceMarking;
+extern bool TraceStackSlotUpdate;
+extern bool TraceObjectFieldUpdate;
+extern bool TraceObjectMoving;
 #endif // DEBUG
 
 extern bool PrintGCStatistics;
@@ -13,7 +17,10 @@ extern std::string MaxHeapSize;
 extern int GCAlgo;
 
 #ifdef LLVM_STATEPOINT_EXAMPLE
+#ifdef DEBUG
 extern bool PrintStackMaps;
+extern bool TraceStackWalker;
+#endif // DEBUG
 #endif // LLVM_STATEPOINT_EXAMPLE
 
 /**

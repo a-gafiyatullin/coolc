@@ -1,5 +1,6 @@
 #include "RuntimeLLVM.h"
 #include "codegen/arch/llvm/klass/KlassLLVM.h"
+#include "llvm/IR/Constants.h"
 
 using namespace codegen;
 
@@ -37,6 +38,12 @@ RuntimeLLVM::RuntimeLLVM(llvm::Module &module)
       _init_runtime(module, SYMBOLS[RuntimeLLVMSymbols::INIT_RUNTIME], _void_type,
                     {_int32_type, _int8_type->getPointerTo()->getPointerTo()}, false, *this),
       _finish_runtime(module, SYMBOLS[RuntimeLLVMSymbols::FINISH_RUNTIME], _void_type, {}, false, *this)
+#ifdef LLVM_STATEPOINT_EXAMPLE
+      ,
+      _stack_pointer(new llvm::GlobalVariable(
+          module, _int64_type, false, llvm::GlobalValue::ExternalLinkage, llvm::ConstantInt::get(_int64_type, 0, true),
+          SYMBOLS[RuntimeLLVMSymbols::STACK_POINTER], nullptr, llvm::GlobalValue::GeneralDynamicTLSModel))
+#endif // LLVM_STATEPOINT_EXAMPLE
 {
     _header_layout_types[HeaderLayout::Mark] =
         llvm::IntegerType::get(module.getContext(), HeaderLayoutSizes::MarkSize * BITS_PER_BYTE);
@@ -45,8 +52,30 @@ RuntimeLLVM::RuntimeLLVM(llvm::Module &module)
     _header_layout_types[HeaderLayout::Size] =
         llvm::IntegerType::get(module.getContext(), HeaderLayoutSizes::SizeSize * BITS_PER_BYTE);
     _header_layout_types[HeaderLayout::DispatchTable] = _void_type->getPointerTo();
+
+#ifdef LLVM_STATEPOINT_EXAMPLE
+#ifdef __x86_64__
+    std::string sp_name = "rsp";
+#endif // __x86_64__
+    _sp_name = llvm::MetadataAsValue::get(
+        module.getContext(), llvm::MDNode::get(module.getContext(), llvm::MDString::get(module.getContext(), sp_name)));
+#endif // LLVM_STATEPOINT_EXAMPLE
 }
 
-const std::string RuntimeLLVM::SYMBOLS[RuntimeLLVMSymbolsSize] = {
-    "_equals",         "_case_abort",   "_case_abort_2", "_gc_alloc", "_dispatch_abort", "_init_runtime",
-    "_finish_runtime", "class_nameTab", "class_objTab",  "_int_tag",  "_bool_tag",       "_string_tag"};
+const std::string RuntimeLLVM::SYMBOLS[RuntimeLLVMSymbolsSize] = {"_equals",
+                                                                  "_case_abort",
+                                                                  "_case_abort_2",
+                                                                  "_gc_alloc",
+                                                                  "_dispatch_abort",
+                                                                  "_init_runtime",
+                                                                  "_finish_runtime",
+                                                                  "class_nameTab",
+                                                                  "class_objTab",
+                                                                  "_int_tag",
+                                                                  "_bool_tag",
+                                                                  "_string_tag"
+#ifdef LLVM_STATEPOINT_EXAMPLE
+                                                                  ,
+                                                                  "_stack_pointer"
+#endif // LLVM_STATEPOINT_EXAMPLE
+};

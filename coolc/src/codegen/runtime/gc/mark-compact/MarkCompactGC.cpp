@@ -60,6 +60,18 @@ void ThreadedCompactionGC::update(address *obj, address addr)
         // we points to fields
         address next = *(address *)temp;
         *(address *)temp = addr; // restore address
+
+#ifdef DEBUG
+        if (TraceStackSlotUpdate && temp >= _stack_start && temp <= _stack_end)
+        {
+            fprintf(stderr, "Update stack slot %p (value %p) with value %p\n", temp, next, addr);
+        }
+        else if (TraceObjectFieldUpdate)
+        {
+            fprintf(stderr, "Update object field %p (value %p) with value %p\n", temp, next, addr);
+        }
+#endif // DEBUG
+
         temp = next;
     }
     ((ObjectLayout *)obj)->_size = (size_t)temp; // restore original info
@@ -135,10 +147,11 @@ void ThreadedCompactionGC::update_backward_references()
 
     address heap_end = nxtf_alloca->end();
 
+    size_t obj_size;
     while (scan < heap_end)
     {
         ObjectLayout *obj = (ObjectLayout *)scan;
-        size_t obj_size = obj->_size; // can be wrong for marked objects after threading
+        obj_size = obj->_size; // can be wrong for marked objects after threading
 
         // markword is ok, because we use _size for threading
         if (obj->is_marked())
@@ -153,6 +166,13 @@ void ThreadedCompactionGC::update_backward_references()
 
             nxtf_alloca->move(obj, free);
 
+#ifdef DEBUG
+            if (TraceObjectMoving)
+            {
+                fprintf(stderr, "Move object %p to %p\n", obj, free);
+            }
+#endif // DEBUG
+
             free = free + obj_size;
         }
 
@@ -160,11 +180,24 @@ void ThreadedCompactionGC::update_backward_references()
         scan = nxtf_alloca->next_object(scan + obj_size);
     }
 
-    nxtf_alloca->force_alloc_pos(free);
+    if (free <= heap_end - HEADER_SIZE)
+    {
+        nxtf_alloca->force_alloc_pos(free);
+    }
+    else
+    {
+        int tail = heap_end - free;
+        ObjectLayout *obj = (ObjectLayout *)(free - obj_size);
+
+        obj->_size += tail;
+        obj->zero_appendix(tail);
+    }
 }
 
 void ThreadedCompactionGC::compact()
 {
     update_forward_references();
     update_backward_references();
+
+    StackWalker::walker()->fix_derived_pointers();
 }

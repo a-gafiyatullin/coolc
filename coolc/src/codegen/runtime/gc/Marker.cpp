@@ -34,12 +34,20 @@ void MarkerFIFO::mark_root(void *obj, address *root, const address *meta)
 void MarkerFIFO::mark_from_roots()
 {
     assert(_worklist.empty());
-    StackWalker::walker()->process_roots(this, &MarkerFIFO::mark_root);
+    StackWalker::walker()->process_roots(this, &MarkerFIFO::mark_root, true);
 }
 
 void MarkerFIFO::mark_root(address *root)
 {
     ObjectLayout *obj = (ObjectLayout *)(*root);
+
+#ifdef DEBUG
+    if (TraceMarking)
+    {
+        fprintf(stderr, "Try mark: %p in %p\n", obj, root);
+    }
+#endif // DEBUG
+
     if (obj && !obj->is_marked())
     {
         obj->set_marked();

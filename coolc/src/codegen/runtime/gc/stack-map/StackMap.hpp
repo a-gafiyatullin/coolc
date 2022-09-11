@@ -2,13 +2,19 @@
 
 #include "codegen/runtime/globals.hpp"
 #include <cstdint>
+#include <unordered_map>
+#include <vector>
 
-extern address __LLVM_StackMaps; // NOLINT
+extern address __LLVM_StackMaps;            // NOLINT
+extern thread_local address _stack_pointer; // NOLINT
 
 namespace gc
 {
 namespace stackmap
 {
+
+// https://llvm.org/docs/StackMaps.html#stack-map-format
+// https://llvm.org/docs/Statepoints.html#stack-map-format
 
 struct Header
 {
@@ -64,10 +70,41 @@ struct StkMapRecordTail
     uint16_t _num_live_outs;
 };
 
+enum DWARFRegNum
+{
+    SP = 0x7
+};
+
+enum LocationType
+{
+    Register = 0x1,
+    Direct,
+    Indirect,
+    Constant,
+    ConstIndex
+};
+
+// represents info about relocation
+// if _base_offset != _offset this is a derived pointer
+struct LocInfo
+{
+    int _base_offset;
+    int _offset;
+};
+
+// represent info about all relocations at safepoint
+struct AddrInfo
+{
+    int _stack_size;               // offset to find previous activation
+    std::vector<LocInfo> _offsets; // offsets relative to sp
+};
+
 class StackMap
 {
   private:
     static StackMap *Map;
+
+    std::unordered_map<address, AddrInfo> _stack_maps;
 
   public:
     StackMap();
@@ -93,6 +130,14 @@ class StackMap
     {
         return Map;
     }
+
+    /**
+     * @brief Get info about stack by addr
+     *
+     * @param ret Return value
+     * @return AddrInfo&
+     */
+    const AddrInfo *info(address ret) const;
 };
 
 }; // namespace stackmap

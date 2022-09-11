@@ -98,6 +98,10 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     void pop();
 #endif // LLVM_SHADOW_STACK
 
+#ifdef LLVM_STATEPOINT_EXAMPLE
+    void save_sp();
+#endif // LLVM_STATEPOINT_EXAMPLE
+
     // cast values helpers
     llvm::Value *maybe_cast(llvm::Value *val, llvm::Type *type);
     void maybe_cast(std::vector<llvm::Value *> &args, llvm::FunctionType *func);

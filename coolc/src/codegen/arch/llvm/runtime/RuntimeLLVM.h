@@ -1,6 +1,7 @@
 #pragma once
 
 #include "codegen/decls/Runtime.h"
+#include <llvm/IR/Metadata.h>
 #include <llvm/IR/Module.h>
 
 namespace codegen
@@ -74,6 +75,10 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
         BOOL_TAG_NAME,
         STRING_TAG_NAME,
 
+#ifdef LLVM_STATEPOINT_EXAMPLE
+        STACK_POINTER,
+#endif // LLVM_STATEPOINT_EXAMPLE
+
         RuntimeLLVMSymbolsSize
     };
 
@@ -114,6 +119,11 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
     // runtime init
     const RuntimeMethod _init_runtime;
     const RuntimeMethod _finish_runtime;
+
+#ifdef LLVM_STATEPOINT_EXAMPLE
+    llvm::GlobalVariable *_stack_pointer;
+    llvm::MetadataAsValue *_sp_name;
+#endif // LLVM_STATEPOINT_EXAMPLE
 
   public:
     /**
@@ -227,5 +237,28 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
 
         return static_cast<std::string>(GC_DEFAULT_NAME);
     }
+
+#ifdef LLVM_STATEPOINT_EXAMPLE
+    /**
+     * @brief Get thread local variable to store stack pointer
+     *
+     * @return llvm::GlobalVariable*
+     */
+    llvm::GlobalVariable *stack_pointer() const
+    {
+        return _stack_pointer;
+    }
+
+    /**
+     * @brief Get stack popinter register name
+     *
+     * @return Stack POinter register name as Metadata
+     */
+    llvm::MetadataAsValue *sp_name() const
+    {
+        assert(_sp_name);
+        return _sp_name;
+    }
+#endif // LLVM_STATEPOINT_EXAMPLE
 };
 }; // namespace codegen

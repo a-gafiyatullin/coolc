@@ -262,7 +262,7 @@ void DataLLVM::string_const_inner(const std::string &str)
     for (auto i = 0; i < str.size(); i++)
     {
         fields.push_back(char_type);
-        elements.push_back(llvm::ConstantInt::get(char_type, str[i]));
+        elements.push_back(llvm::ConstantInt::get(char_type, str.at(i)));
     }
 
     fields.push_back(char_type);
