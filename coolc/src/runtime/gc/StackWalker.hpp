@@ -8,7 +8,7 @@
 #include "stack-map/StackMap.hpp"
 #endif // LLVM_STATEPOINT_EXAMPLE
 
-#include "codegen/runtime/ObjectLayout.hpp"
+#include "runtime/ObjectLayout.hpp"
 
 namespace gc
 {

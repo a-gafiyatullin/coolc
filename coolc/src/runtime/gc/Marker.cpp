@@ -1,5 +1,5 @@
 #include "Marker.hpp"
-#include "codegen/runtime/gc/Allocator.hpp"
+#include "runtime/gc/Allocator.hpp"
 
 using namespace gc;
 

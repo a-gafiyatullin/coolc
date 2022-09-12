@@ -1,6 +1,6 @@
 #pragma once
 
-#include "codegen/runtime/globals.hpp"
+#include "runtime/globals.hpp"
 #include <cstdint>
 #include <unordered_map>
 #include <vector>

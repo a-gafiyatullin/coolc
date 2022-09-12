@@ -1,7 +1,7 @@
 #pragma once
 
 #include "StackWalker.hpp"
-#include "codegen/runtime/ObjectLayout.hpp"
+#include "runtime/ObjectLayout.hpp"
 #include <queue>
 
 namespace gc

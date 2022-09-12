@@ -90,7 +90,7 @@ if(ARCH STREQUAL "LLVM")
         set(CMAKE_SHARED_LIBRARY_SUFFIX .so)
     endif()
 
-    add_subdirectory(src/codegen/runtime)
+    add_subdirectory(src/runtime)
 endif()
 
 enable_testing()

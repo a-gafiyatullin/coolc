@@ -1,4 +1,4 @@
-#include "codegen/runtime/gc/GC.hpp"
+#include "runtime/gc/GC.hpp"
 
 using namespace gc;
 

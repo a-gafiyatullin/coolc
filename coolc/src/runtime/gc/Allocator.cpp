@@ -1,6 +1,6 @@
 #include "Allocator.hpp"
 #include "Utils.hpp"
-#include "codegen/runtime/globals.hpp"
+#include "runtime/globals.hpp"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
