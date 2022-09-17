@@ -42,7 +42,10 @@ RuntimeLLVM::RuntimeLLVM(llvm::Module &module)
       ,
       _stack_pointer(new llvm::GlobalVariable(
           module, _int64_type, false, llvm::GlobalValue::ExternalLinkage, llvm::ConstantInt::get(_int64_type, 0, true),
-          SYMBOLS[RuntimeLLVMSymbols::STACK_POINTER], nullptr, llvm::GlobalValue::GeneralDynamicTLSModel))
+          SYMBOLS[RuntimeLLVMSymbols::STACK_POINTER], nullptr, llvm::GlobalValue::GeneralDynamicTLSModel)),
+      _frame_pointer(new llvm::GlobalVariable(
+          module, _int64_type, false, llvm::GlobalValue::ExternalLinkage, llvm::ConstantInt::get(_int64_type, 0, true),
+          SYMBOLS[RuntimeLLVMSymbols::FRAME_POINTER], nullptr, llvm::GlobalValue::GeneralDynamicTLSModel))
 #endif // LLVM_STATEPOINT_EXAMPLE
 {
     _header_layout_types[HeaderLayout::Mark] =
@@ -56,9 +59,18 @@ RuntimeLLVM::RuntimeLLVM(llvm::Module &module)
 #ifdef LLVM_STATEPOINT_EXAMPLE
 #ifdef __x86_64__
     std::string sp_name = "rsp";
+    std::string fp_name = "rbp";
 #endif // __x86_64__
+
+#ifdef __aarch64__
+    std::string sp_name = "sp";
+    std::string fp_name = "x29";
+#endif // __aarch64__
+
     _sp_name = llvm::MetadataAsValue::get(
         module.getContext(), llvm::MDNode::get(module.getContext(), llvm::MDString::get(module.getContext(), sp_name)));
+    _fp_name = llvm::MetadataAsValue::get(
+        module.getContext(), llvm::MDNode::get(module.getContext(), llvm::MDString::get(module.getContext(), fp_name)));
 #endif // LLVM_STATEPOINT_EXAMPLE
 }
 
@@ -76,6 +88,7 @@ const std::string RuntimeLLVM::SYMBOLS[RuntimeLLVMSymbolsSize] = {"_equals",
                                                                   "_string_tag"
 #ifdef LLVM_STATEPOINT_EXAMPLE
                                                                   ,
-                                                                  "_stack_pointer"
+                                                                  "_stack_pointer",
+                                                                  "_frame_pointer"
 #endif // LLVM_STATEPOINT_EXAMPLE
 };
