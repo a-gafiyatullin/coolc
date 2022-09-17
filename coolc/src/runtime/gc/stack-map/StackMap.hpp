@@ -7,6 +7,7 @@
 
 extern address __LLVM_StackMaps;            // NOLINT
 extern thread_local address _stack_pointer; // NOLINT
+extern thread_local address _frame_pointer; // NOLINT
 
 namespace gc
 {
@@ -70,10 +71,21 @@ struct StkMapRecordTail
     uint16_t _num_live_outs;
 };
 
+#ifdef __x86_64__
 enum DWARFRegNum
 {
+    FP = 0x6,
     SP = 0x7
 };
+#endif // __x86_64__
+
+#ifdef __aarch64__
+enum DWARFRegNum
+{
+    FP = 0x1D,
+    SP = 0x1F
+};
+#endif // __aarch64__
 
 enum LocationType
 {
@@ -88,7 +100,10 @@ enum LocationType
 // if _base_offset != _offset this is a derived pointer
 struct LocInfo
 {
+    DWARFRegNum _base_reg;
     int _base_offset;
+
+    DWARFRegNum _der_reg;
     int _offset;
 };
 

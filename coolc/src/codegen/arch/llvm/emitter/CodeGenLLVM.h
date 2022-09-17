@@ -99,7 +99,7 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
 #endif // LLVM_SHADOW_STACK
 
 #ifdef LLVM_STATEPOINT_EXAMPLE
-    void save_sp();
+    void save_frame();
 #endif // LLVM_STATEPOINT_EXAMPLE
 
     // cast values helpers

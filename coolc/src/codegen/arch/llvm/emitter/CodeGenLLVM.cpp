@@ -1,6 +1,7 @@
 #include "CodeGenLLVM.h"
 #include "codegen/emitter/CodeGen.inline.h"
 #include "codegen/emitter/data/Data.inline.h"
+#include <llvm/IR/Attributes.h>
 
 using namespace codegen;
 
@@ -103,13 +104,19 @@ void CodeGenLLVM::init_shadow_stack(const std::vector<llvm::Value *> &args)
 #endif // LLVM_SHADOW_STACK
 
 #ifdef LLVM_STATEPOINT_EXAMPLE
-void CodeGenLLVM::save_sp()
+void CodeGenLLVM::save_frame()
 {
-    // stack was wet up -> save rsp
     auto *const read_reg_func =
         llvm::Intrinsic::getDeclaration(&_module, llvm::Intrinsic::read_register, {_int0_64->getType()});
+
     auto *sp = __ CreateCall(read_reg_func, {_runtime.sp_name()});
     __ CreateStore(sp, _runtime.stack_pointer());
+
+// TODO: do it for x86 if fno-omit-frame-pointer
+#ifdef __aarch64__
+    auto *fp = __ CreateCall(read_reg_func, {_runtime.fp_name()});
+    __ CreateStore(fp, _runtime.frame_pointer());
+#endif // __aarch64__
 }
 #endif // LLVM_STATEPOINT_EXAMPLE
 
@@ -125,6 +132,11 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
         _builder->klass(_current_class->_type->_string)->method_full_name(method->_object->_object));
 
     GUARANTEE_DEBUG(func);
+
+// workaround for bug in LLVM for aarch64 (49897)
+#if defined(__aarch64__) && defined(LLVM_STATEPOINT_EXAMPLE)
+    func->addFnAttr(llvm::Attribute::get(_context, "frame-pointer", "all"));
+#endif // __aarch64__ && LLVM_STATEPOINT_EXAMPLE
 
     // Create a new basic block to start insertion into.
     auto *entry = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::ENTRY_BLOCK), func);
@@ -315,6 +327,11 @@ void CodeGenLLVM::emit_class_init_method_inner()
     auto *const func = _module.getFunction(klass->init_method());
 
     GUARANTEE_DEBUG(func);
+
+// workaround for bug in LLVM for aarch64 (49897)
+#if defined(__aarch64__) && defined(LLVM_STATEPOINT_EXAMPLE)
+    func->addFnAttr(llvm::Attribute::get(_context, "frame-pointer", "all"));
+#endif // __aarch64__ && LLVM_STATEPOINT_EXAMPLE
 
     // Create a new basic block to start insertion into.
     auto *entry = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::ENTRY_BLOCK), func);
@@ -669,7 +686,7 @@ llvm::Value *CodeGenLLVM::emit_new_inner_helper(const std::shared_ptr<ast::Type>
     auto *const disp_tab = __ CreateBitCast(_data.class_disp_tab(klass), _runtime.void_type()->getPointerTo());
 
 #ifdef LLVM_STATEPOINT_EXAMPLE
-    save_sp();
+    save_frame();
 #endif // LLVM_STATEPOINT_EXAMPLE
 
     // call allocation and cast to this klass pointer
@@ -719,7 +736,7 @@ llvm::Value *CodeGenLLVM::emit_new_inner(const std::shared_ptr<ast::Type> &klass
         __ CreateBitCast(emit_load_dispatch_table(self_val, klass), _runtime.void_type()->getPointerTo());
 
 #ifdef LLVM_STATEPOINT_EXAMPLE
-    save_sp();
+    save_frame();
 #endif // LLVM_STATEPOINT_EXAMPLE
 
     // allocate memory
@@ -1011,7 +1028,7 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
 
 #ifdef LLVM_STATEPOINT_EXAMPLE
     // some runtime calls allocate memory, so we have to save sp
-    save_sp();
+    save_frame();
 #endif // LLVM_STATEPOINT_EXAMPLE
 
     const auto &method_name = expr._object->_object;
@@ -1195,6 +1212,12 @@ void CodeGenLLVM::emit_runtime_main()
                                 },
                                 false),
         llvm::Function::ExternalLinkage, static_cast<std::string>(RUNTIME_MAIN_FUNC), &_module);
+
+// workaround for bug in LLVM for aarch64 (49897)
+#if defined(__aarch64__) && defined(LLVM_STATEPOINT_EXAMPLE)
+    runtime_main->addFnAttr(llvm::Attribute::get(_context, "frame-pointer", "all"));
+#endif // __aarch64__ && LLVM_STATEPOINT_EXAMPLE
+
     // set gc
     const auto gc_name = _runtime.gc_strategy_name();
     if (gc_name != _runtime.GC_DEFAULT_NAME)
@@ -1254,6 +1277,7 @@ void CodeGenLLVM::execute_linker(const std::string &object_file_name, const std:
     std::string error;
 
     // TODO: are you serious?
+    // TODO: here is the problem of MacOS with M1 processor support...
 #ifdef LLVM_STATEPOINT_EXAMPLE
     CODEGEN_VERBOSE_ONLY(
         LOG("Globalize " + static_cast<std::string>(STACKMAP_NAME) + " for " + object_file_name + "."));

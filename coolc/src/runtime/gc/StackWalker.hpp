@@ -92,6 +92,12 @@ class StackMapWalker : public StackWalker
   private:
     std::vector<DeriviedPtrRelocInfo> _derived_ptrs;
 
+    address *next_sp(address *sp, const stackmap::AddrInfo *info);
+    address *next_fp(address *fp, const stackmap::AddrInfo *info);
+    address *ret_addr(address *sp, address *fp, const stackmap::AddrInfo *info);
+    // find the first addrinfo for COOL frame
+    const stackmap::AddrInfo *find_addrinfo_from_rt(address *sp, address *fp, const stackmap::StackMap *map);
+
   public:
     StackMapWalker();
 

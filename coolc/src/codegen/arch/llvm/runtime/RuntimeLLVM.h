@@ -77,6 +77,7 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
 
 #ifdef LLVM_STATEPOINT_EXAMPLE
         STACK_POINTER,
+        FRAME_POINTER,
 #endif // LLVM_STATEPOINT_EXAMPLE
 
         RuntimeLLVMSymbolsSize
@@ -122,7 +123,10 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
 
 #ifdef LLVM_STATEPOINT_EXAMPLE
     llvm::GlobalVariable *_stack_pointer;
+    llvm::GlobalVariable *_frame_pointer;
+
     llvm::MetadataAsValue *_sp_name;
+    llvm::MetadataAsValue *_fp_name;
 #endif // LLVM_STATEPOINT_EXAMPLE
 
   public:
@@ -250,14 +254,35 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
     }
 
     /**
-     * @brief Get stack popinter register name
+     * @brief Get thread local variable to store frame pointer
      *
-     * @return Stack POinter register name as Metadata
+     * @return llvm::GlobalVariable*
+     */
+    llvm::GlobalVariable *frame_pointer() const
+    {
+        return _frame_pointer;
+    }
+
+    /**
+     * @brief Get stack pointer register name
+     *
+     * @return Stack Pointer register name as Metadata
      */
     llvm::MetadataAsValue *sp_name() const
     {
         assert(_sp_name);
         return _sp_name;
+    }
+
+    /**
+     * @brief Get frame popinter register name
+     *
+     * @return Frame Pointer register name as Metadata
+     */
+    llvm::MetadataAsValue *fp_name() const
+    {
+        assert(_fp_name);
+        return _fp_name;
     }
 #endif // LLVM_STATEPOINT_EXAMPLE
 };

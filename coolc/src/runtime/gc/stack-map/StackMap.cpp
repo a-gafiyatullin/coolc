@@ -53,24 +53,31 @@ StackMap::StackMap()
 
                 assert(lock1->_reserved1 == 0);
                 assert(lock1->_type == LocationType::Indirect);
-                assert(lock1->_dwarf_reg_num == DWARFRegNum::SP);
+                assert(lock1->_dwarf_reg_num == DWARFRegNum::SP || lock1->_dwarf_reg_num == DWARFRegNum::FP);
                 assert(lock1->_location_size == 8);
 
                 assert(lock2->_reserved1 == 0);
                 assert(lock2->_type == LocationType::Indirect);
-                assert(lock2->_dwarf_reg_num == DWARFRegNum::SP);
+                assert(lock2->_dwarf_reg_num == DWARFRegNum::SP || lock2->_dwarf_reg_num == DWARFRegNum::FP);
                 assert(lock2->_location_size == 8);
 
                 LocInfo info1;
+
+                info1._base_reg = (DWARFRegNum)lock1->_dwarf_reg_num;
+                info1._der_reg = (DWARFRegNum)lock1->_dwarf_reg_num;
 
                 info1._base_offset = lock1->_offset_or_small_constant;
                 info1._offset = lock1->_offset_or_small_constant;
 
                 info._offsets.push_back(info1);
 
-                if (lock1->_offset_or_small_constant != lock2->_offset_or_small_constant)
+                if (lock1->_offset_or_small_constant != lock2->_offset_or_small_constant ||
+                    lock2->_dwarf_reg_num != lock1->_dwarf_reg_num)
                 {
                     LocInfo info2;
+
+                    info2._base_reg = (DWARFRegNum)lock1->_dwarf_reg_num;
+                    info2._der_reg = (DWARFRegNum)lock2->_dwarf_reg_num;
 
                     info2._base_offset = lock1->_offset_or_small_constant;
                     info2._offset = lock2->_offset_or_small_constant;
@@ -101,7 +108,8 @@ StackMap::StackMap()
             int i = 0;
             for (const auto &offset : safepoint.second._offsets)
             {
-                fprintf(stderr, "Offset %d: 0x%x, base offset = 0x%x\n", i, offset._offset, offset._base_offset);
+                fprintf(stderr, "%d: Offset(reg = %d) = %d, base offset(reg = %d) = %d\n", i, offset._der_reg,
+                        offset._offset, offset._base_reg, offset._base_offset);
                 i++;
             }
             fprintf(stderr, "\n");
