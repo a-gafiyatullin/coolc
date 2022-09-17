@@ -1,5 +1,5 @@
 #include "StackWalker.hpp"
-#include "codegen/runtime/globals.hpp"
+#include "runtime/globals.hpp"
 #include <cassert>
 
 using namespace gc;
