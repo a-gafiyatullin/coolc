@@ -41,7 +41,7 @@ assistance with **coolc**.
 
 5. Features:
 
-|                           | Coolc Core | Shadow Stack GC | Statepoint Example GC |
+|                           | Cool Core  | Shadow Stack GC | Statepoint Example GC |
 |---------------------------|------------|-----------------|-----------------------|
 | AArch64, Linux            |     x      |        x        |           x           |
 | x86_64, Linux             |     x      |        x        |           x           |
