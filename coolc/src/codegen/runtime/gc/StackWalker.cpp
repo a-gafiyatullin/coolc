@@ -1,4 +1,5 @@
 #include "StackWalker.hpp"
+#include "codegen/runtime/globals.hpp"
 #include <cassert>
 
 using namespace gc;
@@ -145,7 +146,7 @@ void StackMapWalker::fix_derived_pointers()
 const stackmap::AddrInfo *StackMapWalker::find_addrinfo_from_rt(address *sp, address *fp, const stackmap::StackMap *map)
 {
     assert(map);
-    return stackmap->info((address)sp[-1]);
+    return map->info((address)sp[-1]);
 }
 
 address *StackMapWalker::next_sp(address *sp, const stackmap::AddrInfo *info)
@@ -162,7 +163,7 @@ address *StackMapWalker::next_fp(address *fp, const stackmap::AddrInfo *info)
 
 address *StackMapWalker::ret_addr(address *sp, address *fp, const stackmap::AddrInfo *info)
 {
-    return (address *)(sp[-1]);
+    return (address *)(next_sp(sp, info)[-1]);
 }
 #elif __aarch64__
 #include <execinfo.h>
