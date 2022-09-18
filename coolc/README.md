@@ -9,7 +9,7 @@ assistance with **coolc**.
 ## Getting the Source Code and Building COOLC
 
 1. Checkout COOLC:
-    - `git clone https://github.com/xp10rd/Compilers.git`
+    - `git clone https://github.com/xp10rd/coolc.git`
 
 2. Configure and build COOLC:
     - Prerequirement: at least **clang-12**, **gtest**, **llvm-12**;

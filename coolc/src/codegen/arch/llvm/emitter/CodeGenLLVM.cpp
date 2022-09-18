@@ -1026,12 +1026,51 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
     llvm::BasicBlock *true_block = nullptr, *false_block = nullptr, *merge_block = nullptr;
     make_control_flow(is_not_null, true_block, false_block, merge_block);
 
+    const auto &method_name = expr._object->_object;
+
 #ifdef LLVM_STATEPOINT_EXAMPLE
-    // some runtime calls allocate memory, so we have to save sp
-    save_frame();
+    // String_concat and IO_in_string can cause GC
+
+    bool need_save = false;
+    std::shared_ptr<ast::Type> disp_class = nullptr;
+
+    if (std::holds_alternative<ast::VirtualDispatchExpression>(expr._base))
+    {
+        disp_class = semant::Semant::exact_type(expr._expr->_type, _current_class->_type);
+    }
+    else
+    {
+        disp_class = std::get<ast::StaticDispatchExpression>(expr._base)._type;
+    }
+
+    // first of all fast check on this methods:
+    if (method_name == StringMethodsNames[CONCAT])
+    {
+        // cannot inherit from String - easy check
+        need_save = semant::Semant::is_string(disp_class);
+    }
+    else if (method_name == IOMethodsNames[IN_STRING])
+    {
+        // this class can be inherited from IO - check this
+        auto disp_class_handle = _builder->klass(disp_class->_string);
+        while (disp_class_handle->parent() != nullptr && disp_class_handle->parent()->name() != BaseClassesNames[IO])
+        {
+            disp_class_handle = disp_class_handle->parent();
+        }
+
+        if (disp_class_handle->parent() != nullptr)
+        {
+            assert(disp_class_handle->parent()->name() == BaseClassesNames[IO]);
+            need_save = true;
+        }
+    }
+
+    if (need_save)
+    {
+        save_frame();
+    }
 #endif // LLVM_STATEPOINT_EXAMPLE
 
-    const auto &method_name = expr._object->_object;
     auto *const call = std::visit(
         ast::overloaded{
             [&](const ast::VirtualDispatchExpression &disp) {
