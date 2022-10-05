@@ -61,7 +61,7 @@ class GC
   protected:
     static const int HEADER_SIZE = sizeof(ObjectLayout);
 
-    address _runtime_root; // need it to preserve allocations in runtime routines
+    std::vector<address *> _runtime_roots; // need it to preserve allocations in runtime routines
 
     static GC *Gc;
 
@@ -117,21 +117,20 @@ class GC
     /**
      * @brief Preserve temporary allocation
      *
-     * @param root Address of an object
+     * @param root Address of a slot with an object
      */
-    void set_runtime_root(address root)
+    inline void add_runtime_root(address *root)
     {
-        _runtime_root = root;
+        _runtime_roots.push_back(root);
     }
 
     /**
-     * @brief Get preserved allocation address
+     * @brief Clean list of preserved objects
      *
-     * @return address of the preserved object
      */
-    address runtime_root() const
+    inline void clean_runtime_roots()
     {
-        return _runtime_root;
+        _runtime_roots.clear();
     }
 
     virtual ~GC()

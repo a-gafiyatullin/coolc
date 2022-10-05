@@ -9,7 +9,10 @@ void MarkCompactGC::collect()
 
         Marker *marker = Marker::marker();
         marker->mark_from_roots();
-        marker->mark_root(&_runtime_root);
+        for (auto *r : _runtime_roots)
+        {
+            marker->mark_root(r);
+        }
     }
 
     GCStats phase(GCStats::GCPhase::COLLECT);
@@ -55,7 +58,8 @@ void ThreadedCompactionGC::update(address *obj, address addr)
 
     // if _size field contains a heap pointer - it is a start of the list
     while (alloca->is_heap_addr(temp) || (temp >= _stack_start && temp <= _stack_end) ||
-           (temp == (address)&_runtime_root))
+           (std::any_of(_runtime_roots.begin(), _runtime_roots.end(),
+                        [temp](address *e) { return e == (address *)temp; })))
     {
         // we points to fields
         address next = *(address *)temp;
@@ -85,9 +89,9 @@ void ThreadedCompactionGC::update_forward_references()
 
     StackWalker::walker()->process_roots(this, &ThreadedCompactionGC::thread_root);
 
-    if (_runtime_root)
+    for (auto *r : _runtime_roots)
     {
-        thread(&_runtime_root);
+        thread(r);
     }
 
     NextFitAllocator *nxtf_alloca = (NextFitAllocator *)Allocator::allocator();

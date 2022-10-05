@@ -1044,12 +1044,12 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
     }
 
     // first of all fast check on this methods:
-    if (method_name == StringMethodsNames[CONCAT])
+    if (method_name == StringMethodsNames[CONCAT] || method_name == StringMethodsNames[SUBSTR])
     {
         // cannot inherit from String - easy check
         need_save = semant::Semant::is_string(disp_class);
     }
-    else if (method_name == IOMethodsNames[IN_STRING])
+    else if (method_name == IOMethodsNames[IN_STRING] || method_name == IOMethodsNames[IN_INT])
     {
         // this class can be inherited from IO - check this
         auto disp_class_handle = _builder->klass(disp_class->_string);

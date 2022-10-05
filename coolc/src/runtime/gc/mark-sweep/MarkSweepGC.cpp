@@ -9,7 +9,10 @@ void MarkSweepGC::collect()
 
         Marker *marker = Marker::marker();
         marker->mark_from_roots();
-        marker->mark_root(&_runtime_root);
+        for (auto *r : _runtime_roots)
+        {
+            marker->mark_root(r);
+        }
     }
 
     GCStats phase(GCStats::GCPhase::COLLECT);

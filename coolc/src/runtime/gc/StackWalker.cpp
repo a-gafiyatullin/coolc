@@ -1,4 +1,5 @@
 #include "StackWalker.hpp"
+#include "runtime/gc/Allocator.hpp"
 #include "runtime/globals.hpp"
 #include <cassert>
 
@@ -69,14 +70,6 @@ void StackMapWalker::process_roots(void *obj, void (*visitor)(void *obj, address
     address *frametop = (address *)_frame_pointer;
     assert(stacktop || frametop);
 
-#ifdef DEBUG
-    if (TraceStackWalker)
-    {
-        fprintf(stderr, "\nStack pointer: %p\n", stacktop);
-        fprintf(stderr, "Frame pointer: %p\n", frametop);
-    }
-#endif // DEBUG
-
     auto *const stackmap = stackmap::StackMap::map();
     assert(stackmap);
 
@@ -87,6 +80,13 @@ void StackMapWalker::process_roots(void *obj, void (*visitor)(void *obj, address
     int i = 0;
     while (stackinfo)
     {
+#ifdef DEBUG
+        if (TraceStackWalker)
+        {
+            fprintf(stderr, "Stack pointer: %p\n", stacktop);
+            fprintf(stderr, "Frame pointer: %p\n", frametop);
+        }
+#endif // DEBUG
         for (const auto &offset : stackinfo->_offsets)
         {
             address *base_ptr_slot =
@@ -97,6 +97,13 @@ void StackMapWalker::process_roots(void *obj, void (*visitor)(void *obj, address
                 (address *)((offset._der_reg == stackmap::DWARFRegNum::SP ? (address)stacktop : (address)frametop) +
                             offset._offset);
 
+            // TODO: very strange behaviour with aarch64:
+            // base pointer is null, but derived is not
+            if (*base_ptr_slot == nullptr && *derived_ptr_slot != nullptr)
+            {
+                assert(!Allocator::allocator()->is_heap_addr(*derived_ptr_slot));
+                continue;
+            }
             if (base_ptr_slot == derived_ptr_slot)
             {
                 (*visitor)(obj, base_ptr_slot, NULL);
@@ -113,6 +120,11 @@ void StackMapWalker::process_roots(void *obj, void (*visitor)(void *obj, address
                             *_derived_ptrs.back()._derived_ptr_slot, *_derived_ptrs.back()._base_ptr_slot,
                             _derived_ptrs.back()._offset);
                 }
+
+                assert(*_derived_ptrs.back()._derived_ptr_slot != nullptr &&
+                           *_derived_ptrs.back()._base_ptr_slot != nullptr ||
+                       *_derived_ptrs.back()._derived_ptr_slot == nullptr &&
+                           *_derived_ptrs.back()._base_ptr_slot == nullptr);
 #endif // DEBUG
             }
         }
@@ -128,7 +140,7 @@ void StackMapWalker::process_roots(void *obj, void (*visitor)(void *obj, address
 #ifdef DEBUG
         if (TraceStackWalker && stackinfo)
         {
-            fprintf(stderr, "%d: ret addr: %p, stack size 0x%x\n", i++, next_ret_addr, stackinfo->_stack_size);
+            fprintf(stderr, "\n%d: ret addr: %p, stack size 0x%x\n", i++, next_ret_addr, stackinfo->_stack_size);
         }
 #endif // DEBUG
     }
@@ -170,7 +182,7 @@ address *StackMapWalker::ret_addr(address *sp, address *fp, const stackmap::Addr
 
 const stackmap::AddrInfo *StackMapWalker::find_addrinfo_from_rt(address *sp, address *fp, const stackmap::StackMap *map)
 {
-    static const int BUFF_SIZE = 10;
+    static const int BUFF_SIZE = 20;
     assert(map);
 
     void *buffer[BUFF_SIZE];

@@ -48,7 +48,13 @@ StringLayout *Object_type_name(ObjectLayout *receiver) // NOLINT
 
 ObjectLayout *Object_copy(ObjectLayout *receiver) // NOLINT
 {
-    return gc::GC::gc()->copy(receiver);
+    gc::GC::gc()->add_runtime_root((address *)&receiver);
+
+    auto *const copy = gc::GC::gc()->copy(receiver);
+
+    gc::GC::gc()->clean_runtime_roots();
+
+    return copy;
 }
 
 IntLayout *String_length(StringLayout *receiver) // NOLINT
@@ -68,16 +74,17 @@ StringLayout *String_concat(StringLayout *receiver, StringLayout *str) // NOLINT
 {
     int size = str->_string_size->_value + receiver->_string_size->_value + sizeof(StringLayout);
 
+    gc::GC::gc()->add_runtime_root((address *)&receiver);
+    gc::GC::gc()->add_runtime_root((address *)&str);
+
     auto *new_string = (StringLayout *)_gc_alloc(_string_tag, size, str->_dispatch_table);
-    gc::GC::gc()->set_runtime_root((address)new_string); // preserve string before integer allocation
-    new_string->_string_size = NULL;                     // need correct address for GC
+
+    gc::GC::gc()->add_runtime_root((address *)&new_string); // preserve string before integer allocation
+    new_string->_string_size = NULL;                        // need correct address for GC
 
     // set size
     auto *const new_int =
         make_int(str->_string_size->_value + receiver->_string_size->_value, receiver->_string_size->_dispatch_table);
-
-    new_string = (StringLayout *)gc::GC::gc()->runtime_root(); // reload string after int allocation
-    gc::GC::gc()->set_runtime_root(NULL);                      // forget root
 
     new_string->_string_size = new_int;
 
@@ -86,18 +93,27 @@ StringLayout *String_concat(StringLayout *receiver, StringLayout *str) // NOLINT
     memcpy(new_string->_string + receiver->_string_size->_value, str->_string, str->_string_size->_value);
     new_string->_string[new_string->_string_size->_value] = '\0';
 
+    gc::GC::gc()->clean_runtime_roots();
+
     return new_string;
 }
 
 StringLayout *String_substr(StringLayout *receiver, IntLayout *index, IntLayout *len) // NOLINT
 {
+    int index_val = index->_value;
+
+    gc::GC::gc()->add_runtime_root((address *)&len);
+    gc::GC::gc()->add_runtime_root((address *)&receiver);
+
     auto *const new_string =
         (StringLayout *)_gc_alloc(_string_tag, len->_value + sizeof(StringLayout), receiver->_dispatch_table);
 
     new_string->_string_size = len;
 
-    memcpy(new_string->_string, receiver->_string + index->_value, len->_value);
+    memcpy(new_string->_string, receiver->_string + index_val, len->_value);
     new_string->_string[new_string->_string_size->_value] = '\0';
+
+    gc::GC::gc()->clean_runtime_roots();
 
     return new_string;
 }
@@ -121,18 +137,17 @@ StringLayout *IO_in_string(ObjectLayout *receiver) // NOLINT
     int len = strlen(str);
 
     StringLayout *obj = (StringLayout *)_gc_alloc(_string_tag, sizeof(StringLayout) + len, &String_dispTab);
-    gc::GC::gc()->set_runtime_root((address)obj); // preserve string before integer allocation
-    obj->_string_size = NULL;                     // need correct address for GC
+    gc::GC::gc()->add_runtime_root((address *)&obj); // preserve string before integer allocation
+    obj->_string_size = NULL;                        // need correct address for GC
 
     auto *const new_int = make_int(len, &Int_dispTab);
-
-    obj = (StringLayout *)gc::GC::gc()->runtime_root(); // reload string after int allocation
-    gc::GC::gc()->set_runtime_root(NULL);               // forget root
 
     obj->_string_size = new_int;
 
     memcpy(obj->_string, str, len);
     obj->_string[len] = '\0';
+
+    gc::GC::gc()->clean_runtime_roots();
 
     return obj;
 }
