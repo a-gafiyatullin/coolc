@@ -10,9 +10,11 @@ bool NCE::runOnFunction(Function &f)
 {
     OPT_VERBOSE_ONLY(LOG("NCE: runOnFunction: " + (std::string)f.getName()));
 
+    bool eliminated = false;
+
     for (auto bb = f.begin(); bb != f.end(); bb++)
     {
-        if (auto *nce_inst = null_check(&*bb))
+        while (auto *nce_inst = null_check(&*bb))
         {
 
 #ifdef DEBUG
@@ -26,13 +28,21 @@ bool NCE::runOnFunction(Function &f)
             if (can_be_eliminated(nce_inst))
             {
                 OPT_VERBOSE_ONLY(LOG("   Can eliminate this null check."));
-
-                return eliminate_null_check(nce_inst);
+                bool success = eliminate_null_check(nce_inst);
+                eliminated |= success;
+                if (!success)
+                {
+                    break;
+                }
+            }
+            else
+            {
+                break;
             }
         }
     }
 
-    return false;
+    return eliminated;
 }
 
 Instruction *NCE::null_check(BasicBlock *bb)
@@ -145,7 +155,6 @@ bool NCE::eliminate_null_check(Instruction *nce_inst)
     if (!merge_block || merge_block != false_block->getSingleSuccessor())
     {
         OPT_VERBOSE_ONLY(LOG("   Cannot eliminate null check for case expression!"));
-
         return false;
     }
 
