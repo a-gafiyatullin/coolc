@@ -1,6 +1,7 @@
 #include "CodeGenLLVM.h"
 #include "codegen/emitter/CodeGen.inline.h"
 #include "codegen/emitter/data/Data.inline.h"
+#include "opt/nce/NCE.hpp"
 #include <llvm/IR/Attributes.h>
 
 using namespace codegen;
@@ -31,6 +32,12 @@ CodeGenLLVM::CodeGenLLVM(const std::shared_ptr<semant::ClassNode> &root)
 
 void CodeGenLLVM::init_optimizer()
 {
+    if (DoOpts)
+    {
+        // Eliminate excessive null checks
+        _optimizer.add(new NCE);
+    }
+
     // Do simple "peephole" optimizations and bit-twiddling optzns.
     _optimizer.add(llvm::createInstructionCombiningPass());
 

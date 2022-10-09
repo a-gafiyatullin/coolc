@@ -8,6 +8,7 @@
 
 #ifdef LLVM
 extern bool UseArchSpecFeatures;
+extern bool DoOpts;
 
 #ifdef LLVM_SHADOW_STACK
 extern bool ReduceGCSpills;
@@ -35,6 +36,7 @@ extern bool PrintFinalAST;
 extern bool TraceParser;
 extern bool TraceSemant;
 extern bool TraceCodeGen;
+extern bool TraceOpts;
 
 /**
  * @brief Get the printable string object
@@ -65,6 +67,11 @@ std::string printable_string(const std::string &str);
     {                                                                                                                  \
         text;                                                                                                          \
     }
+#define OPT_VERBOSE_ONLY(text)                                                                                         \
+    if (TraceOpts)                                                                                                     \
+    {                                                                                                                  \
+        text;                                                                                                          \
+    }
 
 #define GUARANTEE_DEBUG(expr) assert(expr)
 #define SHOULD_NOT_REACH_HERE() assert(false && "Should not reach here!")
@@ -76,6 +83,7 @@ std::string printable_string(const std::string &str);
 #define PARSER_VERBOSE_ONLY(text)
 #define SEMANT_VERBOSE_ONLY(text)
 #define CODEGEN_VERBOSE_ONLY(text)
+#define OPT_VERBOSE_ONLY(text)
 
 #define GUARANTEE_DEBUG(expr)
 #define SHOULD_NOT_REACH_HERE()

@@ -51,11 +51,17 @@ bool PrintFinalAST = false;
 bool TraceParser = false;
 bool TraceSemant = false;
 bool TraceCodeGen = false;
+bool TraceOpts = false;
 #endif // DEBUG
 
 #ifdef LLVM
 bool UseArchSpecFeatures = true;
+bool DoOpts = true;
+
+#ifdef LLVM_SHADOW_STACK
 bool ReduceGCSpills = true;
+#endif // LLVM_SHADOW_STACK
+
 #endif // LLVM
 
 #define flag_pair(flag)                                                                                                \
@@ -71,13 +77,15 @@ std::unordered_map<std::string, bool *> BoolFlags = {
     flag_pair(PrintFinalAST),
     flag_pair(TraceParser),
     flag_pair(TraceSemant),
-    flag_pair(TraceCodeGen)
+    flag_pair(TraceCodeGen),
+    flag_pair(TraceOpts)
 #endif // DEBUG
 #ifdef LLVM
 #ifdef DEBUG
         ,
 #endif // DEBUG
-    flag_pair(UseArchSpecFeatures)
+    flag_pair(UseArchSpecFeatures),
+    flag_pair(DoOpts)
 #ifdef LLVM_SHADOW_STACK
         ,
     flag_pair(ReduceGCSpills)
