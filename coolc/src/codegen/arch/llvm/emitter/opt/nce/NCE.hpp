@@ -1,3 +1,6 @@
+#pragma once
+
+#include "codegen/arch/llvm/runtime/RuntimeLLVM.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
 #include <llvm/IR/Instruction.h>
@@ -8,7 +11,14 @@ struct NCE : public FunctionPass
 {
     static char ID;
 
-    NCE() : FunctionPass(ID)
+    const codegen::RuntimeLLVM &_runtime;
+
+    /**
+     * @brief Construct a NCE Pass
+     *
+     * @param rt Runtime methods
+     */
+    NCE(const codegen::RuntimeLLVM &rt) : FunctionPass(ID), _runtime(rt)
     {
     }
 

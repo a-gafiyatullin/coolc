@@ -78,6 +78,12 @@ bool NCE::can_be_eliminated(Instruction *nce_inst)
     }
     assert(val);
 
+    // skip bitcasts
+    while (isa<BitCastInst>(val))
+    {
+        val = dyn_cast<BitCastInst>(val)->getOperand(0);
+    }
+
     // 1. Val is load. It's ok if corresponding slot is slot for self
     if (const auto *load = dyn_cast<LoadInst>(val))
     {
@@ -110,6 +116,16 @@ bool NCE::can_be_eliminated(Instruction *nce_inst)
         }
     }
 
+    // 2. Val is gc allocation
+    if (const auto *gc_alloc = dyn_cast<CallInst>(val))
+    {
+        if (gc_alloc->getCalledFunction() ==
+            _runtime.symbol_by_id(codegen::RuntimeLLVM::RuntimeLLVMSymbols::GC_ALLOC)->_func)
+        {
+            return true;
+        }
+    }
+
     return false;
 }
 
@@ -126,7 +142,7 @@ bool NCE::eliminate_null_check(Instruction *nce_inst)
     auto *merge_block = true_block->getSingleSuccessor();
 
     // case expression. Don't process for now
-    if (!merge_block || merge_block != false_block->getSinglePredecessor())
+    if (!merge_block || merge_block != false_block->getSingleSuccessor())
     {
         OPT_VERBOSE_ONLY(LOG("   Cannot eliminate null check for case expression!"));
 
@@ -144,13 +160,14 @@ bool NCE::eliminate_null_check(Instruction *nce_inst)
 
     // 3. delete phi (first inst) in the merge block
     assert(isa<PHINode>(merge_block->front()));
-    assert(isa<CallInst>(true_block->back()));
+    assert(isa<CallInst>(true_block->back()) || isa<BitCastInst>(true_block->back()));
     merge_block->front().replaceAllUsesWith(&true_block->back());
     merge_block->front().eraseFromParent();
 
     // 4. merge blocks
     check_block->getInstList().splice(check_block->end(), true_block->getInstList());
     check_block->getInstList().splice(check_block->end(), merge_block->getInstList());
+    check_block->replaceSuccessorsPhiUsesWith(merge_block, check_block);
 
     true_block->eraseFromParent();
     merge_block->eraseFromParent();

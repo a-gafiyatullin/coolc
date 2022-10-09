@@ -35,7 +35,7 @@ void CodeGenLLVM::init_optimizer()
     if (DoOpts)
     {
         // Eliminate excessive null checks
-        _optimizer.add(new NCE);
+        _optimizer.add(new NCE(_runtime));
     }
 
     // Do simple "peephole" optimizations and bit-twiddling optzns.
