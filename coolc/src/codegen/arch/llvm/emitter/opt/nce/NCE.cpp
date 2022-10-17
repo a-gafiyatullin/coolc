@@ -1,8 +1,8 @@
 #include "NCE.hpp"
-#include "utils/Utils.h"
-#include <llvm/IR/CFG.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/Support/raw_ostream.h>
+
+using namespace opt;
 
 char NCE::ID = 0;
 

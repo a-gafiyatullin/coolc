@@ -1,6 +1,7 @@
 #include "CodeGenLLVM.h"
 #include "codegen/emitter/CodeGen.inline.h"
 #include "codegen/emitter/data/Data.inline.h"
+#include "opt/dae/DAE.hpp"
 #include "opt/nce/NCE.hpp"
 #include <llvm/IR/Attributes.h>
 
@@ -35,7 +36,7 @@ void CodeGenLLVM::init_optimizer()
     if (DoOpts)
     {
         // Eliminate excessive null checks
-        _optimizer.add(new NCE(_runtime));
+        _optimizer.add(new opt::NCE(_runtime));
     }
 
     // Do simple "peephole" optimizations and bit-twiddling optzns.
@@ -49,6 +50,21 @@ void CodeGenLLVM::init_optimizer()
 
     // Simplify the control flow graph (deleting unreachable blocks, etc).
     _optimizer.add(llvm::createCFGSimplificationPass());
+
+    if (DoOpts)
+    {
+        // TODO: custom GVN
+        int int_tag = _builder->tag(BaseClassesNames[BaseClasses::INT]);
+
+        // Eliminate Dead Allocations
+        _optimizer.add(new opt::DAE(_runtime, int_tag));
+
+        // Eliminate Common SubExpressions
+        _optimizer.add(llvm::createGVNPass());
+
+        // Eliminate Dead Allocations One More Time
+        _optimizer.add(new opt::DAE(_runtime, int_tag));
+    }
 
     _optimizer.doInitialization();
 }
@@ -1403,13 +1419,13 @@ void CodeGenLLVM::emit(const std::string &out_file)
     emit_class_code(_builder->root()); // emit
     emit_runtime_main();
 
+    CODEGEN_VERBOSE_ONLY(_module.print(llvm::errs(), nullptr););
+
 #ifdef LLVM_STATEPOINT_EXAMPLE
     llvm::legacy::PassManager rwstpts;
     rwstpts.add(llvm::createRewriteStatepointsForGCLegacyPass());
     rwstpts.run(_module);
 #endif // LLVM_STATEPOINT_EXAMPLE
-
-    CODEGEN_VERBOSE_ONLY(_module.print(llvm::errs(), nullptr););
 
     const auto target_triple = llvm::sys::getDefaultTargetTriple();
     CODEGEN_VERBOSE_ONLY(LOG("Target arch: " + target_triple));

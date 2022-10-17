@@ -16,6 +16,7 @@ if(ARCH STREQUAL "LLVM")
         arch/llvm/runtime/RuntimeLLVM.cpp
 
         arch/llvm/emitter/opt/nce/NCE.cpp
+        arch/llvm/emitter/opt/dae/DAE.cpp
         )
 endif()
 
