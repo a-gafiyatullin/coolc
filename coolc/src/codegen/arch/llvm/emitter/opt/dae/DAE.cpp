@@ -109,9 +109,14 @@ bool DAE::eliminate(Instruction *inst)
 {
     std::vector<Instruction *> insts;
 
-    // 4 instrs before allocations are also dead
+    // N instrs before allocations are also dead
+#ifdef __aarch64__
+    int n = 3; // save sp and fp
+#else
+    int n = 1; // save sp
+#endif
     insts.push_back(inst->getPrevNode());
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < n; i++)
     {
         insts.push_back(insts.back()->getPrevNode());
     }
