@@ -115,9 +115,11 @@ bool DAE::eliminate(Instruction *inst)
 #else
     int n = 1; // save sp
 #endif
+    assert(inst->getPrevNode());
     insts.push_back(inst->getPrevNode());
     for (int i = 0; i < n; i++)
     {
+        assert(insts.back()->getPrevNode());
         insts.push_back(insts.back()->getPrevNode());
     }
 
@@ -135,11 +137,15 @@ bool DAE::eliminate(Instruction *inst)
         idx++;
     }
 
+#ifdef DEBUG
     for (int i = insts.size() - 1; i >= 0; i--)
     {
-#ifdef DEBUG
         print(insts[i], "   Eliminated instruction from ");
+    }
 #endif // DEBUG
+
+    for (int i = insts.size() - 1; i >= 0; i--)
+    {
         insts[i]->eraseFromParent();
     }
 

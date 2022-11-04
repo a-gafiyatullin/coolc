@@ -4,7 +4,7 @@ project(coolc)
 option(ASAN "Build with AddressSanitizer" OFF)
 option(UBSAN "Build with UndefinedBehaviorSanitizer" OFF)
 set(ARCH "LLVM" CACHE STRING "Target architecture")
-set(GCTYPE "LLVM_SHADOW_STACK" CACHE STRING "GC")
+set(GCTYPE "LLVM_STATEPOINT_EXAMPLE" CACHE STRING "GC")
 
 execute_process(
     COMMAND sh -c "rm -rf ${PROJECT_SOURCE_DIR}/bin"
