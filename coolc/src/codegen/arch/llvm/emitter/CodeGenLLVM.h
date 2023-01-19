@@ -10,7 +10,11 @@
 #include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Verifier.h>
+#ifdef __x86_64__ // workaround for old version of LLVM on my Intel machine
+#include <llvm/Support/TargetRegistry.h>
+#else
 #include <llvm/MC/TargetRegistry.h>
+#endif // __x86_64__
 #include <llvm/Support/Host.h>
 #include <llvm/Support/Program.h>
 #include <llvm/Support/TargetSelect.h>

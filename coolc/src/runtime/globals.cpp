@@ -15,6 +15,7 @@ bool TraceMarking = false;
 bool TraceStackSlotUpdate = false;
 bool TraceObjectFieldUpdate = false;
 bool TraceObjectMoving = false;
+bool TraceGCCycles = false;
 #endif // DEBUG
 
 bool PrintGCStatistics = false;
@@ -42,7 +43,7 @@ const std::unordered_map<std::string, bool *> BoolFlags = {
 #endif // LLVM_STATEPOINT_EXAMPLE
 #ifdef DEBUG
     flag_pair(PrintAllocatedObjects),  flag_pair(TraceMarking),      flag_pair(TraceStackSlotUpdate),
-    flag_pair(TraceObjectFieldUpdate), flag_pair(TraceObjectMoving),
+    flag_pair(TraceObjectFieldUpdate), flag_pair(TraceObjectMoving), flag_pair(TraceGCCycles),
 #endif // DEBUG
     flag_pair(PrintGCStatistics)};
 

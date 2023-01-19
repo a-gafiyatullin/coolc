@@ -32,6 +32,7 @@ assistance with **coolc**.
       1. `ZeroGC` (code **0**) --- just allocate memory without collecting.
       2. `MarkSweepGC` (code **1**) --- use **Mark-and-Sweep** GC.
       3. `ThreadedCompactionGC` (code **2**) --- use **Jonkers's threaded compaction** (Mark-and-Compact) GC (**default**).
+      4. `CompressorGC` (code **3**) --- use **Kermany and Petrank's compressor** (Mark-and-Compact) GC (**experimental**).
    3. `PrintGCStatistics` --- print some statistics about GC (e.g. `+PrintGCStatistics`);
    4. `DoOpts` --- do custom optimizations:
       1. **NCE** --- Null Check Elimination;

@@ -10,8 +10,8 @@ void _init_runtime(int argc, char **argv) // NOLINT
 
     gc::Allocator::init(std::max(str_to_size(MaxHeapSize), sizeof(ObjectLayout)));
     gc::StackWalker::init();
-    gc::Marker::init();
-    gc::GC::init((gc::GC::GcType)GCAlgo);
+    gc::Marker::init((GcType)GCAlgo);
+    gc::GC::init((GcType)GCAlgo);
 }
 
 void _finish_runtime() // NOLINT

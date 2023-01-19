@@ -47,6 +47,13 @@ ObjectLayout *GC::allocate(int tag, size_t size, void *disp_tab)
 
     if (object == nullptr)
     {
+#ifdef DEBUG
+        if (TraceGCCycles)
+        {
+            fprintf(stderr, "GC Collect was invoked!\n");
+        }
+#endif // DEBUG
+
         collect();
 
         {
@@ -59,6 +66,9 @@ ObjectLayout *GC::allocate(int tag, size_t size, void *disp_tab)
     {
         alloca->exit_with_error("cannot allocate memory for object!");
     }
+
+    assert((address)object >= alloca->start() && (address)object < alloca->end() &&
+           (address)object + object->_size <= alloca->end());
 
     return object;
 }
@@ -87,6 +97,9 @@ void GC::init(const GcType &type)
         break;
     case THREADED_MC_GC:
         Gc = new ThreadedCompactionGC();
+        break;
+    case COMPRESSOR_GC:
+        Gc = new CompressorGC();
         break;
 #endif // LLVM_SHADOW_STACK || LLVM_STATEPOINT_EXAMPLE
     default:

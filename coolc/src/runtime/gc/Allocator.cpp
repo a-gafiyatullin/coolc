@@ -28,6 +28,13 @@ Allocator::Allocator(const size_t &size)
 void Allocator::init(const size_t &size)
 {
     AllocatorObj = new NextFitAllocator(size);
+
+#ifdef DEBUG
+    if (TraceGCCycles)
+    {
+        fprintf(stderr, "Heap: [%p-%p]\n", AllocatorObj->start(), AllocatorObj->end());
+    }
+#endif // DEBUG
 }
 
 void Allocator::release()
@@ -245,6 +252,13 @@ void NextFitAllocator::move(const ObjectLayout *src, address dst)
 {
     if (dst != (address)src)
     {
+#ifdef DEBUG
+        if (TraceObjectMoving)
+        {
+            fprintf(stderr, "Move object %p to %p\n", src, dst);
+        }
+#endif // DEBUG
+
         // non-overlapping memory regions
         if (dst >= (address)src + src->_size || dst <= (address)src - src->_size)
         {

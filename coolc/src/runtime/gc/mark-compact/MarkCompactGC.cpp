@@ -170,13 +170,6 @@ void ThreadedCompactionGC::update_backward_references()
 
             nxtf_alloca->move(obj, free);
 
-#ifdef DEBUG
-            if (TraceObjectMoving)
-            {
-                fprintf(stderr, "Move object %p to %p\n", obj, free);
-            }
-#endif // DEBUG
-
             free = free + obj_size;
         }
 
@@ -204,4 +197,206 @@ void ThreadedCompactionGC::compact()
     update_backward_references();
 
     StackWalker::walker()->fix_derived_pointers();
+}
+
+// --------------------------------------- One-pass compressor ---------------------------------------
+void CompressorGC::compute_locations()
+{
+    BitMapMarker *marker = (BitMapMarker *)Marker::marker();
+    _offsets.resize(marker->bits_num() / BITS_IN_BLOCK + 1);
+
+    size_t loc = 0;
+    size_t blocks_num = 0;
+
+    size_t previous_bit = 0;
+    bool in_object = false;
+    for (size_t b = 0; b < marker->bits_num(); b++)
+    {
+        if (b % BITS_IN_BLOCK == 0)
+        {
+            assert(blocks_num < _offsets.size());
+
+            _offsets[blocks_num] = loc + (in_object ? (b - previous_bit + 1) * BitMapMarker::BYTES_PER_BIT : 0);
+            blocks_num++;
+        }
+
+        if (marker->is_bit_set(b))
+        {
+            if (in_object)
+            {
+                // TODO: fprintf(stderr, "Found object end = %zu\n", b);
+                loc += (b - previous_bit + 1) * BitMapMarker::BYTES_PER_BIT;
+                in_object = false;
+            }
+            else
+            {
+                // TODO: fprintf(stderr, "Found object start = %zu\n", b);
+                in_object = true;
+                previous_bit = b;
+            }
+        }
+    }
+
+#ifdef DEBUG
+    if (TraceObjectFieldUpdate)
+    {
+        fprintf(stderr, "Offset table:\n");
+        address heap_start = Allocator::allocator()->start();
+
+        for (int i = 0; i < _offsets.size(); i++)
+        {
+            fprintf(stderr, "[%p-%p], offset[%d] = %lu\n", heap_start + i * BITS_IN_BLOCK * BitMapMarker::BYTES_PER_BIT,
+                    heap_start + (i + 1) * BITS_IN_BLOCK * BitMapMarker::BYTES_PER_BIT, i, _offsets[i]);
+        }
+    }
+#endif // DEBUG
+
+    assert(!in_object);
+}
+
+address CompressorGC::new_address(address old)
+{
+    if (old == nullptr || !Allocator::allocator()->is_heap_addr(old))
+    {
+        return old;
+    }
+
+    address heap_start = Allocator::allocator()->start();
+
+    size_t block_idx = (size_t)(old - heap_start) / BITS_IN_BLOCK;
+    BitMapMarker *marker = (BitMapMarker *)Marker::marker();
+
+    // calculate offset in block
+    address block_start = heap_start + block_idx * BITS_IN_BLOCK;
+    int used_bits = 0;
+
+    bool in_object = false;
+    size_t previous_bit = 0;
+    for (size_t b = marker->byte_to_bit(block_start); b < marker->byte_to_bit(old); b++)
+    {
+        if (marker->is_bit_set(b))
+        {
+            if (in_object)
+            {
+                used_bits += b - previous_bit + 1;
+                in_object = false;
+            }
+            else
+            {
+                in_object = true;
+                previous_bit = b;
+            }
+        }
+    }
+
+    assert(!in_object);
+
+    assert(block_idx < _offsets.size());
+    address new_addr = heap_start + _offsets[block_idx] + used_bits * BitMapMarker::BYTES_PER_BIT;
+
+#ifdef DEBUG
+    if (TraceObjectFieldUpdate)
+    {
+        fprintf(stderr, "New address for object %p is %p\n", old, new_addr);
+    }
+#endif // DEBUG
+
+    return new_addr;
+}
+
+void CompressorGC::update_stack_root(void *obj, address *root, const address *meta)
+{
+    CompressorGC *gc = (CompressorGC *)obj;
+    ObjectLayout **object_ptr = (ObjectLayout **)root;
+
+    if (!gc->_was_updated.contains(root))
+    {
+        *object_ptr = (ObjectLayout *)gc->new_address((address)(*object_ptr));
+        gc->_was_updated.insert(root);
+    }
+}
+
+void CompressorGC::update_references_relocate()
+{
+    // update roots on stack
+    StackWalker::walker()->process_roots(this, &CompressorGC::update_stack_root);
+
+    for (auto *r : _runtime_roots)
+    {
+        *r = new_address(*r);
+    }
+
+    NextFitAllocator *nxtf_alloca = (NextFitAllocator *)Allocator::allocator();
+    BitMapMarker *marker = (BitMapMarker *)Marker::marker();
+
+    address scan = nxtf_alloca->start();
+    address end = nxtf_alloca->end();
+    address free = nullptr;
+    int size = 0;
+
+    // traverse heap
+    while (scan < end)
+    {
+        ObjectLayout *obj = (ObjectLayout *)scan;
+        size = obj->_size;
+
+        if (marker->is_marked(obj))
+        {
+            // update fields
+            if (!obj->has_special_type())
+            {
+                int fields_cnt = obj->field_cnt();
+                address *fields = obj->fields_base();
+                for (int j = 0; j < fields_cnt; j++)
+                {
+                    ObjectLayout **object_field = (ObjectLayout **)(fields + j);
+                    *object_field = (ObjectLayout *)new_address((address)*object_field);
+                }
+            }
+            else
+            {
+                // special case
+                if (obj->is_string())
+                {
+                    StringLayout *str = (StringLayout *)obj;
+
+                    ObjectLayout **object_field = (ObjectLayout **)((address)str + HEADER_SIZE);
+                    *object_field = (ObjectLayout *)new_address((address)*object_field);
+                }
+            }
+
+            // and move now
+            address dst = new_address((address)obj);
+            nxtf_alloca->move(obj, dst);
+            free = dst + size; // TODO: is it correct?
+        }
+
+        scan = nxtf_alloca->next_object(scan + size);
+    }
+
+    // handle end of the heap
+    if (free <= end - HEADER_SIZE)
+    {
+        nxtf_alloca->force_alloc_pos(free);
+    }
+    else
+    {
+        int tail = end - free;
+        ObjectLayout *obj = (ObjectLayout *)(free - size);
+
+        obj->_size += tail;
+        obj->zero_appendix(tail);
+    }
+}
+
+void CompressorGC::compact()
+{
+    compute_locations();
+    update_references_relocate();
+
+    StackWalker::walker()->fix_derived_pointers();
+
+    ((BitMapMarker *)Marker::marker())->clear();
+    _offsets.clear();
+    _was_updated.clear();
 }

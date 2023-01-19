@@ -3,6 +3,7 @@
 #include "Allocator.hpp"
 #include "Marker.hpp"
 #include <chrono>
+#include <unordered_set>
 
 namespace gc
 {
@@ -48,16 +49,6 @@ class GCStats
  */
 class GC
 {
-  public:
-    enum GcType
-    {
-        ZEROGC, // Dummy GC that don't really collect garbage
-        MARKSWEEPGC,
-        THREADED_MC_GC,
-
-        GcTypeNumber
-    };
-
   protected:
     static const int HEADER_SIZE = sizeof(ObjectLayout);
 
@@ -177,6 +168,10 @@ class MarkCompactGC : public GC
 };
 
 // The Garbage Collection Handbook, Richard Jones: 3.3 Jonkers’s threaded compactor
+// Some other compactors ans why i don't use them:
+//    1. Edwards’s Two-Finger algorithm. Can't use because it compacts regions containing objects of a fixed size.
+//    2. The Lisp 2 algorithm. Can't use because it requires an additional full-slot field
+//       in every object header to store the address to which the object is to be moved.
 class ThreadedCompactionGC : public MarkCompactGC
 {
   protected:
@@ -205,6 +200,35 @@ class ThreadedCompactionGC : public MarkCompactGC
 
     // stack walker helpers
     static void thread_root(void *obj, address *root, const address *meta);
+};
+
+// The Garbage Collection Handbook, Richard Jones: 3.4 One-pass algorithms
+class CompressorGC : public MarkCompactGC
+{
+  protected:
+    std::vector<size_t> _offsets;
+
+    // roots in stackmap can be not unique.
+    // update_stack_root is a destructive operation and after the first update it can try to update already updated root
+    // that is wrong
+    std::unordered_set<address *> _was_updated;
+
+    static constexpr size_t BITS_IN_BLOCK = 512;
+
+    // 1. The computeLocations routine passes over the mark bit vector to produce the offset vector.
+    void compute_locations();
+
+    // 2. The updateReferencesRelocate relocates objects and updates references in a single pass.
+    void update_references_relocate();
+
+    // calculate a new address for the given object
+    address new_address(address old);
+
+    // stack walker helpers
+    static void update_stack_root(void *obj, address *root, const address *meta);
+
+    // main compaction routine
+    void compact() override;
 };
 
 #endif // LLVM_SHADOW_STACK || LLVM_STATEPOINT_EXAMPLE

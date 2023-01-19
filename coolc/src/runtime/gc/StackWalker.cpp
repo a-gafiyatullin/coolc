@@ -106,6 +106,12 @@ void StackMapWalker::process_roots(void *obj, void (*visitor)(void *obj, address
             }
             if (base_ptr_slot == derived_ptr_slot)
             {
+#ifdef DEBUG
+                if (TraceStackWalker)
+                {
+                    fprintf(stderr, "Visit root %p\n", base_ptr_slot);
+                }
+#endif // DEBUG
                 (*visitor)(obj, base_ptr_slot, NULL);
             }
             else if (records_derived_ptrs)
