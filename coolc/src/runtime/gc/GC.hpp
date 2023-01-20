@@ -213,7 +213,7 @@ class CompressorGC : public MarkCompactGC
     // that is wrong
     std::unordered_set<address *> _was_updated;
 
-    static constexpr size_t BITS_IN_BLOCK = 256;
+    static constexpr size_t BITS_IN_BLOCK = 64;
 
     // 1. The computeLocations routine passes over the mark bit vector to produce the offset vector.
     void compute_locations();

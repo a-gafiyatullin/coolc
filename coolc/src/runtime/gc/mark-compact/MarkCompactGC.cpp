@@ -1,4 +1,5 @@
 #include "runtime/gc/GC.hpp"
+#include <bit>
 
 using namespace gc;
 
@@ -208,9 +209,9 @@ void CompressorGC::compute_locations()
     size_t loc = 0;
     size_t blocks_num = 0;
 
-    for (size_t b = 0; b < marker->bits_num(); b++)
+    for (size_t wn = 0; wn < marker->words_num(); wn++)
     {
-        if (b % BITS_IN_BLOCK == 0)
+        if (marker->word_to_bit(wn) % BITS_IN_BLOCK == 0)
         {
             assert(blocks_num < _offsets.size());
 
@@ -218,10 +219,7 @@ void CompressorGC::compute_locations()
             blocks_num++;
         }
 
-        if (marker->is_bit_set(b))
-        {
-            loc++;
-        }
+        loc += std::popcount(marker->word(wn));
     }
 
 #ifdef DEBUG
@@ -246,6 +244,8 @@ address CompressorGC::new_address(address old)
         return old;
     }
 
+    assert(is_alligned((size_t)old));
+
     address heap_start = Allocator::allocator()->start();
     BitMapMarker *marker = (BitMapMarker *)Marker::marker();
 
@@ -255,8 +255,15 @@ address CompressorGC::new_address(address old)
     address block_start = heap_start + marker->bit_to_byte(block_idx * BITS_IN_BLOCK);
     size_t used_bits = 0;
 
-    assert(is_alligned((size_t)old));
-    for (size_t b = marker->byte_to_bit(block_start); b < marker->byte_to_bit(old); b++)
+    size_t start_word = marker->byte_to_word_num(block_start);
+    size_t end_word = marker->byte_to_word_num(old);
+
+    for (size_t wn = start_word; wn < end_word; wn++)
+    {
+        used_bits += std::popcount(marker->word(wn));
+    }
+
+    for (size_t b = marker->word_to_bit(end_word); b < marker->byte_to_bit(old); b++)
     {
         if (marker->is_bit_set(b))
         {

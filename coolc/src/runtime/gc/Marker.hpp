@@ -164,6 +164,49 @@ class BitMapMarker : public MarkerFIFO
     }
 
     /**
+     * @brief Get bitmap word number by the byte number
+     *
+     * @param byte Byte number
+     * @return size_t Bitmap word number
+     */
+    inline size_t byte_to_word_num(address byte) const
+    {
+        return byte_to_bit(byte) / BITS_PER_BIT_MAP_WORD;
+    }
+
+    /**
+     * @brief Get bimap word by index
+     *
+     * @param idx Word index
+     * @return const BitMapWord& Word
+     */
+    inline const BitMapWord &word(size_t idx) const
+    {
+        return _bitmap[idx];
+    }
+
+    /**
+     * @brief Number of words in bitmap
+     *
+     * @return size_t Number of words in bitmap
+     */
+    inline size_t words_num() const
+    {
+        return _bitmap.size();
+    }
+
+    /**
+     * @brief Get nubmer of bits in the given amount of words
+     *
+     * @param word Number of words
+     * @return size_t Number of bits
+     */
+    inline size_t word_to_bit(size_t words) const
+    {
+        return words * BITS_PER_BIT_MAP_WORD;
+    }
+
+    /**
      * @brief Number of bits in this bitmap
      *
      * @return size_t Number of bits
