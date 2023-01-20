@@ -124,7 +124,7 @@ void MarkerFIFO::mark()
 
 BitMapMarker::BitMapMarker(address heap_start, address heap_end) : MarkerFIFO(heap_start, heap_end)
 {
-    int long_words = bits_num() / BITS_PER_BIT_MAP_WORD + 1;
+    int long_words = bits_num() / BITS_PER_BIT_MAP_WORD;
     _bitmap.resize(long_words);
 }
 
@@ -142,29 +142,62 @@ void BitMapMarker::mark_from_roots()
 
 void BitMapMarker::mark_unmarked_object(ObjectLayout *object)
 {
+    assert(is_alligned((address)object - _heap_start));
     size_t bit_num = (size_t)((address)object - _heap_start) / BYTES_PER_BIT;
 
     size_t first_word_num = bit_num / BITS_PER_BIT_MAP_WORD;
     assert(first_word_num < _bitmap.size());
 
-    _bitmap[first_word_num] |= (1llu << (bit_num % BITS_PER_BIT_MAP_WORD));
+    size_t mask1 = ~((1llu << (bit_num % BITS_PER_BIT_MAP_WORD)) - 1);
 
-    size_t object_size_bits = object->_size / BYTES_PER_BIT + (object->_size % BYTES_PER_BIT != 0 ? 1 : 0) - 1;
+    assert(is_alligned(object->_size));
+    size_t object_size_bits = object->_size / BYTES_PER_BIT - 1;
     size_t last_word_num = (bit_num + object_size_bits) / BITS_PER_BIT_MAP_WORD;
     assert(last_word_num < _bitmap.size());
 
-    _bitmap[last_word_num] |= (1llu << ((bit_num + object_size_bits) % BITS_PER_BIT_MAP_WORD));
+    size_t mask2 = 0;
 
-    // TODO: what if first or last bit is already set?
-    for (int i = first_word_num; i < last_word_num; i++)
+    int shift = ((bit_num + object_size_bits) % BITS_PER_BIT_MAP_WORD + 1);
+    if (shift == BITS_PER_BIT_MAP_WORD)
     {
-        _bitmap[i] |= (1llu << (BITS_PER_BIT_MAP_WORD - 1));
-        _bitmap[i + 1] |= 1;
+        mask2 = ~0llu;
+    }
+    else
+    {
+        mask2 = ((1llu << shift) - 1);
+    }
+
+    if (first_word_num == last_word_num)
+    {
+        size_t final_mask = mask1 & mask2;
+
+        assert((_bitmap[first_word_num] & final_mask) == 0);
+        _bitmap[first_word_num] |= final_mask;
+    }
+    else
+    {
+        assert((_bitmap[first_word_num] & mask1) == 0);
+        _bitmap[first_word_num] |= mask1;
+
+        assert((_bitmap[last_word_num] & mask2) == 0);
+        _bitmap[last_word_num] |= mask2;
+
+        for (int i = first_word_num + 1; i < last_word_num; i++)
+        {
+            _bitmap[i] |= ~0llu;
+        }
     }
 
 #ifdef DEBUG
-    assert(is_bit_set(byte_to_bit((address)object)));
-    assert(is_bit_set(byte_to_bit((address)object + object->_size - 1)));
+    for (size_t b = byte_to_bit((address)object); b < byte_to_bit((address)object + object->_size); b++)
+    {
+        if (!is_bit_set(b))
+        {
+            fprintf(stderr, "Bit %zu is not set in range [%zu-%zu)!\n", b, byte_to_bit((address)object),
+                    byte_to_bit((address)object + object->_size));
+        }
+        assert(is_bit_set(b));
+    }
 #endif // DEBUG
 }
 
@@ -178,8 +211,7 @@ bool BitMapMarker::is_marked(ObjectLayout *object) const
     }
 
     // it's enough to check the first bit
-    size_t bit_num = (size_t)((address)object - _heap_start) / BYTES_PER_BIT;
-    return is_bit_set(bit_num);
+    return is_bit_set(byte_to_bit((address)object));
 }
 
 void BitMapMarker::clear()

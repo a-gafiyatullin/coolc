@@ -208,32 +208,19 @@ void CompressorGC::compute_locations()
     size_t loc = 0;
     size_t blocks_num = 0;
 
-    size_t previous_bit = 0;
-    bool in_object = false;
     for (size_t b = 0; b < marker->bits_num(); b++)
     {
         if (b % BITS_IN_BLOCK == 0)
         {
             assert(blocks_num < _offsets.size());
 
-            _offsets[blocks_num] = loc + (in_object ? (b - previous_bit + 1) * BitMapMarker::BYTES_PER_BIT : 0);
+            _offsets[blocks_num] = marker->bit_to_byte(loc);
             blocks_num++;
         }
 
         if (marker->is_bit_set(b))
         {
-            if (in_object)
-            {
-                // TODO: fprintf(stderr, "Found object end = %zu\n", b);
-                loc += (b - previous_bit + 1) * BitMapMarker::BYTES_PER_BIT;
-                in_object = false;
-            }
-            else
-            {
-                // TODO: fprintf(stderr, "Found object start = %zu\n", b);
-                in_object = true;
-                previous_bit = b;
-            }
+            loc++;
         }
     }
 
@@ -245,13 +232,11 @@ void CompressorGC::compute_locations()
 
         for (int i = 0; i < _offsets.size(); i++)
         {
-            fprintf(stderr, "[%p-%p], offset[%d] = %lu\n", heap_start + i * BITS_IN_BLOCK * BitMapMarker::BYTES_PER_BIT,
-                    heap_start + (i + 1) * BITS_IN_BLOCK * BitMapMarker::BYTES_PER_BIT, i, _offsets[i]);
+            fprintf(stderr, "[%p-%p], offset[%d] = %lu\n", heap_start + marker->bit_to_byte(i * BITS_IN_BLOCK),
+                    heap_start + marker->bit_to_byte((i + 1) * BITS_IN_BLOCK), i, _offsets[i]);
         }
     }
 #endif // DEBUG
-
-    assert(!in_object);
 }
 
 address CompressorGC::new_address(address old)
@@ -262,37 +247,26 @@ address CompressorGC::new_address(address old)
     }
 
     address heap_start = Allocator::allocator()->start();
-
-    size_t block_idx = (size_t)(old - heap_start) / BITS_IN_BLOCK;
     BitMapMarker *marker = (BitMapMarker *)Marker::marker();
 
-    // calculate offset in block
-    address block_start = heap_start + block_idx * BITS_IN_BLOCK;
-    int used_bits = 0;
+    size_t block_idx = marker->byte_to_bit(old) / BITS_IN_BLOCK;
 
-    bool in_object = false;
-    size_t previous_bit = 0;
+    // calculate offset in block
+    address block_start = heap_start + marker->bit_to_byte(block_idx * BITS_IN_BLOCK);
+    size_t used_bits = 0;
+
+    assert(is_alligned((size_t)old));
     for (size_t b = marker->byte_to_bit(block_start); b < marker->byte_to_bit(old); b++)
     {
         if (marker->is_bit_set(b))
         {
-            if (in_object)
-            {
-                used_bits += b - previous_bit + 1;
-                in_object = false;
-            }
-            else
-            {
-                in_object = true;
-                previous_bit = b;
-            }
+            used_bits++;
         }
     }
 
-    assert(!in_object);
-
     assert(block_idx < _offsets.size());
-    address new_addr = heap_start + _offsets[block_idx] + used_bits * BitMapMarker::BYTES_PER_BIT;
+    address new_addr = heap_start + _offsets[block_idx] + marker->bit_to_byte(used_bits);
+    assert(is_alligned((size_t)new_addr));
 
 #ifdef DEBUG
     if (TraceObjectFieldUpdate)

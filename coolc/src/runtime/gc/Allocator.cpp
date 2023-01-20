@@ -10,7 +10,7 @@ using namespace gc;
 Allocator *Allocator::AllocatorObj = nullptr;
 
 Allocator::Allocator(const size_t &size)
-    : _size(size)
+    : _size(allign(size))
 #ifdef DEBUG
       ,
       _allocated_size(0), _freed_size(0)

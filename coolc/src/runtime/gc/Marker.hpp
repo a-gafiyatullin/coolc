@@ -103,14 +103,13 @@ class MarkerFIFO : public Marker
 
 class BitMapMarker : public MarkerFIFO
 {
-  public:
+  protected:
     typedef size_t BitMapWord;
 
     static constexpr int BITS_PER_BYTE = 8;
     static constexpr int BITS_PER_BIT_MAP_WORD = sizeof(BitMapWord) * BITS_PER_BYTE;
-    static constexpr int BYTES_PER_BIT = 1;
+    static constexpr int BYTES_PER_BIT = 8;
 
-  protected:
     std::vector<BitMapWord> _bitmap;
 
     static void mark_root(void *obj, address *root, const address *meta);
@@ -132,14 +131,14 @@ class BitMapMarker : public MarkerFIFO
     /**
      * @brief Check if bit is set
      *
-     * @param bitnum Bit number
+     * @param bit Bit index
      * @return true if bit is set
      * @return false if bit is not set
      */
-    inline bool is_bit_set(size_t bitnum) const
+    inline bool is_bit_set(size_t bit) const
     {
-        assert(bitnum / BITS_PER_BIT_MAP_WORD < _bitmap.size());
-        return (_bitmap[bitnum / BITS_PER_BIT_MAP_WORD] & (1llu << (bitnum % BITS_PER_BIT_MAP_WORD))) != 0;
+        assert(bit / BITS_PER_BIT_MAP_WORD < _bitmap.size());
+        return (_bitmap[bit / BITS_PER_BIT_MAP_WORD] & (1llu << (bit % BITS_PER_BIT_MAP_WORD))) != 0;
     }
 
     /**
@@ -154,13 +153,25 @@ class BitMapMarker : public MarkerFIFO
     }
 
     /**
+     * @brief Get the first byte that is represnted by the given bit
+     *
+     * @param bit Bit index in bitmap
+     * @return size_t Byte offset from the heap start
+     */
+    inline size_t bit_to_byte(size_t bit) const
+    {
+        return bit * BYTES_PER_BIT;
+    }
+
+    /**
      * @brief Number of bits in this bitmap
      *
      * @return size_t Number of bits
      */
     inline size_t bits_num() const
     {
-        return (_heap_end - _heap_start) / BYTES_PER_BIT + 1;
+        assert((_heap_end - _heap_start) % BYTES_PER_BIT == 0);
+        return (_heap_end - _heap_start) / BYTES_PER_BIT;
     }
 
     /**

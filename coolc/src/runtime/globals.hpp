@@ -35,6 +35,23 @@ enum GcType
 };
 
 /**
+ * @brief Allign size to sizeof(address) boundary
+ *
+ * @param byte Number of bytes
+ * @return size_t Alligned number of bytes
+ */
+size_t allign(size_t byte);
+
+/**
+ * @brief Check if size is alligned to sizeof(address) boundary
+ *
+ * @param byte Number of bytes
+ * @return true if size is alligned to sizeof(address) boundary
+ * @return false if size is not alligned to sizeof(address) boundary
+ */
+bool is_alligned(size_t byte);
+
+/**
  * @brief Process arguments were passed to executable
  *
  * @param argc Arguments number

@@ -18,6 +18,16 @@ bool TraceObjectMoving = false;
 bool TraceGCCycles = false;
 #endif // DEBUG
 
+size_t allign(size_t byte)
+{
+    return byte + (byte % sizeof(address) ? sizeof(address) - byte % sizeof(address) : 0);
+}
+
+bool is_alligned(size_t byte)
+{
+    return byte % sizeof(address) == 0;
+}
+
 bool PrintGCStatistics = false;
 
 #ifdef LLVM_STATEPOINT_EXAMPLE

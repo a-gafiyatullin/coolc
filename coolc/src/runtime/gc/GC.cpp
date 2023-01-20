@@ -32,9 +32,7 @@ void GCStats::dump()
 
 ObjectLayout *GC::allocate(int tag, size_t size, void *disp_tab)
 {
-    // allign size
-    if (size % 8 != 0)
-        size = size + (8 - size % 8);
+    size = allign(size);
 
     Allocator *alloca = Allocator::allocator();
 
