@@ -7,38 +7,38 @@ set(ARCH "LLVM" CACHE STRING "Target architecture")
 set(GCTYPE "LLVM_STATEPOINT_EXAMPLE" CACHE STRING "GC")
 
 execute_process(
-    COMMAND sh -c "rm -rf ${PROJECT_SOURCE_DIR}/bin"
+  COMMAND sh -c "rm -rf ${PROJECT_SOURCE_DIR}/bin"
 )
 
 execute_process(
-    COMMAND sh -c "rm -rf ${PROJECT_SOURCE_DIR}/lib"
+  COMMAND sh -c "rm -rf ${PROJECT_SOURCE_DIR}/lib"
 )
 
 if(ARCH STREQUAL "LLVM")
-    execute_process(COMMAND sh -c "llvm-config --includedir" OUTPUT_VARIABLE LLVM_INCLUDE_DIR)
-    string(STRIP ${LLVM_INCLUDE_DIR} LLVM_INCLUDE_DIR)
-    message(STATUS "LLVM_INCLUDE_DIR = ${LLVM_INCLUDE_DIR}")
-    include_directories(${LLVM_INCLUDE_DIR})
+  execute_process(COMMAND sh -c "llvm-config --includedir" OUTPUT_VARIABLE LLVM_INCLUDE_DIR)
+  string(STRIP ${LLVM_INCLUDE_DIR} LLVM_INCLUDE_DIR)
+  message(STATUS "LLVM_INCLUDE_DIR = ${LLVM_INCLUDE_DIR}")
+  include_directories(${LLVM_INCLUDE_DIR})
 
-    execute_process(COMMAND sh -c "llvm-config --libs all" OUTPUT_VARIABLE LIBS)
-    string(STRIP ${LIBS} LIBS)
-    message(STATUS "LIBS = ${LIBS}")
+  execute_process(COMMAND sh -c "llvm-config --libs all" OUTPUT_VARIABLE LIBS)
+  string(STRIP ${LIBS} LIBS)
+  message(STATUS "LIBS = ${LIBS}")
 
-    execute_process(COMMAND sh -c "llvm-config --libdir" OUTPUT_VARIABLE LIB_DIR)
-    string(STRIP ${LIB_DIR} LIB_DIR)
-    message(STATUS "LIB_DIR = ${LIB_DIR}")
+  execute_process(COMMAND sh -c "llvm-config --libdir" OUTPUT_VARIABLE LIB_DIR)
+  string(STRIP ${LIB_DIR} LIB_DIR)
+  message(STATUS "LIB_DIR = ${LIB_DIR}")
 
-    link_directories(${LIB_DIR})
+  link_directories(${LIB_DIR})
 
-    if (GCTYPE STREQUAL "LLVM_SHADOW_STACK")
-      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DLLVM_SHADOW_STACK")
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLLVM_SHADOW_STACK")
-    elseif(GCTYPE STREQUAL "LLVM_STATEPOINT_EXAMPLE")
-      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DLLVM_STATEPOINT_EXAMPLE")
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLLVM_STATEPOINT_EXAMPLE")
-    endif()
+  if(GCTYPE STREQUAL "LLVM_SHADOW_STACK")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DLLVM_SHADOW_STACK")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLLVM_SHADOW_STACK")
+  elseif(GCTYPE STREQUAL "LLVM_STATEPOINT_EXAMPLE")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DLLVM_STATEPOINT_EXAMPLE")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLLVM_STATEPOINT_EXAMPLE")
+  endif()
 else()
-    set(GCTYPE "NO_GC")
+  set(GCTYPE "NO_GC")
 endif()
 
 set(CMAKE_CXX_STANDARD 20)
@@ -47,11 +47,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch -D${ARCH}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -D${ARCH}")
 
 if(ASAN)
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DASAN -fsanitize=address -fno-omit-frame-pointer")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DASAN -fsanitize=address -fno-omit-frame-pointer")
 endif()
 
 if(UBSAN)
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DUBSAN -fsanitize=undefined -fno-omit-frame-pointer")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DUBSAN -fsanitize=undefined -fno-omit-frame-pointer")
 endif()
 
 message(STATUS "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
@@ -66,11 +66,11 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
 if(ARCH STREQUAL "LLVM")
-    find_package(Boost 1.61 COMPONENTS filesystem REQUIRED)
-    include_directories(${Boost_INCLUDE_DIR})
+  find_package(Boost 1.61 COMPONENTS filesystem REQUIRED)
+  include_directories(${Boost_INCLUDE_DIR})
 
-    set(ADDITIONAL_LIBS "${Boost_LIBRARIES}")
-    message(STATUS "ADDITIONAL_LIBS = ${ADDITIONAL_LIBS}")
+  set(ADDITIONAL_LIBS "${Boost_LIBRARIES}")
+  message(STATUS "ADDITIONAL_LIBS = ${ADDITIONAL_LIBS}")
 endif()
 
 add_subdirectory(src/lexer)
@@ -85,12 +85,12 @@ add_executable(coolc src/coolc.cpp)
 target_link_libraries(coolc lexer parser semant utils ast codegen decls ${LIBS} ${ADDITIONAL_LIBS} -ldl)
 
 if(ARCH STREQUAL "LLVM")
-    if(APPLE)
-        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
-        set(CMAKE_SHARED_LIBRARY_SUFFIX .so)
-    endif()
+  if(APPLE)
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
+    set(CMAKE_SHARED_LIBRARY_SUFFIX .so)
+  endif()
 
-    add_subdirectory(src/runtime)
+  add_subdirectory(src/runtime)
 endif()
 
 enable_testing()
@@ -101,38 +101,38 @@ find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_test(PrepareLexerTestsResults
-        ${PROJECT_SOURCE_DIR}/tests/lexer/make_results.sh
-        ${EXECUTABLE_OUTPUT_PATH}
-    )
-    add_executable(lexer_tests tests/src/test.cpp tests/src/lexer/test.cpp)
-    target_link_libraries(lexer_tests ${GTEST_LIBRARIES} pthread ${GTEST_MAIN_LIBRARIES})
-    add_test(LexerTests ${EXECUTABLE_OUTPUT_PATH}/lexer_tests)
+  add_test(PrepareLexerTestsResults
+    ${PROJECT_SOURCE_DIR}/tests/lexer/make_results.sh
+    ${EXECUTABLE_OUTPUT_PATH}
+  )
+  add_executable(lexer_tests tests/src/test.cpp tests/src/lexer/test.cpp)
+  target_link_libraries(lexer_tests ${GTEST_LIBRARIES} pthread ${GTEST_MAIN_LIBRARIES})
+  add_test(LexerTests ${EXECUTABLE_OUTPUT_PATH}/lexer_tests)
 
-    add_test(PrepareParserSemantTestsResults
-        ${PROJECT_SOURCE_DIR}/tests/parser-semant/make_results.sh
-        ${EXECUTABLE_OUTPUT_PATH}
-    )
-    add_executable(parser_semant_tests tests/src/test.cpp tests/src/parser-semant/test.cpp)
-    target_link_libraries(parser_semant_tests ${GTEST_LIBRARIES} pthread ${GTEST_MAIN_LIBRARIES})
-    add_test(ParserSemantTests ${EXECUTABLE_OUTPUT_PATH}/parser_semant_tests)
+  add_test(PrepareParserSemantTestsResults
+    ${PROJECT_SOURCE_DIR}/tests/parser-semant/make_results.sh
+    ${EXECUTABLE_OUTPUT_PATH}
+  )
+  add_executable(parser_semant_tests tests/src/test.cpp tests/src/parser-semant/test.cpp)
+  target_link_libraries(parser_semant_tests ${GTEST_LIBRARIES} pthread ${GTEST_MAIN_LIBRARIES})
+  add_test(ParserSemantTests ${EXECUTABLE_OUTPUT_PATH}/parser_semant_tests)
 endif()
 
 if(ARCH STREQUAL "MIPS")
-    set(RUN_DIR mips)
+  set(RUN_DIR mips)
 else()
-    set(RUN_DIR llvm)
+  set(RUN_DIR llvm)
 endif()
 
 if((CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)" AND ARCH STREQUAL "MIPS") OR ARCH STREQUAL "LLVM")
-    add_test(PrepareCodegenTestsResults
-        ${PROJECT_SOURCE_DIR}/tests/codegen/make_results.sh
-        ${EXECUTABLE_OUTPUT_PATH}
-        ${PROJECT_SOURCE_DIR}/tests/codegen/arch/${RUN_DIR}/run.sh
-    )
-    add_executable(codegen_tests tests/src/test.cpp tests/src/codegen/test.cpp)
-    target_link_libraries(codegen_tests ${GTEST_LIBRARIES} pthread ${GTEST_MAIN_LIBRARIES})
-    add_test(CodegenTests ${EXECUTABLE_OUTPUT_PATH}/codegen_tests)
+  add_test(PrepareCodegenTestsResults
+    ${PROJECT_SOURCE_DIR}/tests/codegen/make_results.sh
+    ${EXECUTABLE_OUTPUT_PATH}
+    ${PROJECT_SOURCE_DIR}/tests/codegen/arch/${RUN_DIR}/run.sh
+  )
+  add_executable(codegen_tests tests/src/test.cpp tests/src/codegen/test.cpp)
+  target_link_libraries(codegen_tests ${GTEST_LIBRARIES} pthread ${GTEST_MAIN_LIBRARIES})
+  add_test(CodegenTests ${EXECUTABLE_OUTPUT_PATH}/codegen_tests)
 endif()
 
 unset(ARCH CACHE)

@@ -12,7 +12,11 @@ assistance with **coolc**.
     - `git clone https://github.com/xp10rd/coolc.git`
 
 2. Configure and build COOLC:
-    - Prerequirement: at least **clang-14**, **gtest**, **llvm-14**;
+    - Common prerequirement: **clang-12**, **gtest**, **boost-1.61**;
+      - x86_64: **llvm-12**;
+      - aarch64: **llvm-14**;
+      - There are no guarantees that something will work with library versions differ from the required ones.
+      - Also there are no guarantees that something will work with **MacOS**.
     - `cd coolc`
     - `build.sh [-release/-debug] [options]`<br>
     Some usefull options:
@@ -49,4 +53,3 @@ assistance with **coolc**.
 |---------------------------|------------|-----------------|-----------------------|
 | AArch64, Linux            |     x      |        x        |           x           |
 | x86_64, Linux             |     x      |        x        |           x           |
-| AArch64, MacOS (Apple M1) |     x      |        x        |           -           |
