@@ -149,4 +149,14 @@ extern "C"
      * @return Pointer to the newly allocated object
      */
     ObjectLayout *_gc_alloc(int tag, size_t size, void *disp_tab); // NOLINT
+
+#ifdef DEBUG
+    /**
+     * @brief Check if the obj is a heap object
+     *
+     * @param obj Object pointer
+     */
+    void _verify_oop(ObjectLayout *obj); // NOLINT
+
+#endif // DEBUG
 }

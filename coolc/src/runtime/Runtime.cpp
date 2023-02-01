@@ -10,8 +10,8 @@ void _init_runtime(int argc, char **argv) // NOLINT
 
     gc::Allocator::init(std::max(str_to_size(MaxHeapSize), sizeof(ObjectLayout)));
     gc::StackWalker::init();
-    gc::Marker::init((GcType)GCAlgo);
-    gc::GC::init((GcType)GCAlgo);
+    gc::Marker::init();
+    gc::GC::init();
 }
 
 void _finish_runtime() // NOLINT
@@ -230,3 +230,19 @@ ObjectLayout *_gc_alloc(int tag, size_t size, void *disp_tab) // NOLINT
 {
     return gc::GC::gc()->allocate(tag, size, disp_tab);
 }
+
+#ifdef DEBUG
+void _verify_oop(ObjectLayout *obj) // NOLINT
+{
+    if (TraceVerifyOops)
+    {
+        fprintf(stderr, "VerifyOops: ");
+        obj->print();
+    }
+    assert(!obj ||
+           (obj->is_marked() && !gc::Allocator::allocator()->is_heap_addr((address)obj) &&
+            obj->has_special_type()) || // constant object are always marked
+           (is_alligned((size_t)obj) && gc::Allocator::allocator()->is_heap_addr((address)obj) && !obj->is_marked()));
+}
+
+#endif // DEBUG

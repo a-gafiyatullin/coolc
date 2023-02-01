@@ -10,7 +10,7 @@ using namespace gc;
 Allocator *Allocator::AllocatorObj = nullptr;
 
 Allocator::Allocator(const size_t &size)
-    : _size(allign(size))
+    : _size(allign(size, 2)) // 16 byte allignment
 #ifdef DEBUG
       ,
       _allocated_size(0), _freed_size(0)
@@ -27,7 +27,27 @@ Allocator::Allocator(const size_t &size)
 
 void Allocator::init(const size_t &size)
 {
-    AllocatorObj = new NextFitAllocator(size);
+    switch (GCAlgo)
+    {
+    case ZEROGC:
+        AllocatorObj = new NextFitAllocator(size);
+        break;
+#if defined(LLVM_SHADOW_STACK) || defined(LLVM_STATEPOINT_EXAMPLE)
+    case MARKSWEEPGC:
+    case THREADED_MC_GC:
+    case COMPRESSOR_GC:
+        AllocatorObj = new NextFitAllocator(size);
+        break;
+    case SEMISPACE_COPYING_GC:
+        AllocatorObj = new SemispaceNextFitAllocator(size);
+        break; // don't have explicit mark phase
+
+#endif // LLVM_SHADOW_STACK || LLVM_STATEPOINT_EXAMPLE
+    default:
+        fprintf(stderr, "cannot select GC!\n");
+        abort();
+        break;
+    };
 
 #ifdef DEBUG
     if (TraceGCCycles)
@@ -255,7 +275,7 @@ void NextFitAllocator::move(const ObjectLayout *src, address dst)
 #ifdef DEBUG
         if (TraceObjectMoving)
         {
-            fprintf(stderr, "Move object %p to %p\n", src, dst);
+            fprintf(stderr, "Move object [%p-%p] to [%p-%p]\n", src, (address)src + src->_size, dst, dst + src->_size);
         }
 #endif // DEBUG
 
@@ -274,6 +294,8 @@ void NextFitAllocator::move(const ObjectLayout *src, address dst)
 
 void NextFitAllocator::force_alloc_pos(address pos)
 {
+    assert(is_alligned((size_t)pos));
+
     // create an artificial object with tag 0 and size heap_size
     ObjectLayout *aobj = (ObjectLayout *)pos;
     aobj->set_unused(_end - pos);
@@ -293,4 +315,51 @@ address NextFitAllocator::next_object(address obj)
     }
 
     return (address)possible_object;
+}
+
+SemispaceNextFitAllocator::SemispaceNextFitAllocator(const size_t &size) : NextFitAllocator(size)
+{
+    _orig_heap_start = _start;
+    _orig_heap_end = _end;
+
+    _extend = (_end - _start) / 2;
+    _end = _start + _extend;
+
+    assert(_start + 2 * _extend == _orig_heap_end);
+
+    force_alloc_pos(_start);
+
+#ifdef DEBUG
+    if (TraceGCCycles)
+    {
+        fprintf(stderr, "Original heap boundaries: [%p-%p], mid = %p\n", _orig_heap_start, _orig_heap_end, _end);
+    }
+#endif // DEBUG
+}
+
+void SemispaceNextFitAllocator::flip()
+{
+    _start = _end;
+    _end = _start + _extend;
+
+    if (_start == _orig_heap_end)
+    {
+        _start = _orig_heap_start;
+        _end = _start + _extend;
+    }
+
+#ifdef DEBUG
+    if (TraceGCCycles)
+    {
+        fprintf(stderr, "New heap boundaries: [%p-%p]\n", _start, _end);
+    }
+#endif // DEBUG
+
+    force_alloc_pos(_start);
+}
+
+SemispaceNextFitAllocator::~SemispaceNextFitAllocator()
+{
+    _start = _orig_heap_start;
+    _end = _orig_heap_end;
 }

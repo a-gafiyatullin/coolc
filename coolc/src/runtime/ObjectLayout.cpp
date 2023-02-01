@@ -16,14 +16,6 @@ void ObjectLayout::zero_appendix(int appendix_size)
 #ifdef DEBUG
 void ObjectLayout::print()
 {
-    fprintf(stderr, "Object address = %p\nMark = %x\nTag = %x\nSize = %lu\nDispTable = %p\n", this, _mark, _tag, _size,
-            _dispatch_table);
-
-    for (int i = 0; i < field_cnt(); i++)
-    {
-        fprintf(stderr, "Field %d : %p\n", i, fields_base()[i]);
-    }
-
-    fprintf(stderr, "\n");
+    fprintf(stderr, "%p: Mark = %x; Tag = %x; Size = %lu; DispTable = %p\n", this, _mark, _tag, _size, _dispatch_table);
 }
 #endif // DEBUG

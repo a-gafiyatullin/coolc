@@ -16,16 +16,18 @@ bool TraceStackSlotUpdate = false;
 bool TraceObjectFieldUpdate = false;
 bool TraceObjectMoving = false;
 bool TraceGCCycles = false;
+bool TraceVerifyOops = false;
 #endif // DEBUG
 
-size_t allign(size_t byte)
+size_t allign(size_t byte, int words)
 {
-    return byte + (byte % sizeof(address) ? sizeof(address) - byte % sizeof(address) : 0);
+    int bytes = (sizeof(address) * words);
+    return byte + (byte % bytes ? bytes - byte % bytes : 0);
 }
 
-bool is_alligned(size_t byte)
+bool is_alligned(size_t byte, int words)
 {
-    return byte % sizeof(address) == 0;
+    return byte % (sizeof(address) * words) == 0;
 }
 
 bool PrintGCStatistics = false;
@@ -38,8 +40,8 @@ bool TraceStackWalker = false;
 #endif // LLVM_STATEPOINT_EXAMPLE
 
 #if defined(LLVM_SHADOW_STACK) || defined(LLVM_STATEPOINT_EXAMPLE)
-std::string MaxHeapSize = "6Kb";
-int GCAlgo = 2; // ThreadedCompactionGC
+std::string MaxHeapSize = "10Kb";
+int GCAlgo = 4; // ThreadedCompactionGC
 #else
 int GCAlgo = 0; // ZeroGC
 std::string MaxHeapSize = "384Kb";
@@ -54,6 +56,7 @@ const std::unordered_map<std::string, bool *> BoolFlags = {
 #ifdef DEBUG
     flag_pair(PrintAllocatedObjects),  flag_pair(TraceMarking),      flag_pair(TraceStackSlotUpdate),
     flag_pair(TraceObjectFieldUpdate), flag_pair(TraceObjectMoving), flag_pair(TraceGCCycles),
+    flag_pair(TraceVerifyOops),
 #endif // DEBUG
     flag_pair(PrintGCStatistics)};
 

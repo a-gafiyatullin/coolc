@@ -38,6 +38,10 @@ RuntimeLLVM::RuntimeLLVM(llvm::Module &module)
       _init_runtime(module, SYMBOLS[RuntimeLLVMSymbols::INIT_RUNTIME], _void_type,
                     {_int32_type, _int8_type->getPointerTo()->getPointerTo()}, false, *this),
       _finish_runtime(module, SYMBOLS[RuntimeLLVMSymbols::FINISH_RUNTIME], _void_type, {}, false, *this)
+#ifdef DEBUG
+      ,
+      _verify_oop(module, SYMBOLS[RuntimeLLVMSymbols::VERIFY_OOP], _void_type, {_heap_ptr_type}, false, *this)
+#endif // DEBUG
 #ifdef LLVM_STATEPOINT_EXAMPLE
       ,
       _stack_pointer(new llvm::GlobalVariable(
@@ -81,6 +85,9 @@ const std::string RuntimeLLVM::SYMBOLS[RuntimeLLVMSymbolsSize] = {"_equals",
                                                                   "_dispatch_abort",
                                                                   "_init_runtime",
                                                                   "_finish_runtime",
+#ifdef DEBUG
+                                                                  "_verify_oop",
+#endif // DEBUG
                                                                   "class_nameTab",
                                                                   "class_objTab",
                                                                   "_int_tag",

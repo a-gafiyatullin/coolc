@@ -66,6 +66,8 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
     int _current_stack_size;
 #ifdef DEBUG
     int _max_stack_size;
+
+    void verify_oop(llvm::Value *object);
 #endif // DEBUG
 
     void add_fields() override;
@@ -96,6 +98,7 @@ class CodeGenLLVM : public CodeGen<llvm::Value *, Symbol>
 
 #ifdef LLVM_STATEPOINT_EXAMPLE
     void save_frame();
+    void save_locals(std::vector<llvm::Value *> args_stack);
 #endif // LLVM_STATEPOINT_EXAMPLE
 
     // cast values helpers

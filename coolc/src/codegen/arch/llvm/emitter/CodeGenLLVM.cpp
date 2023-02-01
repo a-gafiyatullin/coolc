@@ -129,17 +129,35 @@ void CodeGenLLVM::init_shadow_stack(const std::vector<llvm::Value *> &args)
 #ifdef LLVM_STATEPOINT_EXAMPLE
 void CodeGenLLVM::save_frame()
 {
-    auto *const read_reg_func =
+    static auto *const READ_REG_FUNC =
         llvm::Intrinsic::getDeclaration(&_module, llvm::Intrinsic::read_register, {_int0_64->getType()});
 
-    auto *sp = __ CreateCall(read_reg_func, {_runtime.sp_name()});
+    auto *sp = __ CreateCall(READ_REG_FUNC, {_runtime.sp_name()});
     __ CreateStore(sp, _runtime.stack_pointer());
 
-// TODO: do it for x86 if fno-omit-frame-pointer
-#ifdef __aarch64__
-    auto *fp = __ CreateCall(read_reg_func, {_runtime.fp_name()});
+    auto *fp = __ CreateCall(READ_REG_FUNC, {_runtime.fp_name()});
     __ CreateStore(fp, _runtime.frame_pointer());
-#endif // __aarch64__
+}
+
+void CodeGenLLVM::save_locals(std::vector<llvm::Value *> args_stack)
+{
+    static auto *const GCROOT = llvm::Intrinsic::getDeclaration(&_module, llvm::Intrinsic::experimental_stackmap);
+
+    std::vector<llvm::Value *> live_locals;
+    live_locals.push_back(_int0_64);
+    live_locals.push_back(_int0_32);
+
+    for (auto *local : args_stack)
+    {
+        live_locals.push_back(local);
+    }
+
+    for (int i = 0; i < _stack.size(); i++)
+    {
+        live_locals.push_back(_stack[i]);
+    }
+
+    __ CreateCall(GCROOT, live_locals);
 }
 #endif // LLVM_STATEPOINT_EXAMPLE
 
@@ -156,10 +174,9 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
 
     GUARANTEE_DEBUG(func);
 
-// workaround for bug in LLVM for aarch64 (49897)
-#if defined(__aarch64__) && defined(LLVM_STATEPOINT_EXAMPLE)
+#if LLVM_STATEPOINT_EXAMPLE
     func->addFnAttr(llvm::Attribute::get(_context, "frame-pointer", "all"));
-#endif // __aarch64__ && LLVM_STATEPOINT_EXAMPLE
+#endif // LLVM_STATEPOINT_EXAMPLE
 
     // Create a new basic block to start insertion into.
     auto *entry = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::ENTRY_BLOCK), func);
@@ -191,6 +208,10 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
     init_stack();
 #endif // LLVM_SHADOW_STACK
 
+#ifdef LLVM_STATEPOINT_EXAMPLE
+    save_locals(args_stack);
+#endif // LLVM_STATEPOINT_EXAMPLE
+
     for (auto i = 0; i < func->arg_size(); i++)
     {
         auto *const arg = func->getArg(i);
@@ -198,6 +219,11 @@ void CodeGenLLVM::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
 
         _table.add_symbol(static_cast<std::string>(arg->getName()),
                           Symbol(args_stack[i], i != 0 ? formals[i - 1]->_type : _current_class->_type));
+    }
+
+    for (auto i = 0; i < func->arg_size(); i++)
+    {
+        DEBUG_ONLY(verify_oop(func->getArg(i)));
     }
 
     __ CreateRet(maybe_cast(emit_expr(method->_expr), func->getReturnType()));
@@ -250,25 +276,11 @@ int CodeGenLLVM::reload_args(std::vector<llvm::Value *> &args, const std::shared
                              const std::vector<std::shared_ptr<ast::Expression>> &expr_args, int slots)
 {
     int n = 0;
-    int expr_args_size = expr_args.size();
-
-    for (int i = 0; i < expr_args_size - 1; i++)
+    for (int i = 0; i < expr_args.size(); i++)
     {
         auto *const orig_value = args.at(i + 1);
-        args[i + 1] =
-            reload_value_from_stack(_current_stack_size - (slots - n), orig_value, expr_args.at(i + 1)->_can_allocate);
+        args[i + 1] = reload_value_from_stack(_current_stack_size - (slots - n), orig_value, true);
         if (orig_value != args.at(i + 1))
-        {
-            n++;
-        }
-    }
-
-    if (!expr_args.empty())
-    {
-        auto *const orig_value = args.back();
-        args[expr_args_size] =
-            reload_value_from_stack(_current_stack_size - (slots - n), orig_value, self->_can_allocate);
-        if (orig_value != args.back())
         {
             n++;
         }
@@ -305,6 +317,7 @@ void CodeGenLLVM::init_stack()
     for (int i = 0; i < _stack.size(); i++)
     {
         _stack[i] = __ CreateAlloca(_runtime.stack_slot_type());
+        __ CreateStore(_stack_slot_null, _stack[i]);
     }
 }
 #endif // LLVM_SHADOW_STACK
@@ -340,6 +353,15 @@ void CodeGenLLVM::verify(llvm::Function *func)
         GUARANTEE_DEBUG(!has_error);
     }
 }
+
+void CodeGenLLVM::verify_oop(llvm::Value *object)
+{
+    static auto *const VERIFY_OOP = _runtime.symbol_by_id(RuntimeLLVM::RuntimeLLVMSymbols::VERIFY_OOP)->_func;
+    if (VerifyOops)
+    {
+        __ CreateCall(VERIFY_OOP, {__ CreateBitCast(object, _runtime.heap_ptr_type())});
+    }
+}
 #endif // DEBUG
 
 void CodeGenLLVM::emit_class_init_method_inner()
@@ -351,10 +373,9 @@ void CodeGenLLVM::emit_class_init_method_inner()
 
     GUARANTEE_DEBUG(func);
 
-// workaround for bug in LLVM for aarch64 (49897)
-#if defined(__aarch64__) && defined(LLVM_STATEPOINT_EXAMPLE)
+#if LLVM_STATEPOINT_EXAMPLE
     func->addFnAttr(llvm::Attribute::get(_context, "frame-pointer", "all"));
-#endif // __aarch64__ && LLVM_STATEPOINT_EXAMPLE
+#endif // LLVM_STATEPOINT_EXAMPLE
 
     // Create a new basic block to start insertion into.
     auto *entry = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::ENTRY_BLOCK), func);
@@ -384,6 +405,10 @@ void CodeGenLLVM::emit_class_init_method_inner()
     _table.add_symbol(SelfObject, Symbol(args_stack.at(0), _current_class->_type));
 
     auto *const klass_struct = _data.class_struct(klass);
+
+#ifdef LLVM_STATEPOINT_EXAMPLE
+    save_locals(args_stack);
+#endif // LLVM_STATEPOINT_EXAMPLE
 
     // set default value before init for fields of this class
     for (const auto &feature : _current_class->_features)
@@ -446,6 +471,7 @@ void CodeGenLLVM::emit_class_init_method_inner()
 
         __ CreateCall(_module.getFunction(parent->init_method()),
                       // it's ok to use getArg(0) here, because safepoint is impossible
+                      // TODO: why??
                       __ CreateBitCast(func->getArg(0), parent_struct->getPointerTo(_runtime.HEAP_ADDR_SPACE)));
     }
 
@@ -545,6 +571,9 @@ llvm::Value *CodeGenLLVM::emit_binary_expr_inner(const ast::BinaryExpression &ex
     lhs = reload_value_from_stack(_current_stack_size - 1, lhs, expr._rhs->_can_allocate);
 #endif // LLVM_SHADOW_STACK
 
+    DEBUG_ONLY(verify_oop(lhs));
+    DEBUG_ONLY(verify_oop(rhs));
+
     auto logical_result = false;
     llvm::Value *op_result = nullptr;
 
@@ -626,6 +655,8 @@ llvm::Value *CodeGenLLVM::emit_unary_expr_inner(const ast::UnaryExpression &expr
 {
     auto *const operand = emit_expr(expr._expr);
 
+    DEBUG_ONLY(verify_oop(operand));
+
     return std::visit(
         ast::overloaded{
             [&](const ast::IsVoidExpression &isvoid) {
@@ -684,17 +715,25 @@ llvm::Value *CodeGenLLVM::emit_object_expr_inner(const ast::ObjectExpression &ex
         type = object._value_type;
     }
 
-    return __ CreateLoad(_data.class_struct(_builder->klass(type->_string))->getPointerTo(_runtime.HEAP_ADDR_SPACE),
-                         ptr);
+    auto *local =
+        __ CreateLoad(_data.class_struct(_builder->klass(type->_string))->getPointerTo(_runtime.HEAP_ADDR_SPACE), ptr);
+
+    DEBUG_ONLY(verify_oop(local));
+
+    return local;
 }
 
 llvm::Value *CodeGenLLVM::emit_load_self()
 {
     const auto &self_val = _table.symbol(SelfObject);
 
-    return __ CreateLoad(
+    auto *self = __ CreateLoad(
         _data.class_struct(_builder->klass(self_val._value_type->_string))->getPointerTo(_runtime.HEAP_ADDR_SPACE),
         self_val._value._ptr);
+
+    DEBUG_ONLY(verify_oop(self));
+
+    return self;
 }
 
 llvm::Value *CodeGenLLVM::emit_new_inner_helper(const std::shared_ptr<ast::Type> &klass_type, bool preserve_before_init)
@@ -826,6 +865,8 @@ llvm::Value *CodeGenLLVM::emit_cases_expr_inner(const ast::CaseExpression &expr,
 {
     // TODO: maybe use SwitchInst?
     auto *const pred = emit_expr(expr._expr);
+
+    DEBUG_ONLY(verify_oop(pred));
 
     // we want to generate code for the the most precise cases first, so sort cases by tag
     auto cases = expr._cases;
@@ -1005,23 +1046,15 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
     // prepare args
     std::vector<llvm::Value *> args;
     args.push_back(nullptr); // dummy for the first arg
-    for (int i = 0; i < expr_args_size - 1; i++)
+    for (int i = 0; i < expr_args_size; i++)
     {
         args.push_back(emit_expr(expr._args.at(i)));
 
-#ifdef LLVM_SHADOW_STACK
-        // preserve args for GC
-        slots_num += preserve_value_for_gc(args.back(), expr._args.at(i + 1)->_can_allocate);
-#endif // LLVM_SHADOW_STACK
-    }
-
-    if (!expr._args.empty())
-    {
-        args.push_back(emit_expr(expr._args.back()));
+        DEBUG_ONLY(verify_oop(args.back()));
 
 #ifdef LLVM_SHADOW_STACK
         // preserve args for GC
-        slots_num += preserve_value_for_gc(args.back(), expr._expr->_can_allocate);
+        slots_num += preserve_value_for_gc(args.back(), true);
 #endif // LLVM_SHADOW_STACK
     }
 
@@ -1029,12 +1062,14 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
     auto *const receiver = emit_expr(expr._expr);
     args[0] = receiver;
 
+    DEBUG_ONLY(verify_oop(receiver));
+
 #ifdef LLVM_SHADOW_STACK
     // reload args after possible relocation
     int n = reload_args(args, expr._expr, expr._args, slots_num);
 
     // pop stack slots now to reduce roots number for mark phase
-    assert(ReduceGCSpills || slots_num == expr_args_size);
+    assert(slots_num == expr_args_size);
     assert(n == slots_num);
     pop_dead_value(slots_num);
 #endif // LLVM_SHADOW_STACK
@@ -1148,6 +1183,8 @@ llvm::Value *CodeGenLLVM::emit_dispatch_expr_inner(const ast::DispatchExpression
     phi->addIncoming(casted_call, true_block);
     phi->addIncoming(llvm::ConstantPointerNull::get(phi_type), false_block);
 
+    DEBUG_ONLY(verify_oop(phi));
+
     return phi;
 }
 
@@ -1156,6 +1193,8 @@ llvm::Value *CodeGenLLVM::emit_assign_expr_inner(const ast::AssignExpression &ex
 {
     auto *const value = emit_expr(expr._expr);
     const auto &symbol = _table.symbol(expr._object->_object);
+
+    DEBUG_ONLY(verify_oop(value));
 
     llvm::Type *cast_type = nullptr;
     llvm::Value *store_dst = nullptr;
@@ -1255,6 +1294,8 @@ llvm::Value *CodeGenLLVM::emit_in_scope(const std::shared_ptr<ast::ObjectExpress
     auto *const result = emit_expr(expr);
     _table.pop_scope();
 
+    DEBUG_ONLY(verify_oop(result));
+
 #ifdef LLVM_SHADOW_STACK
     pop_dead_value();
 #else
@@ -1275,10 +1316,9 @@ void CodeGenLLVM::emit_runtime_main()
                                 false),
         llvm::Function::ExternalLinkage, static_cast<std::string>(RUNTIME_MAIN_FUNC), &_module);
 
-// workaround for bug in LLVM for aarch64 (49897)
-#if defined(__aarch64__) && defined(LLVM_STATEPOINT_EXAMPLE)
+#if LLVM_STATEPOINT_EXAMPLE
     runtime_main->addFnAttr(llvm::Attribute::get(_context, "frame-pointer", "all"));
-#endif // __aarch64__ && LLVM_STATEPOINT_EXAMPLE
+#endif // LLVM_STATEPOINT_EXAMPLE
 
     // set gc
     const auto gc_name = _runtime.gc_strategy_name();
@@ -1289,6 +1329,11 @@ void CodeGenLLVM::emit_runtime_main()
 
     auto *entry = llvm::BasicBlock::Create(_context, Names::comment(Names::Comment::ENTRY_BLOCK), runtime_main);
     __ SetInsertPoint(entry);
+
+#ifdef LLVM_STATEPOINT_EXAMPLE
+    _stack.resize(0);
+    save_locals({});
+#endif // LLVM_STATEPOINT_EXAMPLE
 
 #ifdef LLVM_SHADOW_STACK
     // need at least one slot for main object

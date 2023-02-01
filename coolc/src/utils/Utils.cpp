@@ -52,6 +52,7 @@ bool TraceParser = false;
 bool TraceSemant = false;
 bool TraceCodeGen = false;
 bool TraceOpts = false;
+bool VerifyOops = true;
 #endif // DEBUG
 
 #ifdef LLVM
@@ -78,7 +79,8 @@ std::unordered_map<std::string, bool *> BoolFlags = {
     flag_pair(TraceParser),
     flag_pair(TraceSemant),
     flag_pair(TraceCodeGen),
-    flag_pair(TraceOpts)
+    flag_pair(TraceOpts),
+    flag_pair(VerifyOops)
 #endif // DEBUG
 #ifdef LLVM
 #ifdef DEBUG

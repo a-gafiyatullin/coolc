@@ -27,7 +27,7 @@ assistance with **coolc**.
         - `-mips` --- build for **SPIM** emulator.
         - `-llvm` --- build with **LLVM** for host architecture.
         - `-shadow-stack-gc` --- (**llvm build**) build with **LLVM Shadow Stack**.
-        - `-statepoint-example-gc` --- (**llvm build**) build with **LLVM Stack Maps**.
+        - `-statepoint-example-gc` --- (**llvm build**) build with **LLVM Stack Maps**. **(*default*)**
         - `-no-gc` --- (**llvm build**) build without GC (**ZeroGC** only).
 
 3. Some usefull runtime options for **LLVM**-based build with GC (pass them as argument to executable):
@@ -37,6 +37,7 @@ assistance with **coolc**.
       2. `MarkSweepGC` (code **1**) --- use **Mark-and-Sweep** GC.
       3. `ThreadedCompactionGC` (code **2**) --- use **Jonkers's threaded compaction** (Mark-and-Compact) GC (**default**).
       4. `CompressorGC` (code **3**) --- use **Kermany and Petrank's compressor** (Mark-and-Compact) GC.
+      5. `SemispaceCopyingGC` (code **4**) --- use **Semispace Copying GC** (Copying) GC.
    3. `PrintGCStatistics` --- print some statistics about GC (e.g. `+PrintGCStatistics`);
    4. `DoOpts` --- do custom optimizations:
       1. **NCE** --- Null Check Elimination;

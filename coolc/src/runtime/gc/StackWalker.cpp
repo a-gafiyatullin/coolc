@@ -77,7 +77,7 @@ void StackMapWalker::process_roots(void *obj, void (*visitor)(void *obj, address
     const auto *stackinfo = find_addrinfo_from_rt(stacktop, frametop, stackmap);
     assert(stackinfo);
 
-    int i = 0;
+    int i = 1;
     while (stackinfo)
     {
 #ifdef DEBUG
@@ -102,37 +102,46 @@ void StackMapWalker::process_roots(void *obj, void (*visitor)(void *obj, address
             if (*base_ptr_slot == nullptr && *derived_ptr_slot != nullptr)
             {
                 assert(!Allocator::allocator()->is_heap_addr(*derived_ptr_slot));
-                continue;
-            }
-            if (base_ptr_slot == derived_ptr_slot)
-            {
 #ifdef DEBUG
                 if (TraceStackWalker)
                 {
-                    fprintf(stderr, "Visit root %p\n", base_ptr_slot);
+                    fprintf(stderr, "Skip root %p in %p\n", *derived_ptr_slot, derived_ptr_slot);
                 }
 #endif // DEBUG
-                (*visitor)(obj, base_ptr_slot, NULL);
+                continue;
             }
-            else if (records_derived_ptrs)
+
+#ifdef DEBUG
+            if (TraceStackWalker)
+            {
+                bool relative_to_frame = (offset._base_reg == stackmap::DWARFRegNum::FP);
+                fprintf(stderr, "Visit root [%d(%s)] = [%p]\n", offset._base_offset, relative_to_frame ? "fp" : "sp",
+                        base_ptr_slot);
+            }
+
+#endif // DEBUG
+            if (records_derived_ptrs && base_ptr_slot != derived_ptr_slot)
             {
                 _derived_ptrs.push_back({base_ptr_slot, derived_ptr_slot, (int)(*derived_ptr_slot - *base_ptr_slot)});
-#ifdef DEBUG
-                if (TraceStackWalker)
-                {
-                    fprintf(stderr, "Found derived ptr in %p, base ptr is in %p. ",
-                            _derived_ptrs.back()._derived_ptr_slot, _derived_ptrs.back()._base_ptr_slot);
-                    fprintf(stderr, "Derived ptr is %p, base is %p, offset = 0x%x\n",
-                            *_derived_ptrs.back()._derived_ptr_slot, *_derived_ptrs.back()._base_ptr_slot,
-                            _derived_ptrs.back()._offset);
-                }
 
                 assert(*_derived_ptrs.back()._derived_ptr_slot != nullptr &&
                            *_derived_ptrs.back()._base_ptr_slot != nullptr ||
                        *_derived_ptrs.back()._derived_ptr_slot == nullptr &&
                            *_derived_ptrs.back()._base_ptr_slot == nullptr);
-#endif // DEBUG
             }
+
+#ifdef DEBUG
+            if (TraceStackWalker && records_derived_ptrs && base_ptr_slot != derived_ptr_slot)
+            {
+                fprintf(stderr, "Found derived ptr in %p, base ptr is in %p. ", _derived_ptrs.back()._derived_ptr_slot,
+                        _derived_ptrs.back()._base_ptr_slot);
+                fprintf(stderr, "Derived ptr is %p, base is %p, offset = %d\n", *_derived_ptrs.back()._derived_ptr_slot,
+                        *_derived_ptrs.back()._base_ptr_slot, _derived_ptrs.back()._offset);
+            }
+#endif // DEBUG
+
+            // call has to be here, because visitir can destroy info for base-derived pair
+            (*visitor)(obj, base_ptr_slot, NULL);
         }
 
         address next_ret_addr = (address)ret_addr(stacktop, frametop, stackinfo);
@@ -157,12 +166,26 @@ void StackMapWalker::fix_derived_pointers()
     for (const auto &reloc : _derived_ptrs)
     {
         *(reloc._derived_ptr_slot) = *(reloc._base_ptr_slot) + reloc._offset;
+
+#ifdef DEBUG
+        if (TraceObjectFieldUpdate)
+        {
+            fprintf(stderr, "Updated derived pointer at %p: base %p, offset = %d\n", reloc._base_ptr_slot,
+                    *(reloc._base_ptr_slot), reloc._offset);
+        }
+#endif // DEBUG
     }
 }
 
 #ifdef __x86_64__
 const stackmap::AddrInfo *StackMapWalker::find_addrinfo_from_rt(address *sp, address *fp, const stackmap::StackMap *map)
 {
+#if DEBUG
+    if (TraceStackWalker)
+    {
+        fprintf(stderr, "Try found stackmap for %p\n", sp[-1]);
+    }
+#endif // DEBUG
     assert(map);
     return map->info((address)sp[-1]);
 }
@@ -174,9 +197,8 @@ address *StackMapWalker::next_sp(address *sp, const stackmap::AddrInfo *info)
 
 address *StackMapWalker::next_fp(address *fp, const stackmap::AddrInfo *info)
 {
-    // TODO: check for -fno-omit-frame-pointer
-    // normally we don't use fp
-    return fp;
+
+    return (address *)fp[0];
 }
 
 address *StackMapWalker::ret_addr(address *sp, address *fp, const stackmap::AddrInfo *info)

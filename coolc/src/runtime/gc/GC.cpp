@@ -82,9 +82,9 @@ ObjectLayout *GC::copy(const ObjectLayout *obj)
     return new_obj;
 }
 
-void GC::init(const GcType &type)
+void GC::init()
 {
-    switch (type)
+    switch (GCAlgo)
     {
     case ZEROGC:
         Gc = new ZeroGC();
@@ -99,6 +99,10 @@ void GC::init(const GcType &type)
     case COMPRESSOR_GC:
         Gc = new CompressorGC();
         break;
+    case SEMISPACE_COPYING_GC:
+        Gc = new SemispaceCopyingGC();
+        break; // don't have explicit mark phase
+
 #endif // LLVM_SHADOW_STACK || LLVM_STATEPOINT_EXAMPLE
     default:
         fprintf(stderr, "cannot select GC!\n");

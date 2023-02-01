@@ -55,9 +55,8 @@ class Marker
     /**
      * @brief Initialize global marker
      *
-     * @param type GC Algo
      */
-    static void init(GcType type);
+    static void init();
 
     /**
      * @brief Destruct the global marker

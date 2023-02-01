@@ -68,6 +68,10 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
         INIT_RUNTIME,
         FINISH_RUNTIME,
 
+#ifdef DEBUG
+        VERIFY_OOP,
+#endif // DEBUG
+
         CLASS_NAME_TAB,
         CLASS_OBJ_TAB,
 
@@ -120,6 +124,10 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
     // runtime init
     const RuntimeMethod _init_runtime;
     const RuntimeMethod _finish_runtime;
+
+#ifdef DEBUG
+    const RuntimeMethod _verify_oop;
+#endif // DEBUG
 
 #ifdef LLVM_STATEPOINT_EXAMPLE
     llvm::GlobalVariable *_stack_pointer;

@@ -106,7 +106,7 @@ class Allocator
      */
     inline bool is_heap_addr(address addr) const
     {
-        return addr >= _start && addr <= _end;
+        return addr >= _start && addr < _end;
     }
 
     /**
@@ -166,5 +166,58 @@ class NextFitAllocator : public Allocator
      * @return Next object
      */
     address next_object(address obj);
+};
+
+// SemispaceNextFitAllocator is a NextFitAllocator that swaps semispaces every gc cycle
+class SemispaceNextFitAllocator : public NextFitAllocator
+{
+  protected:
+    size_t _extend;
+
+    address _orig_heap_start;
+    address _orig_heap_end;
+
+  public:
+    SemispaceNextFitAllocator(const size_t &size);
+
+    /**
+     * @brief Swap semispaces
+     *
+     */
+    void flip();
+
+    /**
+     * @brief Space where we allocate
+     *
+     * @return address tospace start
+     */
+    inline address tospace() const
+    {
+        return _start;
+    }
+
+    /**
+     * @brief Space from where we evacuate
+     *
+     * @return address fromspace start
+     */
+    inline address fromspace() const
+    {
+        return _end != _orig_heap_end ? _end : _orig_heap_start;
+    }
+
+    /**
+     * @brief Check if this address is heap addr (in any of the semispaces)
+     *
+     * @param addr Address to check
+     * @return true if addr is from the heap
+     * @return false if addr isn't from the heap
+     */
+    inline bool is_orig_heap_addr(address obj) const
+    {
+        return obj >= _orig_heap_start && obj < _orig_heap_end;
+    }
+
+    virtual ~SemispaceNextFitAllocator();
 };
 }; // namespace gc

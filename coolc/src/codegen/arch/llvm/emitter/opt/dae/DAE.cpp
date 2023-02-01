@@ -14,8 +14,9 @@ bool DAE::runOnFunction(Function &f)
 
     for (auto bb = f.begin(); bb != f.end(); bb++)
     {
-        while (run_on_block(&*bb))
+        while ((run_on_block(&*bb)))
         {
+            eliminated = true;
         }
     }
 
@@ -109,6 +110,7 @@ bool DAE::eliminate(Instruction *inst)
 {
     std::vector<Instruction *> insts;
 
+#ifdef LLVM_STATEPOINT_EXAMPLE
     // N instrs before allocations are also dead
 #ifdef __aarch64__
     int n = 3; // save sp and fp
@@ -122,6 +124,7 @@ bool DAE::eliminate(Instruction *inst)
         assert(insts.back()->getPrevNode());
         insts.push_back(insts.back()->getPrevNode());
     }
+#endif // LLVM_STATEPOINT_EXAMPLE
 
     insts.push_back(inst);
 

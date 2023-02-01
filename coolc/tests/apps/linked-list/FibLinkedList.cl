@@ -1,3 +1,6 @@
+-- Neet at least 680Mb heap for GCAlgo 2, 3
+-- Neet at least 1360Mb heap for GCAlgo 4
+
 class FibNode inherits IO {
     value: Int;
     next : FibNode;

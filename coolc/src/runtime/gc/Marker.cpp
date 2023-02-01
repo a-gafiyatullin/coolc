@@ -13,11 +13,11 @@ Marker::~Marker()
 {
 }
 
-void Marker::init(GcType type)
+void Marker::init()
 {
     Allocator *alloca = Allocator::allocator();
 
-    switch (type)
+    switch (GCAlgo)
     {
     case ZEROGC:
         break;
@@ -29,6 +29,9 @@ void Marker::init(GcType type)
     case COMPRESSOR_GC:
         MarkerObj = new BitMapMarker(alloca->start(), alloca->end());
         break;
+    case SEMISPACE_COPYING_GC:
+        break; // don't have explicit mark phase
+
 #endif // LLVM_SHADOW_STACK || LLVM_STATEPOINT_EXAMPLE
     default:
         fprintf(stderr, "cannot select GC!\n");
@@ -124,7 +127,7 @@ void MarkerFIFO::mark()
 
 BitMapMarker::BitMapMarker(address heap_start, address heap_end) : MarkerFIFO(heap_start, heap_end)
 {
-    int long_words = bits_num() / BITS_PER_BIT_MAP_WORD;
+    int long_words = (int)bits_num() / BITS_PER_BIT_MAP_WORD + 1;
     _bitmap.resize(long_words);
 }
 

@@ -13,7 +13,8 @@ set(COMMON_SRC Runtime.cpp
 
 if(GCTYPE STREQUAL "LLVM_SHADOW_STACK" OR GCTYPE STREQUAL "LLVM_STATEPOINT_EXAMPLE")
     set(GC_SRC gc/mark-sweep/MarkSweepGC.cpp
-               gc/mark-compact/MarkCompactGC.cpp)
+               gc/mark-compact/MarkCompactGC.cpp
+               gc/copying/CopyingGC.cpp)
 endif()
 
 if(GCTYPE STREQUAL "LLVM_STATEPOINT_EXAMPLE")

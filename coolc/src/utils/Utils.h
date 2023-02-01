@@ -37,6 +37,7 @@ extern bool TraceParser;
 extern bool TraceSemant;
 extern bool TraceCodeGen;
 extern bool TraceOpts;
+extern bool VerifyOops;
 
 /**
  * @brief Get the printable string object

@@ -60,9 +60,8 @@ class GC
     /**
      * @brief Initialize GC
      *
-     * @param type GC Type
      */
-    static void init(const GcType &type);
+    static void init();
 
     /**
      * @brief Finalize GC
@@ -229,6 +228,32 @@ class CompressorGC : public MarkCompactGC
 
     // main compaction routine
     void compact() override;
+};
+
+// The Garbage Collection Handbook, Richard Jones: 4.1 Semispace copying collection with Cheney’s work list
+class SemispaceCopyingGC : public GC
+{
+  protected:
+    address _free;
+
+    // stack walker helpers
+    static void update_stack_root(void *obj, address *root, const address *meta);
+
+    // update field with reference to tospace replica
+    void process(address *root);
+
+    // forward address and copy
+    address forward(ObjectLayout *fromref);
+
+    // use size field for forwarding address
+    // if mark is set then size contains correct tospace address
+    void set_forwarding_address(ObjectLayout *old, address newloc);
+
+    // copy object and return forwarding address
+    address copy(ObjectLayout *old);
+
+  public:
+    void collect() override;
 };
 
 #endif // LLVM_SHADOW_STACK || LLVM_STATEPOINT_EXAMPLE
