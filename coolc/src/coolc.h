@@ -6,6 +6,9 @@
 #elif LLVM
 #include "codegen/arch/llvm/emitter/CodeGenLLVM.h"
 #define CODEGEN codegen::CodeGenLLVM
+#elif MYIR
+#include "codegen/arch/myir/emitter/CodeGenMyIR.hpp"
+#define CODEGEN codegen::CodeGenMyIR
 #else
 #define CODEGEN UndefinedArchCodeGen
 #endif // ARCH

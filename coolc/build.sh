@@ -63,6 +63,10 @@ do
         result_args+=" -DARCH:STRING=LLVM"
         shift
     ;;
+     -myir)
+        result_args+=" -DARCH:STRING=MYIR"
+        shift
+    ;;
     -*|--*)
         echo "Unknown option $var"
         exit 1

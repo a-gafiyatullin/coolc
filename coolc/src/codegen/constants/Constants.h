@@ -12,9 +12,9 @@
 #define WORD_SIZE 4
 #endif // MIPS
 
-#ifdef LLVM
+#if defined(LLVM) || defined (MYIR)
 #define WORD_SIZE 8
-#endif // LLVM
+#endif // LLVM || MYIR
 
 #define TrueValue 1
 #define FalseValue 0

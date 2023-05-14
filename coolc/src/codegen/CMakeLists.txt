@@ -20,6 +20,17 @@ if(ARCH STREQUAL "LLVM")
         )
 endif()
 
+if(ARCH STREQUAL "MYIR")
+    set(ARCH_SRC
+        arch/myir/klass/KlassMyIR.cpp
+        arch/myir/emitter/data/DataMyIR.cpp
+        arch/myir/emitter/CodeGenMyIR.cpp
+        arch/myir/runtime/RuntimeMyIR.cpp
+        arch/myir/ir/IR.cpp
+        arch/myir/ir/Inst.cpp
+        )
+endif()
+
 add_library(codegen STATIC
     ${ARCH_SRC}
     
