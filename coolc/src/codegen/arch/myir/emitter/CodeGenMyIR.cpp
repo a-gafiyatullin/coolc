@@ -19,7 +19,7 @@ CodeGenMyIR::CodeGenMyIR(const std::shared_ptr<semant::ClassNode> &root)
 
 void CodeGenMyIR::add_fields()
 {
-    const auto &this_klass = _builder->klass(_current_class->_type->_string);
+    auto &this_klass = _builder->klass(_current_class->_type->_string);
 
     for (auto field = this_klass->fields_begin(); field != this_klass->fields_end(); field++)
     {
@@ -53,7 +53,7 @@ void CodeGenMyIR::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
     // add formals to symbol table
     _table.push_scope();
 
-    const auto &formals = std::get<ast::MethodFeature>(method->_base)._formals;
+    auto &formals = std::get<ast::MethodFeature>(method->_base)._formals;
 
     for (auto i = 0; i < func->params_size(); i++)
     {
@@ -82,7 +82,7 @@ void CodeGenMyIR::verify_oop(const myir::oper &object)
 
 void CodeGenMyIR::emit_class_init_method_inner()
 {
-    const auto &klass = _builder->klass(_current_class->_type->_string);
+    auto &klass = _builder->klass(_current_class->_type->_string);
 
     // Note, that init method don't init header
     auto func = _module.get_function(klass->init_method());
@@ -103,13 +103,13 @@ void CodeGenMyIR::emit_class_init_method_inner()
     _table.add_symbol(SelfObject, Symbol(func->param(0), _current_class->_type));
 
     // set default value before init for fields of this class
-    for (const auto &feature : _current_class->_features)
+    for (auto &feature : _current_class->_features)
     {
         if (std::holds_alternative<ast::AttrFeature>(feature->_base))
         {
             myir::oper initial_val = nullptr;
 
-            const auto &this_field = _table.symbol(feature->_object->_object);
+            auto &this_field = _table.symbol(feature->_object->_object);
             assert(this_field._type == Symbol::FIELD); // impossible
 
             if (semant::Semant::is_trivial_type(this_field._value_type))
@@ -146,19 +146,19 @@ void CodeGenMyIR::emit_class_init_method_inner()
     // call parent constructor
     if (!semant::Semant::is_empty_type(_current_class->_parent)) // Object moment
     {
-        const auto parent = _builder->klass(_current_class->_parent->_string);
+        auto parent = _builder->klass(_current_class->_parent->_string);
 
         __ call(_module.get_function(parent->init_method()), {func->param(0)});
     }
 
     // Now initialize
-    for (const auto &feature : _current_class->_features)
+    for (auto &feature : _current_class->_features)
     {
         if (std::holds_alternative<ast::AttrFeature>(feature->_base))
         {
             if (feature->_expr)
             {
-                const auto &this_field = _table.symbol(feature->_object->_object);
+                auto &this_field = _table.symbol(feature->_object->_object);
                 assert(this_field._type == Symbol::FIELD); // impossible
 
                 auto value = emit_expr(feature->_expr);
@@ -316,7 +316,7 @@ myir::oper CodeGenMyIR::emit_string_expr(const ast::StringExpression &expr, cons
 myir::oper CodeGenMyIR::emit_object_expr_inner(const ast::ObjectExpression &expr,
                                                const std::shared_ptr<ast::Type> &expr_type)
 {
-    const auto &object = _table.symbol(expr._object);
+    auto &object = _table.symbol(expr._object);
 
     if (object._type == Symbol::FIELD)
     {
@@ -328,7 +328,7 @@ myir::oper CodeGenMyIR::emit_object_expr_inner(const ast::ObjectExpression &expr
 
 myir::oper CodeGenMyIR::emit_load_self()
 {
-    const auto &self_val = _table.symbol(SelfObject);
+    auto &self_val = _table.symbol(SelfObject);
 
     auto self = self_val._variable;
     DEBUG_ONLY(verify_oop(self));
@@ -340,7 +340,7 @@ myir::oper CodeGenMyIR::emit_new_inner_helper(const std::shared_ptr<ast::Type> &
 {
     auto func = _runtime.symbol_by_id(RuntimeMyIR::RuntimeMyIRSymbols::GC_ALLOC)->_func;
 
-    const auto &klass = _builder->klass(klass_type->_string);
+    auto &klass = _builder->klass(klass_type->_string);
 
     // prepare tag, size and dispatch table
     auto tag = myir::Constant::constant(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag());
@@ -368,7 +368,7 @@ myir::oper CodeGenMyIR::emit_new_inner(const std::shared_ptr<ast::Type> &klass_t
     }
 
     auto self_val = emit_load_self();
-    const auto &klass = _builder->klass(_current_class->_type->_string);
+    auto &klass = _builder->klass(_current_class->_type->_string);
 
     // get info about this object
     auto tag = emit_load_tag(self_val);
@@ -441,7 +441,7 @@ myir::oper CodeGenMyIR::emit_cases_expr_inner(const ast::CaseExpression &expr,
     // Last case is a special case: branch to abort
     for (auto i = 0; i < cases.size(); i++)
     {
-        const auto &klass = _builder->klass(cases[i]->_type->_string);
+        auto &klass = _builder->klass(cases[i]->_type->_string);
 
         auto tag_type = _runtime.header_elem_type(HeaderLayout::Tag);
 
@@ -469,7 +469,7 @@ myir::oper CodeGenMyIR::emit_cases_expr_inner(const ast::CaseExpression &expr,
     }
 
     // did not find suitable branch
-    auto *const case_abort = _runtime.symbol_by_id(RuntimeMyIR::RuntimeMyIRSymbols::CASE_ABORT);
+    auto *case_abort = _runtime.symbol_by_id(RuntimeMyIR::RuntimeMyIRSymbols::CASE_ABORT);
     __ call(case_abort->_func, {tag});
 
     __ move(_null_val, result);
@@ -570,12 +570,12 @@ myir::oper CodeGenMyIR::emit_dispatch_expr_inner(const ast::DispatchExpression &
     myir::block true_block = nullptr, false_block = nullptr, merge_block = nullptr;
     make_control_flow(is_not_null, true_block, false_block, merge_block);
 
-    const auto &method_name = expr._object->_object;
+    auto &method_name = expr._object->_object;
 
     auto call = std::visit(
         ast::overloaded{
             [&](const ast::VirtualDispatchExpression &disp) {
-                const auto &klass =
+                auto &klass =
                     _builder->klass(semant::Semant::exact_type(expr._expr->_type, _current_class->_type)->_string);
 
                 // load dispatch table
@@ -595,7 +595,7 @@ myir::oper CodeGenMyIR::emit_dispatch_expr_inner(const ast::DispatchExpression &
             [&](const ast::StaticDispatchExpression &disp) {
                 auto method = _module.get_function(_builder->klass(disp._type->_string)->method_full_name(method_name));
 
-                GUARANTEE_DEBUG(method);
+                assert(method);
 
                 return __ call(method, args);
             }},
@@ -622,7 +622,7 @@ myir::oper CodeGenMyIR::emit_assign_expr_inner(const ast::AssignExpression &expr
                                                const std::shared_ptr<ast::Type> &expr_type)
 {
     auto value = emit_expr(expr._expr);
-    const auto &symbol = _table.symbol(expr._object->_object);
+    auto &symbol = _table.symbol(expr._object->_object);
 
     DEBUG_ONLY(verify_oop(value));
 
@@ -715,12 +715,12 @@ void CodeGenMyIR::emit_runtime_main()
     auto init_rt = _runtime.symbol_by_id(RuntimeMyIR::INIT_RUNTIME)->_func;
     __ call(init_rt, {runtime_main->param(0), runtime_main->param(1)});
 
-    const auto main_klass = _builder->klass(MainClassName);
+    auto main_klass = _builder->klass(MainClassName);
 
     // this objects will be preserved in a callee frame
     auto main_object = emit_new_inner(main_klass->klass());
 
-    const auto main_method = main_klass->method_full_name(MainMethodName);
+    auto main_method = main_klass->method_full_name(MainMethodName);
     __ call(_module.get_function(main_method), {main_object});
 
     // finish runtime
@@ -729,21 +729,14 @@ void CodeGenMyIR::emit_runtime_main()
     __ ret(myir::Constant::constant(myir::INT32, 0));
 }
 
-#define EXIT_ON_ERROR(cond, error)                                                                                     \
-    if (!cond)                                                                                                         \
-    {                                                                                                                  \
-        std::cerr << error << std::endl;                                                                               \
-        exit(-1);                                                                                                      \
-    }
-
 void CodeGenMyIR::emit(const std::string &out_file)
 {
-    const std::string obj_file = out_file + static_cast<std::string>(EXT);
-
-    _data.emit(obj_file);
+    std::string obj_file = out_file + static_cast<std::string>(EXT);
 
     emit_class_code(_builder->root()); // emit
     emit_runtime_main();
+
+    _data.emit(obj_file);
 
     std::cout << _module.dump();
 }
