@@ -38,3 +38,5 @@ For a given variable *v*, we place φ-functions at the iterated dominance fronti
 ![Algorithm for computing the dominance frontier of each CFG node](../pics/algorithm-3-2.png)
 
 The single definition that reaches each use dominates that use.
+
+A paper ["A Simple, Fast Dominance Algorithm"](../papers/a-simple-fast-dominance-algorithm.pdf) by Keith D. Cooper, Timothy J. Harvey, and Ken Kennedy describes easy to understand and implement algorithms.
