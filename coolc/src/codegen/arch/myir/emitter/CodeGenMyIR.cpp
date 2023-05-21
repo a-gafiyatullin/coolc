@@ -37,7 +37,7 @@ void CodeGenMyIR::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
         return;
     }
 
-    auto func = _module.get_function(
+    auto func = _module.get<myir::func>(
         _builder->klass(_current_class->_type->_string)->method_full_name(method->_object->_object));
 
     assert(func);
@@ -85,7 +85,7 @@ void CodeGenMyIR::emit_class_init_method_inner()
     auto &klass = _builder->klass(_current_class->_type->_string);
 
     // Note, that init method don't init header
-    auto func = _module.get_function(klass->init_method());
+    auto func = _module.get<myir::func>(klass->init_method());
 
     assert(func);
 
@@ -148,7 +148,7 @@ void CodeGenMyIR::emit_class_init_method_inner()
     {
         auto parent = _builder->klass(_current_class->_parent->_string);
 
-        __ call(_module.get_function(parent->init_method()), {func->param(0)});
+        __ call(_module.get<myir::func>(parent->init_method()), {func->param(0)});
     }
 
     // Now initialize
@@ -351,7 +351,7 @@ myir::oper CodeGenMyIR::emit_new_inner_helper(const std::shared_ptr<ast::Type> &
     auto object = __ call(func, {tag, size, disp_tab});
 
     // call init
-    __ call(_module.get_function(klass->init_method()), {object});
+    __ call(_module.get<myir::func>(klass->init_method()), {object});
 
     // object is ready
     return object;
@@ -381,11 +381,11 @@ myir::oper CodeGenMyIR::emit_new_inner(const std::shared_ptr<ast::Type> &klass_t
     auto object = __ call(func, {tag, size, disp_tab});
 
     // lookup init method
-    auto class_obj_tab = _module.get_constant(_runtime.symbol_name(RuntimeMyIR::CLASS_OBJ_TAB));
+    auto class_obj_tab = _module.get<myir::func>(_runtime.symbol_name(RuntimeMyIR::CLASS_OBJ_TAB));
 
     // load init method and call
     // init method has the same type as for Object class
-    auto object_init = _module.get_function(klass->init_method());
+    auto object_init = _module.get<myir::func>(klass->init_method());
 
     auto init_method = __ ld<myir::POINTER>(class_obj_tab, pointer_offset(tag));
 
@@ -582,7 +582,7 @@ myir::oper CodeGenMyIR::emit_dispatch_expr_inner(const ast::DispatchExpression &
                 auto dispatch_table_ptr = emit_load_dispatch_table(receiver);
 
                 // method has the same type as in this klass
-                auto base_method = _module.get_function(klass->method_full_name(method_name));
+                auto base_method = _module.get<myir::func>(klass->method_full_name(method_name));
 
                 // load method
                 auto method = __ ld<myir::POINTER>(
@@ -593,7 +593,8 @@ myir::oper CodeGenMyIR::emit_dispatch_expr_inner(const ast::DispatchExpression &
                 return __ call(base_method, method, args);
             },
             [&](const ast::StaticDispatchExpression &disp) {
-                auto method = _module.get_function(_builder->klass(disp._type->_string)->method_full_name(method_name));
+                auto method =
+                    _module.get<myir::func>(_builder->klass(disp._type->_string)->method_full_name(method_name));
 
                 assert(method);
 
@@ -703,7 +704,7 @@ void CodeGenMyIR::emit_runtime_main()
                                                                  myir::Operand::operand(myir::POINTER, "argv")},
                                          myir::INT32);
 
-    _module.add_function(runtime_main);
+    _module.add(runtime_main);
     __ set_current_function(runtime_main);
 
     auto entry = __ new_block(Names::name(Names::ENTRY_BLOCK));
@@ -721,7 +722,7 @@ void CodeGenMyIR::emit_runtime_main()
     auto main_object = emit_new_inner(main_klass->klass());
 
     auto main_method = main_klass->method_full_name(MainMethodName);
-    __ call(_module.get_function(main_method), {main_object});
+    __ call(_module.get<myir::func>(main_method), {main_object});
 
     // finish runtime
     __ call(_runtime.symbol_by_id(RuntimeMyIR::FINISH_RUNTIME)->_func, {});
@@ -739,4 +740,6 @@ void CodeGenMyIR::emit(const std::string &out_file)
     _data.emit(obj_file);
 
     std::cout << _module.dump();
+
+    _module.construct_ssa();
 }

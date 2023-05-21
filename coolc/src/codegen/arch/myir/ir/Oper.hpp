@@ -220,6 +220,9 @@ class Function final : public GlobalConstant
         return _cfg;
     }
 
+    // Transform CFG to SSA form
+    void construct_ssa();
+
     inline oper param(int i) const
     {
         assert(i < _params.size());

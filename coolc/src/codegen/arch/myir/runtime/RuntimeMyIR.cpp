@@ -8,7 +8,7 @@ RuntimeMethod::RuntimeMethod(myir::Module &module, const std::string &name, myir
     : _func(std::make_shared<myir::Function>(name, args, ret))
 {
     runtime._symbol_by_name.insert({name, this});
-    module.add_function(_func);
+    module.add(_func);
 
     // set gc
     if (!need_gc)
@@ -67,8 +67,8 @@ RuntimeMyIR::RuntimeMyIR(myir::Module &module)
     _header_layout_types[HeaderLayout::Size] = myir::OperandType::UINT64;
     _header_layout_types[HeaderLayout::DispatchTable] = myir::OperandType::POINTER;
 
-    module.add_global_variable(_stack_pointer);
-    module.add_global_variable(_frame_pointer);
+    module.add(_stack_pointer);
+    module.add(_frame_pointer);
 }
 
 const std::string RuntimeMyIR::SYMBOLS[RuntimeMyIRSymbolsSize] = {

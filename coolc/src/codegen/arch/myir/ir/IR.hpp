@@ -8,6 +8,8 @@ namespace myir
 
 class Block
 {
+    friend class GraphUtils;
+
   private:
     const std::string _name;
 
@@ -18,11 +20,10 @@ class Block
 
     bool _is_visited;
 
-    static void postorder(const block &block, std::vector<myir::block> &blocks);
-    static void clear_visited(const std::vector<myir::block> &blocks);
+    int _postorder_num;
 
   public:
-    Block(const std::string &name) : _name(name), _is_visited(false)
+    Block(const std::string &name) : _name(name), _is_visited(false), _postorder_num(-1)
     {
     }
 
@@ -33,17 +34,22 @@ class Block
 
     static void connect(const block &pred, const block &succ);
 
-    static std::vector<block> preorder(const block &block);
-
-    static std::vector<block> postorder(const block &block);
-
     const std::string &name() const
     {
         return _name;
     }
 
+    inline int postorder() const
+    {
+        assert(_postorder_num != -1);
+        return _postorder_num;
+    }
+
     std::string dump() const;
 };
+
+typedef std::shared_ptr<GlobalConstant> global_const;
+typedef std::shared_ptr<GlobalVariable> global_var;
 
 class Module
 {
@@ -52,10 +58,10 @@ class Module
     std::unordered_map<std::string, func> _funcs;
 
     // rodata segment
-    std::unordered_map<std::string, std::shared_ptr<GlobalConstant>> _constants;
+    std::unordered_map<std::string, global_const> _constants;
 
     // data segment
-    std::unordered_map<std::string, std::shared_ptr<GlobalVariable>> _variables;
+    std::unordered_map<std::string, global_var> _variables;
 
     template <class T>
     inline T get_by_name(const std::string &name, const std::unordered_map<std::string, T> &map) const
@@ -69,35 +75,62 @@ class Module
     }
 
   public:
-    inline void add_function(const func &func)
+    template <class T> void add(const T &elem)
     {
-        _funcs[func->short_name()] = func;
+        if constexpr (std::is_same_v<T, func>)
+        {
+            _funcs[elem->short_name()] = elem;
+        }
+        else if constexpr (std::is_same_v<T, global_const>)
+        {
+            _constants[elem->name()] = elem;
+        }
+        else if constexpr (std::is_same_v<T, global_var>)
+        {
+            _variables[elem->name()] = elem;
+        }
+        else
+            static_assert("Unexpected type");
     }
 
-    inline void add_global_constant(const std::shared_ptr<GlobalConstant> &global)
+    template <class T> T get(const std::string &name) const
     {
-        _constants[global->name()] = global;
+        if constexpr (std::is_same_v<T, func>)
+        {
+            return get_by_name(name, _funcs);
+        }
+        else if constexpr (std::is_same_v<T, global_const>)
+        {
+            return get_by_name(name, _constants);
+        }
+        else if constexpr (std::is_same_v<T, global_var>)
+        {
+            return get_by_name(name, _variables);
+        }
+        else
+            static_assert("Unexpected type");
     }
 
-    inline void add_global_variable(const std::shared_ptr<GlobalVariable> &variable)
+    template <class T> const std::unordered_map<std::string, T> &get() const
     {
-        _variables[variable->name()] = variable;
+        if constexpr (std::is_same_v<T, func>)
+        {
+            return _funcs;
+        }
+        else if constexpr (std::is_same_v<T, global_const>)
+        {
+            return _constants;
+        }
+        else if constexpr (std::is_same_v<T, global_var>)
+        {
+            return _variables;
+        }
+        else
+            static_assert("Unexpected type");
     }
 
-    inline func get_function(const std::string &name) const
-    {
-        return get_by_name(name, _funcs);
-    }
-
-    inline std::shared_ptr<GlobalConstant> get_constant(const std::string &name) const
-    {
-        return get_by_name(name, _constants);
-    }
-
-    inline std::shared_ptr<GlobalVariable> get_variable(const std::string &name) const
-    {
-        return get_by_name(name, _variables);
-    }
+    // Transform all functions' CFG to SSA form
+    void construct_ssa();
 
     std::string dump() const;
 };

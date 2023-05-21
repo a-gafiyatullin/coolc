@@ -39,6 +39,10 @@ extern bool TraceCodeGen;
 extern bool TraceOpts;
 extern bool VerifyOops;
 
+#ifdef MYIR
+extern bool PrintDominanceInfo;
+#endif // MYIR
+
 /**
  * @brief Get the printable string object
  *

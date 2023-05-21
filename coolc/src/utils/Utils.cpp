@@ -65,6 +65,12 @@ bool ReduceGCSpills = true;
 
 #endif // LLVM
 
+#ifdef MYIR
+#ifdef DEBUG
+bool PrintDominanceInfo = true;
+#endif // DEBUG
+#endif
+
 #define flag_pair(flag)                                                                                                \
     {                                                                                                                  \
 #flag, &flag                                                                                                   \
@@ -93,6 +99,13 @@ std::unordered_map<std::string, bool *> BoolFlags = {
     flag_pair(ReduceGCSpills)
 #endif // LLVM_SHADOW_STACK
 #endif // LLVM
+
+#ifdef MYIR
+#ifdef DEBUG
+        ,
+    flag_pair(PrintDominanceInfo)
+#endif // DEBUG
+#endif // MYIR
 };
 
 bool maybe_set(const char *arg)

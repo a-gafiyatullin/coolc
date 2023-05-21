@@ -1,4 +1,6 @@
 #include "IR.inline.hpp"
+#include "codegen/arch/myir/ir/GraphUtils.hpp"
+#include <iostream>
 #include <stack>
 
 using namespace myir;
@@ -55,69 +57,25 @@ void Block::connect(const block &pred, const block &succ)
     succ->_preds.push_back(pred);
 }
 
-std::vector<block> Block::preorder(const block &bl)
+void Function::construct_ssa()
 {
-    std::stack<block> st;
-    std::vector<block> traversal;
-
-    st.push(bl);
-
-    while (!st.empty())
+    if (!_cfg)
     {
-        auto b = st.top();
-        st.pop();
-
-        if (b->_is_visited)
-        {
-            continue;
-        }
-
-        b->_is_visited = true;
-
-        traversal.push_back(b);
-
-        for (auto succ : b->_succs)
-        {
-            st.push(succ);
-        }
+        return; // function was declared but not defined
     }
 
-    clear_visited(traversal);
-    return traversal;
+    std::cout << "\nSSA construction for " << short_name() << ":\n";
+
+    // 1. insert fi-functions
+    auto df = GraphUtils::dominance_frontier(_cfg);
 }
 
-void Block::clear_visited(const std::vector<myir::block> &blocks)
+void Module::construct_ssa()
 {
-    for (auto b : blocks)
+    for (auto &[name, func] : get<myir::func>())
     {
-        b->_is_visited = false;
+        func->construct_ssa();
     }
-}
-
-void Block::postorder(const block &block, std::vector<myir::block> &blocks)
-{
-    if (block->_is_visited)
-    {
-        return;
-    }
-
-    block->_is_visited = true;
-
-    for (auto s : block->_succs)
-    {
-        postorder(s, blocks);
-    }
-
-    blocks.push_back(block);
-}
-
-std::vector<block> Block::postorder(const block &block)
-{
-    std::vector<myir::block> traversal;
-    postorder(block, traversal);
-
-    clear_visited(traversal);
-    return traversal;
 }
 
 std::string type_to_string(OperandType type)
@@ -160,7 +118,7 @@ std::string Function::dump() const
 
     std::string s = name() + " {\n";
 
-    auto traverse = Block::postorder(_cfg);
+    auto traverse = GraphUtils::postorder(_cfg);
     std::reverse(traverse.begin(), traverse.end());
     for (auto b : traverse)
     {

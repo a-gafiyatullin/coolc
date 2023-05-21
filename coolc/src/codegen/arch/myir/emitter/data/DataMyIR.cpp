@@ -22,7 +22,7 @@ void DataMyIR::make_init_method(const std::shared_ptr<Klass> &klass)
     const auto init_method_name = klass->init_method();
     CODEGEN_VERBOSE_ONLY(LOG("Declare init method \"" + init_method_name + "\""));
 
-    _module.add_function(std::make_shared<myir::Function>(
+    _module.add(std::make_shared<myir::Function>(
         init_method_name, std::vector<myir::oper>{myir::Operand::operand(myir::OperandType::POINTER, SelfObject)},
         myir::VOID));
 }
@@ -42,7 +42,7 @@ void DataMyIR::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
         const auto &return_type = method.second->_type;
 
         // maybe already have such a method? If so, just get a pointer to it, otherwise create a new one
-        auto func = _module.get_function(method_full_name);
+        auto func = _module.get<myir::func>(method_full_name);
         if (!func)
         {
             std::vector<myir::oper> args;
@@ -62,7 +62,7 @@ void DataMyIR::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
 
             // cool methods always return pointer
             func = make_shared<myir::Function>(method_full_name, args, myir::OperandType::POINTER);
-            _module.add_function(func);
+            _module.add(func);
 
             CODEGEN_VERBOSE_ONLY(LOG_EXIT("DECLARE METHOD \"" + method_full_name + "\""));
 
@@ -71,9 +71,9 @@ void DataMyIR::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
     });
 
     const auto &disp_tab_name = klass->disp_tab();
-    _module.add_global_constant(make_shared<myir::GlobalConstant>(disp_tab_name, methods, myir::STRUCTURE));
+    _module.add(make_shared<myir::GlobalConstant>(disp_tab_name, methods, myir::STRUCTURE));
 
-    _dispatch_tables[klass->name()] = _module.get_constant(disp_tab_name);
+    _dispatch_tables[klass->name()] = _module.get<myir::global_const>(disp_tab_name);
 }
 
 void DataMyIR::int_const_inner(const int64_t &value)
@@ -84,7 +84,7 @@ void DataMyIR::int_const_inner(const int64_t &value)
 
     auto const_name = Names::int_constant();
 
-    _module.add_global_constant(make_shared<myir::GlobalConstant>(
+    _module.add(make_shared<myir::GlobalConstant>(
         const_name,
         std::vector<myir::oper>{
             myir::Constant::constant(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordSetValue),
@@ -93,7 +93,7 @@ void DataMyIR::int_const_inner(const int64_t &value)
             _dispatch_tables.at(klass_name), myir::Constant::constant(myir::OperandType::INT64, value)},
         myir::STRUCTURE));
 
-    _int_constants.insert({value, _module.get_constant(const_name)});
+    _int_constants.insert({value, _module.get<myir::global_const>(const_name)});
 }
 
 void DataMyIR::string_const_inner(const std::string &str)
@@ -120,9 +120,9 @@ void DataMyIR::string_const_inner(const std::string &str)
     elements.push_back(myir::Constant::constant(myir::INT8, 0));
 
     auto string_name = Names::string_constant();
-    _module.add_global_constant(std::make_shared<myir::GlobalConstant>(string_name, elements, myir::STRUCTURE));
+    _module.add(std::make_shared<myir::GlobalConstant>(string_name, elements, myir::STRUCTURE));
 
-    _string_constants.insert({str, _module.get_constant(string_name)});
+    _string_constants.insert({str, _module.get<myir::global_const>(string_name)});
 }
 
 void DataMyIR::bool_const_inner(const bool &value)
@@ -133,7 +133,7 @@ void DataMyIR::bool_const_inner(const bool &value)
 
     auto const_name = Names::bool_constant();
 
-    _module.add_global_constant(make_shared<myir::GlobalConstant>(
+    _module.add(make_shared<myir::GlobalConstant>(
         const_name,
         std::vector<myir::oper>{
             myir::Constant::constant(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordSetValue),
@@ -142,7 +142,7 @@ void DataMyIR::bool_const_inner(const bool &value)
             _dispatch_tables.at(klass_name), myir::Constant::constant(myir::OperandType::INT64, value)},
         myir::STRUCTURE));
 
-    _bool_constants.insert({value, _module.get_constant(const_name)});
+    _bool_constants.insert({value, _module.get<myir::global_const>(const_name)});
 }
 
 void DataMyIR::gen_class_obj_tab_inner()
@@ -155,13 +155,13 @@ void DataMyIR::gen_class_obj_tab_inner()
 
     for (const auto &klass : _builder->klasses())
     {
-        auto init_method = _module.get_function(klass->init_method());
+        auto init_method = _module.get<myir::func>(klass->init_method());
         init_methods.push_back(init_method);
     }
 
     GUARANTEE_DEBUG(init_methods.size());
-    _module.add_global_constant(std::make_shared<myir::GlobalConstant>(_runtime.symbol_name(RuntimeMyIR::CLASS_OBJ_TAB),
-                                                                       init_methods, myir::STRUCTURE));
+    _module.add(std::make_shared<myir::GlobalConstant>(_runtime.symbol_name(RuntimeMyIR::CLASS_OBJ_TAB), init_methods,
+                                                       myir::STRUCTURE));
 }
 
 void DataMyIR::gen_class_name_tab()
@@ -174,8 +174,8 @@ void DataMyIR::gen_class_name_tab()
     }
 
     GUARANTEE_DEBUG(names.size());
-    _module.add_global_constant(std::make_shared<myir::GlobalConstant>(
-        _runtime.symbol_name(RuntimeMyIR::CLASS_NAME_TAB), names, myir::STRUCTURE));
+    _module.add(std::make_shared<myir::GlobalConstant>(_runtime.symbol_name(RuntimeMyIR::CLASS_NAME_TAB), names,
+                                                       myir::STRUCTURE));
 }
 
 void DataMyIR::emit_inner(const std::string &out_file)
