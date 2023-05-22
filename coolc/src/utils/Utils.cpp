@@ -68,6 +68,7 @@ bool ReduceGCSpills = true;
 #ifdef MYIR
 #ifdef DEBUG
 bool PrintDominanceInfo = true;
+bool TraceSSAConstruction = true;
 #endif // DEBUG
 #endif
 
@@ -103,7 +104,8 @@ std::unordered_map<std::string, bool *> BoolFlags = {
 #ifdef MYIR
 #ifdef DEBUG
         ,
-    flag_pair(PrintDominanceInfo)
+    flag_pair(PrintDominanceInfo),
+    flag_pair(TraceSSAConstruction)
 #endif // DEBUG
 #endif // MYIR
 };

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Inst.hpp"
-#include <unordered_map>
+#include <list>
 
 namespace myir
 {
@@ -16,7 +16,7 @@ class Block
     std::vector<block> _preds;
     std::vector<block> _succs;
 
-    std::vector<inst> _insts;
+    std::list<inst> _insts;
 
     bool _is_visited;
 
@@ -43,6 +43,11 @@ class Block
     {
         assert(_postorder_num != -1);
         return _postorder_num;
+    }
+
+    inline std::list<inst> &insts()
+    {
+        return _insts;
     }
 
     std::string dump() const;
@@ -174,25 +179,13 @@ class IRBuilder
     }
 
     // instructions
+    static inst phi(const oper& var);
+
     void ret(const oper &value);
 
     void st(const oper &base, const oper &offset, const oper &value);
 
-    template <OperandType type> oper ld(const oper &base, const oper &offset)
-    {
-        myir::oper res = myir::Operand::operand(type);
-
-        auto inst = std::make_shared<Load>(res, base, offset);
-
-        base->used_by(inst);
-        offset->used_by(inst);
-
-        res->defed_by(inst);
-
-        _curr_block->append(inst);
-
-        return res;
-    }
+    template <OperandType type> oper ld(const oper &base, const oper &offset);
 
     oper call(const func &f, const std::vector<oper> &args);
 

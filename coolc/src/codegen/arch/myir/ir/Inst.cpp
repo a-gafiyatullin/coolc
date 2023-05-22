@@ -2,6 +2,26 @@
 
 using namespace myir;
 
+std::string Phi::dump() const
+{
+    assert(_defs.size() >= 1);
+    auto result = _defs.at(0);
+
+    std::string s = "phi " + result->name() + " <- [";
+    for (auto &[def, block] : _def_from_block)
+    {
+        s += "(" + def->name() + ": " + block->name() + "), ";
+    }
+
+    if (s.back() == ' ')
+    {
+        s = s.substr(0, s.length() - 2); // trim ", "
+    }
+
+    s += "]";
+    return s;
+}
+
 std::string Store::dump() const
 {
     assert(_uses.size() >= 3);

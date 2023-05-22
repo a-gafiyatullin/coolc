@@ -41,6 +41,7 @@ extern bool VerifyOops;
 
 #ifdef MYIR
 extern bool PrintDominanceInfo;
+extern bool TraceSSAConstruction;
 #endif // MYIR
 
 /**

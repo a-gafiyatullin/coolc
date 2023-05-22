@@ -1,8 +1,6 @@
 #include "GraphUtils.hpp"
 #include "GraphUtils.inline.hpp"
 #include "utils/Utils.h"
-#include <algorithm>
-#include <string>
 
 using namespace myir;
 
@@ -154,7 +152,7 @@ void GraphUtils::dump_dominance(const std::unordered_map<block, block> &doms)
 
 void GraphUtils::dump_dominance_frontier(const std::unordered_map<block, std::set<block>> &df)
 {
-    if (!PrintDominanceInfo)
+    if (!TraceSSAConstruction)
     {
         return;
     }

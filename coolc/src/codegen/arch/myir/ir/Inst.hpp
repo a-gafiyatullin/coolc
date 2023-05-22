@@ -19,7 +19,25 @@ class Instruction
     {
     }
 
+    const std::vector<oper> &defs() const
+    {
+        return _defs;
+    }
+
     virtual std::string dump() const = 0;
+};
+
+class Phi : public Instruction
+{
+  private:
+    std::unordered_map<oper, block> _def_from_block;
+
+  public:
+    Phi(const oper &result) : Instruction({result}, {})
+    {
+    }
+
+    std::string dump() const;
 };
 
 class MemoryInst : public Instruction

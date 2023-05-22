@@ -3,7 +3,9 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace myir
@@ -98,6 +100,11 @@ class Operand
     static inline std::shared_ptr<Operand> operand(OperandType type)
     {
         return std::make_shared<Operand>(type);
+    }
+
+    inline std::vector<inst> &defs()
+    {
+        return _defs;
     }
 
     virtual std::string dump() const;
@@ -203,6 +210,17 @@ class Function final : public GlobalConstant
     block _cfg;
 
     bool _is_leaf;
+
+    // for every variable with multiple defs find all blocks that contain it
+    std::unordered_map<oper, std::set<block>> defs_in_blocks() const;
+
+    // standard algorithm for iinserting phi-functions
+    void insert_phis(const std::unordered_map<oper, std::set<block>> &vars_in_blocks,
+                     const std::unordered_map<block, std::set<block>> &df);
+
+#ifdef DEBUG
+    static void dump_defs(const std::unordered_map<oper, std::set<block>> &defs);
+#endif // DEBUG
 
   public:
     Function(const std::string &name, const std::vector<oper> &params, OperandType return_type)

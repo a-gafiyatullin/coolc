@@ -1,4 +1,5 @@
 #include "CodeGenMyIR.hpp"
+#include "codegen/arch/myir/ir/IR.inline.hpp"
 #include "codegen/emitter/CodeGen.inline.h"
 #include "codegen/emitter/data/Data.inline.h"
 
@@ -189,7 +190,7 @@ void CodeGenMyIR::make_control_flow(const myir::oper &pred, myir::block &true_bl
 myir::oper CodeGenMyIR::emit_ternary_operator(const myir::oper &pred, const myir::oper &true_val,
                                               const myir::oper &false_val)
 {
-    auto result = __ move(true_val);
+    auto result = Operand::operand(true_val->type());
 
     myir::block true_block = nullptr, false_block = nullptr, merge_block = nullptr;
     make_control_flow(pred, true_block, false_block, merge_block);
@@ -246,7 +247,7 @@ myir::oper CodeGenMyIR::emit_binary_expr_inner(const ast::BinaryExpression &expr
     {
         logical_result = true;
 
-        auto result = __ move(_true_obj);
+        auto result = Operand::operand(_true_obj->type());
 
         auto is_same_ref = __ eq(lhs, rhs);
 
@@ -428,7 +429,7 @@ myir::oper CodeGenMyIR::emit_cases_expr_inner(const ast::CaseExpression &expr,
         return _builder->tag(case_b->_type->_string) < _builder->tag(case_a->_type->_string);
     });
 
-    auto result = __ move(_null_val);
+    auto result = Operand::operand(_null_val->type());
 
     auto is_not_null = __ not1(__ eq(pred, _null_val));
 
@@ -517,7 +518,7 @@ myir::oper CodeGenMyIR::emit_loop_expr_inner(const ast::WhileExpression &expr,
 
 myir::oper CodeGenMyIR::emit_if_expr_inner(const ast::IfExpression &expr, const std::shared_ptr<ast::Type> &expr_type)
 {
-    auto result = __ move(_null_val);
+    auto result = Operand::operand(_null_val->type());
 
     // do control flow
     auto pred = __ eq(emit_load_bool(emit_expr(expr._predicate)), _true_val);
@@ -562,7 +563,7 @@ myir::oper CodeGenMyIR::emit_dispatch_expr_inner(const ast::DispatchExpression &
 
     DEBUG_ONLY(verify_oop(receiver));
 
-    auto result = __ move(_null_val);
+    auto result = Operand::operand(_null_val->type());
 
     // check if receiver is null
     auto is_not_null = __ not1(__ eq(receiver, _null_val));

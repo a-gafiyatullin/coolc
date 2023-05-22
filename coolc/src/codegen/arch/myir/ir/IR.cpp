@@ -1,7 +1,5 @@
 #include "IR.inline.hpp"
 #include "codegen/arch/myir/ir/GraphUtils.hpp"
-#include <iostream>
-#include <stack>
 
 using namespace myir;
 
@@ -55,27 +53,6 @@ void Block::connect(const block &pred, const block &succ)
 
     assert(find(succ->_preds.begin(), succ->_preds.end(), pred) == succ->_preds.end());
     succ->_preds.push_back(pred);
-}
-
-void Function::construct_ssa()
-{
-    if (!_cfg)
-    {
-        return; // function was declared but not defined
-    }
-
-    std::cout << "\nSSA construction for " << short_name() << ":\n";
-
-    // 1. insert fi-functions
-    auto df = GraphUtils::dominance_frontier(_cfg);
-}
-
-void Module::construct_ssa()
-{
-    for (auto &[name, func] : get<myir::func>())
-    {
-        func->construct_ssa();
-    }
 }
 
 std::string type_to_string(OperandType type)
@@ -198,6 +175,15 @@ void IRBuilder::ret(const oper &value)
     }
 
     _curr_block->append(instr);
+}
+
+inst IRBuilder::phi(const oper &var)
+{
+    auto oper = std::make_shared<Operand>(var->name(), var->type());
+    auto inst = std::make_shared<Phi>(oper);
+    oper->defed_by(inst);
+
+    return inst;
 }
 
 void IRBuilder::st(const oper &base, const oper &offset, const oper &value)
