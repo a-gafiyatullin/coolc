@@ -40,3 +40,20 @@ For a given variable *v*, we place φ-functions at the iterated dominance fronti
 The single definition that reaches each use dominates that use.
 
 A paper ["A Simple, Fast Dominance Algorithm"](../papers/a-simple-fast-dominance-algorithm.pdf) by Keith D. Cooper, Timothy J. Harvey, and Ken Kennedy describes easy to understand and implement algorithms.
+
+### 3.1.3 Variable Renaming
+
+The variable renaming phase associates each individual live range with a new variable name, also called a *version*.
+
+In Algorithm 3.3, we compute and cache the reaching definition for *v* in the per-variable slot “*v*.reachingDef” that is updated as the algorithm traverses the dominator tree of the SSA graph.
+
+![Renaming algorithm for second phase of SSA construction](../pics/algorithm-3-3.png)
+
+![Procedure updateReachingDef(v,p) Utility function for SSA renaming](../pics/algorithm-3-3-1.png)
+
+### 3.1.4 Summary
+The flavour of SSA form that this simple construction algorithm produces:
+1. minimal;
+2. not pruned;
+3. conventional;
+4. has the dominance property (strict).
