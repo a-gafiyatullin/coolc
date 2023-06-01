@@ -15,15 +15,17 @@ class Instruction
     std::vector<oper> _defs;
 
   public:
-    Instruction(const std::vector<oper> &defs, const std::vector<oper> &uses) : _defs(defs), _uses(uses)
-    {
-    }
+    // construction
+    Instruction(const std::vector<oper> &defs, const std::vector<oper> &uses) : _defs(defs), _uses(uses) {}
 
-    const std::vector<oper> &defs() const
-    {
-        return _defs;
-    }
+    // access to defs
+    const std::vector<oper> &defs() const { return _defs; }
 
+    // typecheck
+    template <class T> static bool isa(const inst &instruction);
+    template <class T> static std::shared_ptr<T> as(const inst &instruction);
+
+    // debugging
     virtual std::string dump() const = 0;
 };
 
@@ -33,9 +35,7 @@ class Phi : public Instruction
     std::unordered_map<oper, block> _def_from_block;
 
   public:
-    Phi(const oper &result) : Instruction({result}, {})
-    {
-    }
+    Phi(const oper &result) : Instruction({result}, {}) {}
 
     std::string dump() const;
 };
@@ -43,17 +43,13 @@ class Phi : public Instruction
 class MemoryInst : public Instruction
 {
   public:
-    MemoryInst(const std::vector<oper> &defs, const std::vector<oper> &uses) : Instruction(defs, uses)
-    {
-    }
+    MemoryInst(const std::vector<oper> &defs, const std::vector<oper> &uses) : Instruction(defs, uses) {}
 };
 
 class Store : public MemoryInst
 {
   public:
-    Store(const oper &base, const oper &offset, const oper &value) : MemoryInst({}, {base, offset, value})
-    {
-    }
+    Store(const oper &base, const oper &offset, const oper &value) : MemoryInst({}, {base, offset, value}) {}
 
     std::string dump() const override;
 };
@@ -61,9 +57,7 @@ class Store : public MemoryInst
 class Load : public MemoryInst
 {
   public:
-    Load(const oper &result, const oper &base, const oper &offset) : MemoryInst({result}, {base, offset})
-    {
-    }
+    Load(const oper &result, const oper &base, const oper &offset) : MemoryInst({result}, {base, offset}) {}
 
     std::string dump() const override;
 };
@@ -74,9 +68,7 @@ class Branch : public Instruction
     block _dest;
 
   public:
-    Branch(const block &dest) : Instruction({}, {}), _dest(dest)
-    {
-    }
+    Branch(const block &dest) : Instruction({}, {}), _dest(dest) {}
 
     std::string dump() const override;
 };
@@ -102,25 +94,19 @@ class BinaryInst : public Instruction
     std::string print(const std::string &op) const;
 
   public:
-    BinaryInst(const oper &result, const oper &lhs, const oper &rhs) : Instruction({result}, {lhs, rhs})
-    {
-    }
+    BinaryInst(const oper &result, const oper &lhs, const oper &rhs) : Instruction({result}, {lhs, rhs}) {}
 };
 
 class BinaryArithInst : public BinaryInst
 {
   public:
-    BinaryArithInst(const oper &result, const oper &lhs, const oper &rhs) : BinaryInst(result, lhs, rhs)
-    {
-    }
+    BinaryArithInst(const oper &result, const oper &lhs, const oper &rhs) : BinaryInst(result, lhs, rhs) {}
 };
 
 class Sub : public BinaryArithInst
 {
   public:
-    Sub(const oper &result, const oper &lhs, const oper &rhs) : BinaryArithInst(result, lhs, rhs)
-    {
-    }
+    Sub(const oper &result, const oper &lhs, const oper &rhs) : BinaryArithInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -128,9 +114,7 @@ class Sub : public BinaryArithInst
 class Add : public BinaryArithInst
 {
   public:
-    Add(const oper &result, const oper &lhs, const oper &rhs) : BinaryArithInst(result, lhs, rhs)
-    {
-    }
+    Add(const oper &result, const oper &lhs, const oper &rhs) : BinaryArithInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -138,9 +122,7 @@ class Add : public BinaryArithInst
 class Div : public BinaryArithInst
 {
   public:
-    Div(const oper &result, const oper &lhs, const oper &rhs) : BinaryArithInst(result, lhs, rhs)
-    {
-    }
+    Div(const oper &result, const oper &lhs, const oper &rhs) : BinaryArithInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -148,9 +130,7 @@ class Div : public BinaryArithInst
 class Mul : public BinaryArithInst
 {
   public:
-    Mul(const oper &result, const oper &lhs, const oper &rhs) : BinaryArithInst(result, lhs, rhs)
-    {
-    }
+    Mul(const oper &result, const oper &lhs, const oper &rhs) : BinaryArithInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -158,9 +138,7 @@ class Mul : public BinaryArithInst
 class Xor : public BinaryArithInst
 {
   public:
-    Xor(const oper &result, const oper &lhs, const oper &rhs) : BinaryArithInst(result, lhs, rhs)
-    {
-    }
+    Xor(const oper &result, const oper &lhs, const oper &rhs) : BinaryArithInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -168,9 +146,7 @@ class Xor : public BinaryArithInst
 class Or : public BinaryArithInst
 {
   public:
-    Or(const oper &result, const oper &lhs, const oper &rhs) : BinaryArithInst(result, lhs, rhs)
-    {
-    }
+    Or(const oper &result, const oper &lhs, const oper &rhs) : BinaryArithInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -178,9 +154,7 @@ class Or : public BinaryArithInst
 class Shl : public BinaryArithInst
 {
   public:
-    Shl(const oper &result, const oper &lhs, const oper &rhs) : BinaryArithInst(result, lhs, rhs)
-    {
-    }
+    Shl(const oper &result, const oper &lhs, const oper &rhs) : BinaryArithInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -188,17 +162,13 @@ class Shl : public BinaryArithInst
 class BinaryLogicInst : public BinaryInst
 {
   public:
-    BinaryLogicInst(const oper &result, const oper &lhs, const oper &rhs) : BinaryInst(result, lhs, rhs)
-    {
-    }
+    BinaryLogicInst(const oper &result, const oper &lhs, const oper &rhs) : BinaryInst(result, lhs, rhs) {}
 };
 
 class LT : public BinaryLogicInst
 {
   public:
-    LT(const oper &result, const oper &lhs, const oper &rhs) : BinaryLogicInst(result, lhs, rhs)
-    {
-    }
+    LT(const oper &result, const oper &lhs, const oper &rhs) : BinaryLogicInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -206,9 +176,7 @@ class LT : public BinaryLogicInst
 class LE : public BinaryLogicInst
 {
   public:
-    LE(const oper &result, const oper &lhs, const oper &rhs) : BinaryLogicInst(result, lhs, rhs)
-    {
-    }
+    LE(const oper &result, const oper &lhs, const oper &rhs) : BinaryLogicInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -216,9 +184,7 @@ class LE : public BinaryLogicInst
 class EQ : public BinaryLogicInst
 {
   public:
-    EQ(const oper &result, const oper &lhs, const oper &rhs) : BinaryLogicInst(result, lhs, rhs)
-    {
-    }
+    EQ(const oper &result, const oper &lhs, const oper &rhs) : BinaryLogicInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -226,9 +192,7 @@ class EQ : public BinaryLogicInst
 class GT : public BinaryLogicInst
 {
   public:
-    GT(const oper &result, const oper &lhs, const oper &rhs) : BinaryLogicInst(result, lhs, rhs)
-    {
-    }
+    GT(const oper &result, const oper &lhs, const oper &rhs) : BinaryLogicInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -239,25 +203,19 @@ class UnaryInst : public Instruction
     std::string print(const std::string &op) const;
 
   public:
-    UnaryInst(const oper &result, const oper &value) : Instruction({result}, {value})
-    {
-    }
+    UnaryInst(const oper &result, const oper &value) : Instruction({result}, {value}) {}
 };
 
 class UnaryLogicInst : public UnaryInst
 {
   public:
-    UnaryLogicInst(const oper &result, const oper &value) : UnaryInst(result, value)
-    {
-    }
+    UnaryLogicInst(const oper &result, const oper &value) : UnaryInst(result, value) {}
 };
 
 class Not : public UnaryLogicInst
 {
   public:
-    Not(const oper &result, const oper &value) : UnaryLogicInst(result, value)
-    {
-    }
+    Not(const oper &result, const oper &value) : UnaryLogicInst(result, value) {}
 
     std::string dump() const override;
 };
@@ -265,17 +223,13 @@ class Not : public UnaryLogicInst
 class UnaryArithInst : public UnaryInst
 {
   public:
-    UnaryArithInst(const oper &result, const oper &value) : UnaryInst(result, value)
-    {
-    }
+    UnaryArithInst(const oper &result, const oper &value) : UnaryInst(result, value) {}
 };
 
 class Neg : public UnaryArithInst
 {
   public:
-    Neg(const oper &result, const oper &value) : UnaryArithInst(result, value)
-    {
-    }
+    Neg(const oper &result, const oper &value) : UnaryArithInst(result, value) {}
 
     std::string dump() const override;
 };
@@ -286,13 +240,9 @@ class Call : public Instruction
     func _callee;
 
   public:
-    Call(const func &f, const std::vector<oper> &args) : Instruction({}, args), _callee(f)
-    {
-    }
+    Call(const func &f, const std::vector<oper> &args) : Instruction({}, args), _callee(f) {}
 
-    Call(const func &f, const oper &result, const std::vector<oper> &args) : Instruction({result}, args), _callee(f)
-    {
-    }
+    Call(const func &f, const oper &result, const std::vector<oper> &args) : Instruction({result}, args), _callee(f) {}
 
     std::string dump() const override;
 };
@@ -300,13 +250,9 @@ class Call : public Instruction
 class Ret : public Instruction
 {
   public:
-    Ret(const oper &value) : Instruction({}, {value})
-    {
-    }
+    Ret(const oper &value) : Instruction({}, {value}) {}
 
-    Ret() : Instruction({}, {})
-    {
-    }
+    Ret() : Instruction({}, {}) {}
 
     std::string dump() const override;
 };

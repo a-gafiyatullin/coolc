@@ -9,9 +9,9 @@ using namespace codegen;
 
 CodeGenMyIR::CodeGenMyIR(const std::shared_ptr<semant::ClassNode> &root)
     : CodeGen(std::make_shared<KlassBuilderMyIR>(root)), _runtime(_module), _data(_builder, _module, _runtime),
-      _ir_builder(_module), _true_val(myir::Constant::constant(myir::INT8, TrueValue)),
-      _false_val(myir::Constant::constant(myir::INT8, FalseValue)), _true_obj(_data.bool_const(true)),
-      _false_obj(_data.bool_const(false)), _null_val(myir::Constant::constant(myir::POINTER, 0))
+      _ir_builder(_module), _true_val(myir::Constant::constval(myir::INT8, TrueValue)),
+      _false_val(myir::Constant::constval(myir::INT8, FalseValue)), _true_obj(_data.bool_const(true)),
+      _false_obj(_data.bool_const(false)), _null_val(myir::Constant::constval(myir::POINTER, 0))
 {
     DEBUG_ONLY(_table.set_printer([](const std::string &name, const Symbol &s) {
         LOG("Added symbol \"" + name + "\": " + static_cast<std::string>(s))
@@ -127,11 +127,11 @@ void CodeGenMyIR::emit_class_init_method_inner()
                 if (semant::Semant::is_native_int(this_field._value_type) ||
                     semant::Semant::is_native_bool(this_field._value_type))
                 {
-                    initial_val = myir::Constant::constant(myir::UINT64, 0);
+                    initial_val = myir::Constant::constval(myir::UINT64, 0);
                 }
                 else if (semant::Semant::is_native_string(this_field._value_type))
                 {
-                    initial_val = myir::Constant::constant(myir::INT8, 0);
+                    initial_val = myir::Constant::constval(myir::INT8, 0);
                 }
                 else
                 {
@@ -344,8 +344,8 @@ myir::oper CodeGenMyIR::emit_new_inner_helper(const std::shared_ptr<ast::Type> &
     auto &klass = _builder->klass(klass_type->_string);
 
     // prepare tag, size and dispatch table
-    auto tag = myir::Constant::constant(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag());
-    auto size = myir::Constant::constant(_runtime.header_elem_type(HeaderLayout::Size), klass->size());
+    auto tag = myir::Constant::constval(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag());
+    auto size = myir::Constant::constval(_runtime.header_elem_type(HeaderLayout::Size), klass->size());
     auto disp_tab = _data.class_disp_tab(klass);
 
     // call allocation and cast to this klass pointer
@@ -447,10 +447,10 @@ myir::oper CodeGenMyIR::emit_cases_expr_inner(const ast::CaseExpression &expr,
         auto tag_type = _runtime.header_elem_type(HeaderLayout::Tag);
 
         // if object tag lower than the lowest tag for this branch, jump to next case
-        auto less = __ lt(tag, myir::Constant::constant(tag_type, klass->tag()));
+        auto less = __ lt(tag, myir::Constant::constval(tag_type, klass->tag()));
 
         // if object tag higher that the highest tag for this branch, jump to next case
-        auto higher = __ gt(tag, myir::Constant::constant(tag_type, klass->child_max_tag()));
+        auto higher = __ gt(tag, myir::Constant::constval(tag_type, klass->child_max_tag()));
 
         auto need_next = __ or2(less, higher);
 
@@ -481,7 +481,7 @@ myir::oper CodeGenMyIR::emit_cases_expr_inner(const ast::CaseExpression &expr,
     auto case_abort_2_func = _runtime.symbol_by_id(RuntimeMyIR::RuntimeMyIRSymbols::CASE_ABORT_2)->_func;
 
     __ call(case_abort_2_func, {_data.string_const(_current_class->_file_name),
-                                myir::Constant::constant(myir::INT32, expr._expr->_line_number)});
+                                myir::Constant::constval(myir::INT32, expr._expr->_line_number)});
     __ move(_null_val, result);
     __ br(merge_block);
 
@@ -588,7 +588,7 @@ myir::oper CodeGenMyIR::emit_dispatch_expr_inner(const ast::DispatchExpression &
                 // load method
                 auto method = __ ld<myir::POINTER>(
                     dispatch_table_ptr,
-                    pointer_offset(myir::Constant::constant(myir::UINT32, klass->method_index(method_name))));
+                    pointer_offset(myir::Constant::constval(myir::UINT32, klass->method_index(method_name))));
 
                 // call
                 return __ call(base_method, method, args);
@@ -610,7 +610,7 @@ myir::oper CodeGenMyIR::emit_dispatch_expr_inner(const ast::DispatchExpression &
     __ set_current_block(false_block);
     auto dispatch_abort_func = _runtime.symbol_by_id(RuntimeMyIR::RuntimeMyIRSymbols::DISPATCH_ABORT)->_func;
     __ call(dispatch_abort_func, {_data.string_const(_current_class->_file_name),
-                                  myir::Constant::constant(myir::INT32, expr._expr->_line_number)});
+                                  myir::Constant::constval(myir::INT32, expr._expr->_line_number)});
     __ move(_null_val, result);
     __ br(merge_block);
 
@@ -640,10 +640,7 @@ myir::oper CodeGenMyIR::emit_assign_expr_inner(const ast::AssignExpression &expr
     return value;
 }
 
-myir::oper CodeGenMyIR::emit_load_int(const myir::oper &int_obj)
-{
-    return emit_load_primitive(int_obj);
-}
+myir::oper CodeGenMyIR::emit_load_int(const myir::oper &int_obj) { return emit_load_primitive(int_obj); }
 
 myir::oper CodeGenMyIR::emit_load_primitive(const myir::oper &obj)
 {
@@ -666,10 +663,7 @@ myir::oper CodeGenMyIR::emit_allocate_int(const myir::oper &val)
     return emit_allocate_primitive(val, _builder->klass(BaseClassesNames[BaseClasses::INT]));
 }
 
-myir::oper CodeGenMyIR::emit_load_bool(const myir::oper &bool_obj)
-{
-    return emit_load_primitive(bool_obj);
-}
+myir::oper CodeGenMyIR::emit_load_bool(const myir::oper &bool_obj) { return emit_load_primitive(bool_obj); }
 
 myir::oper CodeGenMyIR::emit_in_scope(const std::shared_ptr<ast::ObjectExpression> &object,
                                       const std::shared_ptr<ast::Type> &object_type,
@@ -685,7 +679,7 @@ myir::oper CodeGenMyIR::emit_in_scope(const std::shared_ptr<ast::ObjectExpressio
         initializer = semant::Semant::is_trivial_type(object_type) ? _data.init_value(object_type) : _null_val;
     }
 
-    auto variable = myir::Operand::operand(myir::POINTER, object->_object);
+    auto variable = myir::Variable::var(object->_object, myir::POINTER);
 
     _table.add_symbol(object->_object, Symbol(variable, local_type));
 
@@ -699,11 +693,10 @@ myir::oper CodeGenMyIR::emit_in_scope(const std::shared_ptr<ast::ObjectExpressio
 
 void CodeGenMyIR::emit_runtime_main()
 {
-    auto runtime_main =
-        std::make_shared<myir::Function>(static_cast<std::string>(RUNTIME_MAIN_FUNC),
-                                         std::vector<myir::oper>{myir::Operand::operand(myir::INT32, "argc"),
-                                                                 myir::Operand::operand(myir::POINTER, "argv")},
-                                         myir::INT32);
+    auto runtime_main = std::make_shared<myir::Function>(
+        static_cast<std::string>(RUNTIME_MAIN_FUNC),
+        std::vector<myir::oper>{myir::Variable::var("argc", myir::INT32), myir::Variable::var("argv", myir::POINTER)},
+        myir::INT32);
 
     _module.add(runtime_main);
     __ set_current_function(runtime_main);
@@ -728,7 +721,7 @@ void CodeGenMyIR::emit_runtime_main()
     // finish runtime
     __ call(_runtime.symbol_by_id(RuntimeMyIR::FINISH_RUNTIME)->_func, {});
 
-    __ ret(myir::Constant::constant(myir::INT32, 0));
+    __ ret(myir::Constant::constval(myir::INT32, 0));
 }
 
 void CodeGenMyIR::emit(const std::string &out_file)

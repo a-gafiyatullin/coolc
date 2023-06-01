@@ -28,7 +28,7 @@ if(ARCH STREQUAL "MYIR")
     arch/myir/runtime/RuntimeMyIR.cpp
     arch/myir/ir/IR.cpp
     arch/myir/ir/Inst.cpp
-    arch/myir/ir/GraphUtils.cpp
+    arch/myir/ir/CFG.cpp
     arch/myir/ir/SSA.cpp
   )
 endif()

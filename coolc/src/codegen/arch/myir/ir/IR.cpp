@@ -1,9 +1,14 @@
 #include "IR.inline.hpp"
-#include "codegen/arch/myir/ir/GraphUtils.hpp"
-
+#include "codegen/arch/myir/ir/CFG.hpp"
 using namespace myir;
 
-uint64_t Operand::ID = 0;
+int Operand::ID = 0;
+
+Function::Function(const std::string &name, const std::vector<oper> &params, OperandType return_type)
+    : GlobalConstant(name, {}, POINTER), _params(params), _return_type(return_type), _is_leaf(false),
+      _cfg(std::make_shared<CFG>())
+{
+}
 
 std::string Block::dump() const
 {
@@ -14,10 +19,7 @@ std::string Block::dump() const
         s += p->_name + ", ";
     }
 
-    if (s.back() == ' ')
-    {
-        s = s.substr(0, s.length() - 2); // trim ", "
-    }
+    trim(s, ", ");
 
     s += "], succs = [";
 
@@ -26,10 +28,7 @@ std::string Block::dump() const
         s += p->_name + ", ";
     }
 
-    if (s.back() == ' ')
-    {
-        s = s.substr(0, s.length() - 2); // trim ", "
-    }
+    trim(s, ", ");
 
     s += "]:\n";
 
@@ -38,10 +37,7 @@ std::string Block::dump() const
         s += "    " + i->dump() + "\n";
     }
 
-    if (s.back() == '\n')
-    {
-        s = s.substr(0, s.length() - 1); // trim "\n"
-    }
+    trim(s, "\n");
 
     return s;
 }
@@ -71,41 +67,28 @@ std::string Function::name() const
         s += p->dump() + ", ";
     }
 
-    if (s.back() == ' ')
-    {
-        s = s.substr(0, s.length() - 2); // trim ", "
-    }
+    trim(s, ", ");
 
-    s += ")";
-
-    return s;
+    return s + ")";
 }
 
-std::string Function::short_name() const
-{
-    return _name;
-}
+std::string Function::short_name() const { return _name; }
 
 std::string Function::dump() const
 {
-    if (!_cfg)
+    if (_cfg->empty())
     {
         return name() + " {}";
     }
 
     std::string s = name() + " {\n";
 
-    auto traverse = GraphUtils::postorder(_cfg);
-    std::reverse(traverse.begin(), traverse.end());
-    for (auto b : traverse)
+    for (auto b : _cfg->traversal<CFG::REVERSE_POSTORDER>())
     {
         s += b->dump() + "\n\n";
     }
 
-    if (s.back() == '\n')
-    {
-        s = s.substr(0, s.length() - 2); // trim "\n\n"
-    }
+    trim(s, "\n\n");
 
     return s + "\n}";
 }
@@ -132,15 +115,9 @@ std::string Module::dump() const
     return s;
 }
 
-std::string Operand::dump() const
-{
-    return type_to_string(_type) + " " + _name;
-}
+std::string Operand::dump() const { return type_to_string(_type) + " " + name(); }
 
-std::string Constant::dump() const
-{
-    return std::to_string(_value);
-}
+std::string Constant::dump() const { return std::to_string(_value); }
 
 std::string StructuredOperand::dump() const
 {
@@ -151,10 +128,7 @@ std::string StructuredOperand::dump() const
         s += f->name() + ", ";
     }
 
-    if (s.back() == ' ')
-    {
-        s = s.substr(0, s.length() - 2); // trim ", "
-    }
+    trim(s, ", ");
 
     s += "} " + _name;
 
@@ -179,9 +153,8 @@ void IRBuilder::ret(const oper &value)
 
 inst IRBuilder::phi(const oper &var)
 {
-    auto oper = std::make_shared<Operand>(var->name(), var->type());
-    auto inst = std::make_shared<Phi>(oper);
-    oper->defed_by(inst);
+    auto inst = std::make_shared<Phi>(var);
+    var->defed_by(inst);
 
     return inst;
 }
@@ -197,10 +170,7 @@ void IRBuilder::st(const oper &base, const oper &offset, const oper &value)
     _curr_block->append(inst);
 }
 
-oper IRBuilder::call(const func &f, const std::vector<oper> &args)
-{
-    return call(f, f, args);
-}
+oper IRBuilder::call(const func &f, const std::vector<oper> &args) { return call(f, f, args); }
 
 oper IRBuilder::call(const func &f, const oper &dst, const std::vector<oper> &args)
 {
@@ -252,82 +222,42 @@ void IRBuilder::br(const block &taken)
     Block::connect(_curr_block, taken);
 }
 
-oper IRBuilder::add(const oper &lhs, const oper &rhs)
-{
-    return binary<Add>(lhs, rhs);
-}
+oper IRBuilder::add(const oper &lhs, const oper &rhs) { return binary<Add>(lhs, rhs); }
 
-oper IRBuilder::sub(const oper &lhs, const oper &rhs)
-{
-    return binary<Sub>(lhs, rhs);
-}
+oper IRBuilder::sub(const oper &lhs, const oper &rhs) { return binary<Sub>(lhs, rhs); }
 
-oper IRBuilder::div(const oper &lhs, const oper &rhs)
-{
-    return binary<Div>(lhs, rhs);
-}
+oper IRBuilder::div(const oper &lhs, const oper &rhs) { return binary<Div>(lhs, rhs); }
 
-oper IRBuilder::mul(const oper &lhs, const oper &rhs)
-{
-    return binary<Mul>(lhs, rhs);
-}
+oper IRBuilder::mul(const oper &lhs, const oper &rhs) { return binary<Mul>(lhs, rhs); }
 
-oper IRBuilder::shl(const oper &lhs, const oper &rhs)
-{
-    return binary<Shl>(lhs, rhs);
-}
+oper IRBuilder::shl(const oper &lhs, const oper &rhs) { return binary<Shl>(lhs, rhs); }
 
-oper IRBuilder::lt(const oper &lhs, const oper &rhs)
-{
-    return binary<LT>(lhs, rhs);
-}
+oper IRBuilder::lt(const oper &lhs, const oper &rhs) { return binary<LT>(lhs, rhs); }
 
-oper IRBuilder::le(const oper &lhs, const oper &rhs)
-{
-    return binary<LE>(lhs, rhs);
-}
+oper IRBuilder::le(const oper &lhs, const oper &rhs) { return binary<LE>(lhs, rhs); }
 
-oper IRBuilder::eq(const oper &lhs, const oper &rhs)
-{
-    return binary<EQ>(lhs, rhs);
-}
+oper IRBuilder::eq(const oper &lhs, const oper &rhs) { return binary<EQ>(lhs, rhs); }
 
-oper IRBuilder::gt(const oper &lhs, const oper &rhs)
-{
-    return binary<GT>(lhs, rhs);
-}
+oper IRBuilder::gt(const oper &lhs, const oper &rhs) { return binary<GT>(lhs, rhs); }
 
-oper IRBuilder::or2(const oper &lhs, const oper &rhs)
-{
-    return binary<Or>(lhs, rhs);
-}
+oper IRBuilder::or2(const oper &lhs, const oper &rhs) { return binary<Or>(lhs, rhs); }
 
-oper IRBuilder::xor2(const oper &lhs, const oper &rhs)
-{
-    return binary<Xor>(lhs, rhs);
-}
+oper IRBuilder::xor2(const oper &lhs, const oper &rhs) { return binary<Xor>(lhs, rhs); }
 
-oper IRBuilder::neg(const oper &operand)
-{
-    return unary<Neg>(operand);
-}
+oper IRBuilder::neg(const oper &operand) { return unary<Neg>(operand); }
 
-oper IRBuilder::not1(const oper &operand)
-{
-    return unary<Not>(operand);
-}
+oper IRBuilder::not1(const oper &operand) { return unary<Not>(operand); }
 
-oper IRBuilder::move(const oper &src)
-{
-    return add(src, Constant::constant(src->type(), 0));
-}
+oper IRBuilder::move(const oper &src) { return add(src, Constant::constval(src->type(), 0)); }
 
 void IRBuilder::move(const oper &src, const oper &dst)
 {
-    auto inst = std::make_shared<Add>(dst, src, Constant::constant(src->type(), 0));
+    auto inst = std::make_shared<Add>(dst, src, Constant::constval(src->type(), 0));
 
     src->used_by(inst);
     dst->defed_by(inst);
 
     _curr_block->append(inst);
 }
+
+void Function::set_cfg(const block &cfg) { _cfg->set_cfg(cfg); }

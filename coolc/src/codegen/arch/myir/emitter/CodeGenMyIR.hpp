@@ -37,15 +37,12 @@ class CodeGenMyIR : public CodeGen<myir::oper, Symbol>
 
     void emit_class_init_method_inner() override;
 
-    inline static myir::oper field_offset(uint64_t offset)
-    {
-        return myir::Constant::constant(myir::UINT64, offset);
-    }
+    inline static myir::oper field_offset(uint64_t offset) { return myir::Constant::constval(myir::UINT64, offset); }
 
     inline myir::oper pointer_offset(const myir::oper &val)
     {
         static const int POINTER_SIZE_LOG = 3;
-        return _ir_builder.shl(val, myir::Constant::constant(myir::UINT32, POINTER_SIZE_LOG));
+        return _ir_builder.shl(val, myir::Constant::constval(myir::UINT32, POINTER_SIZE_LOG));
     }
 
     myir::oper emit_binary_expr_inner(const ast::BinaryExpression &expr,

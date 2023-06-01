@@ -1,12 +1,13 @@
 #include "IR.hpp"
-#include "codegen/arch/myir/ir/GraphUtils.hpp"
+#include "codegen/arch/myir/ir/CFG.inline.hpp"
+#include "codegen/arch/myir/ir/IR.inline.hpp"
 #include "utils/Utils.h"
 
 using namespace myir;
 
 void Function::construct_ssa()
 {
-    if (!_cfg)
+    if (_cfg->empty())
     {
         return; // function was declared but not defined
     }
@@ -20,7 +21,7 @@ void Function::construct_ssa()
 
     // 1.   insert phi-functions
     // 1.1. calcaulate DF
-    auto df = GraphUtils::dominance_frontier(_cfg);
+    auto &df = _cfg->dominance_frontier();
     // 1.2 find all variables with multiple defs
     auto defs = defs_in_blocks();
     // 1.3 insert
@@ -45,26 +46,22 @@ void Module::construct_ssa()
 std::unordered_map<oper, std::set<block>> Function::defs_in_blocks() const
 {
     std::unordered_map<oper, std::set<block>> var_to_blocks;
-    std::vector<block> traversal;
 
-    GraphUtils::dfs<GraphUtils::PREORDER>(_cfg, [&traversal, &var_to_blocks](const block &b, const block &) {
-        traversal.push_back(b);
-
+    for (auto b : _cfg->traversal<CFG::REVERSE_POSTORDER>())
+    {
         for (auto inst : b->insts())
         {
             for (auto def : inst->defs())
             {
-                // variable has multiple defs
-                if (def->defs().size() >= 2)
+                if (Operand::isa<Variable>(def))
                 {
                     var_to_blocks[def].insert(b);
                 }
             }
         }
-    });
+    }
 
     DEBUG_ONLY(dump_defs(var_to_blocks));
-    GraphUtils::clear_visited(traversal);
 
     return var_to_blocks;
 }
@@ -118,10 +115,7 @@ void Function::dump_defs(const std::unordered_map<oper, std::set<block>> &defs)
             s += b->name() + ", ";
         }
 
-        if (s.back() == ' ')
-        {
-            s = s.substr(0, s.length() - 2); // trim ", "
-        }
+        trim(s, ", ");
 
         s += "]\n";
 

@@ -1,4 +1,5 @@
 #include "DataMyIR.hpp"
+#include "codegen/arch/myir/ir/IR.inline.hpp"
 #include "codegen/emitter/data/Data.inline.h"
 #include "decls/Decls.h"
 
@@ -23,7 +24,7 @@ void DataMyIR::make_init_method(const std::shared_ptr<Klass> &klass)
     CODEGEN_VERBOSE_ONLY(LOG("Declare init method \"" + init_method_name + "\""));
 
     _module.add(std::make_shared<myir::Function>(
-        init_method_name, std::vector<myir::oper>{myir::Operand::operand(myir::OperandType::POINTER, SelfObject)},
+        init_method_name, std::vector<myir::oper>{myir::Variable::var(SelfObject, myir::OperandType::POINTER)},
         myir::VOID));
 }
 
@@ -46,7 +47,7 @@ void DataMyIR::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
         if (!func)
         {
             std::vector<myir::oper> args;
-            args.push_back(myir::Operand::operand(myir::OperandType::POINTER, SelfObject)); // this
+            args.push_back(myir::Variable::var(SelfObject, myir::OperandType::POINTER)); // this
 
             // formals
             const auto &method_formals = std::get<ast::MethodFeature>(method.second->_base);
@@ -55,7 +56,7 @@ void DataMyIR::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
                 const auto &formal_type = formal->_type->_string;
                 CODEGEN_VERBOSE_ONLY(LOG("Formal of type \"" + formal_type + "\""));
                 // all arguments are pointer
-                args.push_back(myir::Operand::operand(myir::OperandType::POINTER, formal->_object->_object));
+                args.push_back(myir::Variable::var(formal->_object->_object, myir::OperandType::POINTER));
             }
 
             CODEGEN_VERBOSE_ONLY(LOG("Return type: \"" + return_type->_string + "\""));
@@ -87,10 +88,10 @@ void DataMyIR::int_const_inner(const int64_t &value)
     _module.add(make_shared<myir::GlobalConstant>(
         const_name,
         std::vector<myir::oper>{
-            myir::Constant::constant(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordSetValue),
-            myir::Constant::constant(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag()),
-            myir::Constant::constant(_runtime.header_elem_type(HeaderLayout::Size), klass->size()),
-            _dispatch_tables.at(klass_name), myir::Constant::constant(myir::OperandType::INT64, value)},
+            myir::Constant::constval(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordSetValue),
+            myir::Constant::constval(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag()),
+            myir::Constant::constval(_runtime.header_elem_type(HeaderLayout::Size), klass->size()),
+            _dispatch_tables.at(klass_name), myir::Constant::constval(myir::OperandType::INT64, value)},
         myir::STRUCTURE));
 
     _int_constants.insert({value, _module.get<myir::global_const>(const_name)});
@@ -103,9 +104,9 @@ void DataMyIR::string_const_inner(const std::string &str)
 
     std::vector<myir::oper> elements;
 
-    elements.push_back(myir::Constant::constant(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordSetValue));
-    elements.push_back(myir::Constant::constant(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag()));
-    elements.push_back(myir::Constant::constant(
+    elements.push_back(myir::Constant::constval(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordSetValue));
+    elements.push_back(myir::Constant::constval(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag()));
+    elements.push_back(myir::Constant::constval(
         _runtime.header_elem_type(HeaderLayout::Size),
         klass->size() + str.length() - (WORD_SIZE - 1))); // native string is a 8 byte field, so substract 7 for '\0'
     elements.push_back(_dispatch_tables.at(klass_name));
@@ -114,10 +115,10 @@ void DataMyIR::string_const_inner(const std::string &str)
     // and now add string
     for (auto i = 0; i < str.size(); i++)
     {
-        elements.push_back(myir::Constant::constant(myir::INT8, str.at(i)));
+        elements.push_back(myir::Constant::constval(myir::INT8, str.at(i)));
     }
 
-    elements.push_back(myir::Constant::constant(myir::INT8, 0));
+    elements.push_back(myir::Constant::constval(myir::INT8, 0));
 
     auto string_name = Names::string_constant();
     _module.add(std::make_shared<myir::GlobalConstant>(string_name, elements, myir::STRUCTURE));
@@ -136,10 +137,10 @@ void DataMyIR::bool_const_inner(const bool &value)
     _module.add(make_shared<myir::GlobalConstant>(
         const_name,
         std::vector<myir::oper>{
-            myir::Constant::constant(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordSetValue),
-            myir::Constant::constant(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag()),
-            myir::Constant::constant(_runtime.header_elem_type(HeaderLayout::Size), klass->size()),
-            _dispatch_tables.at(klass_name), myir::Constant::constant(myir::OperandType::INT64, value)},
+            myir::Constant::constval(_runtime.header_elem_type(HeaderLayout::Mark), MarkWordSetValue),
+            myir::Constant::constval(_runtime.header_elem_type(HeaderLayout::Tag), klass->tag()),
+            myir::Constant::constval(_runtime.header_elem_type(HeaderLayout::Size), klass->size()),
+            _dispatch_tables.at(klass_name), myir::Constant::constval(myir::OperandType::INT64, value)},
         myir::STRUCTURE));
 
     _bool_constants.insert({value, _module.get<myir::global_const>(const_name)});
@@ -178,6 +179,4 @@ void DataMyIR::gen_class_name_tab()
                                                        myir::STRUCTURE));
 }
 
-void DataMyIR::emit_inner(const std::string &out_file)
-{
-}
+void DataMyIR::emit_inner(const std::string &out_file) {}

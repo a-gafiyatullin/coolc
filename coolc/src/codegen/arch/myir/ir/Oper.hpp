@@ -14,9 +14,17 @@ namespace myir
 class Instruction;
 class Block;
 class Constant;
+class Operand;
+class Function;
+class Variable;
+class CFG;
 
 typedef std::shared_ptr<Instruction> inst;
 typedef std::shared_ptr<Block> block;
+typedef std::shared_ptr<Operand> oper;
+typedef std::shared_ptr<Constant> constant;
+typedef std::shared_ptr<Variable> variable;
+typedef std::shared_ptr<Function> func;
 
 enum OperandType
 {
@@ -36,7 +44,7 @@ enum OperandType
     OperandTypeSize
 };
 
-// class represents intermediate result
+// class represents temporary result
 class Operand
 {
     friend class IRBuilder;
@@ -44,78 +52,45 @@ class Operand
   protected:
     const std::string _name;
     const OperandType _type;
+    int _id;
 
     std::vector<inst> _uses;
     std::vector<inst> _defs;
 
     // record use-def and def-use chains during instruction construction
-    inline void used_by(const inst &inst)
-    {
-        _uses.push_back(inst);
-    }
+    inline void used_by(const inst &inst) { _uses.push_back(inst); }
+    inline void defed_by(const inst &inst) { _defs.push_back(inst); }
 
-    inline void defed_by(const inst &inst)
-    {
-        _defs.push_back(inst);
-    }
+    Operand(const std::string &name, OperandType type) : _name(name), _type(type), _id(INCORRECT_ID) {}
 
   private:
     static constexpr std::string_view PREFIX = "tmp";
-    static uint64_t ID;
+    static int ID;
+    static constexpr int INCORRECT_ID = -1;
 
   public:
-    Operand(const std::string &name, OperandType type) : _name(name), _type(type)
-    {
-    }
+    // constructors
+    Operand(OperandType type) : _name(PREFIX), _id(ID++), _type(type) {}
 
-    Operand(OperandType type) : _name(static_cast<std::string>(PREFIX) + std::to_string(ID++)), _type(type)
-    {
-    }
+    Operand(const Operand &other) : _type(other._type), _name(other._name), _id(ID++) {}
 
-    inline OperandType type() const
-    {
-        return _type;
-    }
+    // convinient construction
+    static inline oper operand(OperandType type) { return std::make_shared<Operand>(type); }
 
-    virtual bool is_constant() const
-    {
-        return false;
-    }
+    // type
+    inline OperandType type() const { return _type; }
 
-    virtual bool is_global() const
-    {
-        return false;
-    }
+    // typecheck
+    template <class T> static bool isa(const oper &o);
+    template <class T> static std::shared_ptr<T> as(const oper &o);
 
-    virtual bool is_function() const
-    {
-        return false;
-    }
+    // array of defs
+    inline std::vector<inst> &defs() { return _defs; }
 
-    static inline std::shared_ptr<Operand> operand(OperandType type, const std::string &name)
-    {
-        return std::make_shared<Operand>(name, type);
-    }
-
-    static inline std::shared_ptr<Operand> operand(OperandType type)
-    {
-        return std::make_shared<Operand>(type);
-    }
-
-    inline std::vector<inst> &defs()
-    {
-        return _defs;
-    }
-
+    // debugging
     virtual std::string dump() const;
-
-    virtual std::string name() const
-    {
-        return _name;
-    }
+    virtual std::string name() const { return _id != INCORRECT_ID ? _name + std::to_string(_id) : _name; }
 };
-
-typedef std::shared_ptr<Operand> oper;
 
 class Constant : public Operand
 {
@@ -123,31 +98,36 @@ class Constant : public Operand
     uint64_t _value;
 
   public:
-    Constant(uint64_t value, OperandType type) : Operand("imm", type), _value(value)
-    {
-    }
+    // constructors
+    Constant(uint64_t value, OperandType type) : Operand("imm", type), _value(value) {}
 
-    inline uint64_t value() const
-    {
-        return _value;
-    }
+    // convinient construction
+    static inline constant constval(OperandType type, int value) { return std::make_shared<Constant>(value, type); }
 
-    bool is_constant() const override
-    {
-        return true;
-    }
+    // type
+    inline uint64_t value() const { return _value; }
 
+    // debugging
     std::string dump() const override;
+    std::string name() const override { return dump(); }
+};
 
-    std::string name() const override
+class Variable : public Operand
+{
+  private:
+    oper _reaching_def;
+
+  public:
+    // constructors
+    Variable(const std::string &name, OperandType type) : Operand(name, type), _reaching_def(nullptr) {}
+
+    // convinient construction
+    static inline variable var(const std::string &name, OperandType type)
     {
-        return dump();
+        return std::make_shared<Variable>(name, type);
     }
 
-    static inline std::shared_ptr<Constant> constant(OperandType type, int value)
-    {
-        return std::make_shared<Constant>(value, type);
-    }
+    static inline variable var(const variable &var) { return std::make_shared<Variable>(*var); }
 };
 
 class StructuredOperand : public Operand
@@ -156,12 +136,15 @@ class StructuredOperand : public Operand
     std::vector<oper> _fields;
 
   public:
+    // constructors
+
     // if type is STRUCTURE, then use internal structure in _fields
     StructuredOperand(const std::string &name, const std::vector<oper> &fields, OperandType type)
         : Operand(name, type), _fields(fields)
     {
     }
 
+    // debugging
     std::string dump() const override;
 };
 
@@ -169,19 +152,10 @@ class StructuredOperand : public Operand
 class GlobalConstant : public StructuredOperand
 {
   public:
+    // constructors
     GlobalConstant(const std::string &name, const std::vector<oper> &fields, OperandType type)
         : StructuredOperand(name, fields, type)
     {
-    }
-
-    bool is_constant() const override
-    {
-        return true;
-    }
-
-    bool is_global() const override
-    {
-        return true;
     }
 };
 
@@ -189,15 +163,12 @@ class GlobalConstant : public StructuredOperand
 class GlobalVariable final : public StructuredOperand
 {
   public:
+    // constructors
+
     // if type is STRUCTURE, then use internal structure in _fields
     GlobalVariable(const std::string &name, const std::vector<oper> &fields, OperandType type)
         : StructuredOperand(name, fields, type)
     {
-    }
-
-    bool is_global() const override
-    {
-        return true;
     }
 };
 
@@ -207,7 +178,7 @@ class Function final : public GlobalConstant
     const std::vector<oper> _params;
     const OperandType _return_type;
 
-    block _cfg;
+    const std::shared_ptr<CFG> _cfg;
 
     bool _is_leaf;
 
@@ -223,62 +194,31 @@ class Function final : public GlobalConstant
 #endif // DEBUG
 
   public:
-    Function(const std::string &name, const std::vector<oper> &params, OperandType return_type)
-        : GlobalConstant(name, {}, POINTER), _params(params), _return_type(return_type), _is_leaf(false)
-    {
-    }
+    // constructors
+    Function(const std::string &name, const std::vector<oper> &params, OperandType return_type);
 
-    inline void set_cfg(const block &cfg)
-    {
-        _cfg = cfg;
-    }
-
-    inline block cfg() const
-    {
-        return _cfg;
-    }
+    // CFG
+    void set_cfg(const block &cfg);
+    inline std::shared_ptr<CFG> cfg() const { return _cfg; }
 
     // Transform CFG to SSA form
     void construct_ssa();
 
-    inline oper param(int i) const
-    {
-        assert(i < _params.size());
-        return _params.at(i);
-    }
+    // params
+    inline oper param(int i) const { return _params.at(i); }
+    inline int params_size() const { return _params.size(); }
 
-    inline int params_size() const
-    {
-        return _params.size();
-    }
+    // return
+    inline OperandType return_type() const { return _return_type; }
+    inline bool has_return() const { return return_type() != VOID; }
 
-    inline OperandType return_type() const
-    {
-        return _return_type;
-    }
+    // type
+    inline void set_is_leaf() { _is_leaf = true; }
 
-    inline bool has_return() const
-    {
-        return return_type() != VOID;
-    }
-
-    inline void set_is_leaf()
-    {
-        _is_leaf = true;
-    }
-
-    bool is_function() const override
-    {
-        return true;
-    }
-
+    // debugging
     std::string name() const override;
-
     std::string short_name() const;
-
     std::string dump() const override;
 };
-
-typedef std::shared_ptr<Function> func;
 
 }; // namespace myir

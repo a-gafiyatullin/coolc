@@ -8,7 +8,7 @@ namespace myir
 
 class Block
 {
-    friend class GraphUtils;
+    friend class CFG;
 
   private:
     const std::string _name;
@@ -23,33 +23,23 @@ class Block
     int _postorder_num;
 
   public:
-    Block(const std::string &name) : _name(name), _is_visited(false), _postorder_num(-1)
-    {
-    }
+    // construction
+    Block(const std::string &name) : _name(name), _is_visited(false), _postorder_num(-1) {}
 
-    inline void append(const inst &inst)
-    {
-        _insts.push_back(inst);
-    }
+    // add instruction
+    inline void append(const inst &inst) { _insts.push_back(inst); }
 
+    // create edges in CFG
     static void connect(const block &pred, const block &succ);
 
-    const std::string &name() const
-    {
-        return _name;
-    }
+    // number that was set by postorder traversal
+    inline int postorder() const { return _postorder_num; }
 
-    inline int postorder() const
-    {
-        assert(_postorder_num != -1);
-        return _postorder_num;
-    }
+    // access to insts
+    inline std::list<inst> &insts() { return _insts; }
 
-    inline std::list<inst> &insts()
-    {
-        return _insts;
-    }
-
+    // debugging
+    const std::string &name() const { return _name; }
     std::string dump() const;
 };
 
@@ -68,71 +58,16 @@ class Module
     // data segment
     std::unordered_map<std::string, global_var> _variables;
 
-    template <class T>
-    inline T get_by_name(const std::string &name, const std::unordered_map<std::string, T> &map) const
-    {
-        auto iter = map.find(name);
-        if (iter != map.end())
-        {
-            return iter->second;
-        }
-        return nullptr;
-    }
+    // convinient access to arrays
+    template <class T> T get_by_name(const std::string &name, const std::unordered_map<std::string, T> &map) const;
 
   public:
-    template <class T> void add(const T &elem)
-    {
-        if constexpr (std::is_same_v<T, func>)
-        {
-            _funcs[elem->short_name()] = elem;
-        }
-        else if constexpr (std::is_same_v<T, global_const>)
-        {
-            _constants[elem->name()] = elem;
-        }
-        else if constexpr (std::is_same_v<T, global_var>)
-        {
-            _variables[elem->name()] = elem;
-        }
-        else
-            static_assert("Unexpected type");
-    }
+    // add and get global variables and constants
+    template <class T> void add(const T &elem);
+    template <class T> T get(const std::string &name) const;
 
-    template <class T> T get(const std::string &name) const
-    {
-        if constexpr (std::is_same_v<T, func>)
-        {
-            return get_by_name(name, _funcs);
-        }
-        else if constexpr (std::is_same_v<T, global_const>)
-        {
-            return get_by_name(name, _constants);
-        }
-        else if constexpr (std::is_same_v<T, global_var>)
-        {
-            return get_by_name(name, _variables);
-        }
-        else
-            static_assert("Unexpected type");
-    }
-
-    template <class T> const std::unordered_map<std::string, T> &get() const
-    {
-        if constexpr (std::is_same_v<T, func>)
-        {
-            return _funcs;
-        }
-        else if constexpr (std::is_same_v<T, global_const>)
-        {
-            return _constants;
-        }
-        else if constexpr (std::is_same_v<T, global_var>)
-        {
-            return _variables;
-        }
-        else
-            static_assert("Unexpected type");
-    }
+    // raw access to variables and constants
+    template <class T> const std::unordered_map<std::string, T> &get() const;
 
     // Transform all functions' CFG to SSA form
     void construct_ssa();
@@ -140,6 +75,7 @@ class Module
     std::string dump() const;
 };
 
+// track the current state of the CFG construction
 class IRBuilder
 {
   private:
@@ -149,37 +85,26 @@ class IRBuilder
 
     func _curr_func;
 
+    // convinience methods for bnary and unary instructions
     template <class T> oper binary(const oper &lhs, const oper &rhs);
-
     template <class T> oper unary(const oper &operand);
 
   public:
-    IRBuilder(Module &module) : _module(module), _curr_block(nullptr)
-    {
-    }
+    // construction
+    IRBuilder(Module &module) : _module(module), _curr_block(nullptr) {}
 
-    inline static block new_block(const std::string &name)
-    {
-        return std::make_shared<Block>(name);
-    }
+    // create a new block
+    inline static block new_block(const std::string &name) { return std::make_shared<Block>(name); }
 
-    inline void set_current_function(const func &func)
-    {
-        _curr_func = func;
-    }
+    // set a state
+    inline void set_current_function(const func &func) { _curr_func = func; }
+    inline void set_current_block(const block &block) { _curr_block = block; }
 
-    inline void set_current_block(const block &block)
-    {
-        _curr_block = block;
-    }
+    // get a state
+    inline block curr_block() const { return _curr_block; }
 
-    inline block curr_block() const
-    {
-        return _curr_block;
-    }
-
-    // instructions
-    static inst phi(const oper& var);
+    // create instructions
+    static inst phi(const oper &var);
 
     void ret(const oper &value);
 

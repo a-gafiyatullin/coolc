@@ -1,5 +1,5 @@
+#include "CFG.hpp"
 #include "IR.hpp"
-
 using namespace myir;
 
 std::string Phi::dump() const
@@ -13,13 +13,9 @@ std::string Phi::dump() const
         s += "(" + def->name() + ": " + block->name() + "), ";
     }
 
-    if (s.back() == ' ')
-    {
-        s = s.substr(0, s.length() - 2); // trim ", "
-    }
+    trim(s, ", ");
 
-    s += "]";
-    return s;
+    return s + "]";
 }
 
 std::string Store::dump() const
@@ -45,10 +41,7 @@ std::string Load::dump() const
     return "load " + result->name() + " <- [" + base->name() + " + " + offset->name() + "]";
 }
 
-std::string Branch::dump() const
-{
-    return "br " + _dest->name();
-}
+std::string Branch::dump() const { return "br " + _dest->name(); }
 
 std::string CondBranch::dump() const
 {
@@ -63,60 +56,27 @@ std::string BinaryInst::print(const std::string &op) const
     return _defs.at(0)->name() + " <- " + _uses.at(0)->name() + " " + op + " " + _uses.at(1)->name();
 }
 
-std::string Sub::dump() const
-{
-    return print("-");
-}
+std::string Sub::dump() const { return print("-"); }
 
-std::string Add::dump() const
-{
-    return print("+");
-}
+std::string Add::dump() const { return print("+"); }
 
-std::string Div::dump() const
-{
-    return print("/");
-}
+std::string Div::dump() const { return print("/"); }
 
-std::string Mul::dump() const
-{
-    return print("*");
-}
+std::string Mul::dump() const { return print("*"); }
 
-std::string Xor::dump() const
-{
-    return print("^");
-}
+std::string Xor::dump() const { return print("^"); }
 
-std::string Or::dump() const
-{
-    return print("|");
-}
+std::string Or::dump() const { return print("|"); }
 
-std::string Shl::dump() const
-{
-    return print("<<");
-}
+std::string Shl::dump() const { return print("<<"); }
 
-std::string LT::dump() const
-{
-    return print("<");
-}
+std::string LT::dump() const { return print("<"); }
 
-std::string LE::dump() const
-{
-    return print("<=");
-}
+std::string LE::dump() const { return print("<="); }
 
-std::string EQ::dump() const
-{
-    return print("==");
-}
+std::string EQ::dump() const { return print("=="); }
 
-std::string GT::dump() const
-{
-    return print(">");
-}
+std::string GT::dump() const { return print(">"); }
 
 std::string UnaryInst::print(const std::string &op) const
 {
@@ -125,15 +85,9 @@ std::string UnaryInst::print(const std::string &op) const
     return _defs.at(0)->name() + " <- " + op + _uses.at(0)->name();
 }
 
-std::string Not::dump() const
-{
-    return print("!");
-}
+std::string Not::dump() const { return print("!"); }
 
-std::string Neg::dump() const
-{
-    return print("-");
-}
+std::string Neg::dump() const { return print("-"); }
 
 std::string Call::dump() const
 {
@@ -147,17 +101,9 @@ std::string Call::dump() const
         s += (*u)->name() + ", ";
     }
 
-    if (s.back() == ' ')
-    {
-        s = s.substr(0, s.length() - 2); // trim ", "
-    }
+    trim(s, ", ");
 
-    s += ")";
-
-    return s;
+    return s + ")";
 }
 
-std::string Ret::dump() const
-{
-    return "ret " + (!_uses.empty() ? _uses.at(0)->name() : "");
-}
+std::string Ret::dump() const { return "ret " + (!_uses.empty() ? _uses.at(0)->name() : ""); }

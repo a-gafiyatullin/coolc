@@ -1,4 +1,5 @@
 #include "RuntimeMyIR.hpp"
+#include "codegen/arch/myir/ir/IR.inline.hpp"
 #include "codegen/arch/myir/klass/KlassMyIR.hpp"
 
 using namespace codegen;
@@ -19,32 +20,32 @@ RuntimeMethod::RuntimeMethod(myir::Module &module, const std::string &name, myir
 
 RuntimeMyIR::RuntimeMyIR(myir::Module &module)
     : _equals(module, SYMBOLS[RuntimeMyIRSymbols::EQUALS], myir::OperandType::INT32,
-              {std::make_shared<myir::Operand>("lhs", myir::OperandType::POINTER),
-               std::make_shared<myir::Operand>("rhs", myir::OperandType::POINTER)},
+              {std::make_shared<myir::Variable>("lhs", myir::OperandType::POINTER),
+               std::make_shared<myir::Variable>("rhs", myir::OperandType::POINTER)},
               false, *this),
 
       _gc_alloc(module, SYMBOLS[RuntimeMyIRSymbols::GC_ALLOC], myir::OperandType::POINTER,
-                {std::make_shared<myir::Operand>("tag", myir::OperandType::INT32),
-                 std::make_shared<myir::Operand>("size", myir::OperandType::UINT64),
-                 std::make_shared<myir::Operand>("dt", myir::OperandType::POINTER)},
+                {std::make_shared<myir::Variable>("tag", myir::OperandType::INT32),
+                 std::make_shared<myir::Variable>("size", myir::OperandType::UINT64),
+                 std::make_shared<myir::Variable>("dt", myir::OperandType::POINTER)},
                 true, *this),
 
       _case_abort(module, SYMBOLS[RuntimeMyIRSymbols::CASE_ABORT], myir::OperandType::VOID,
-                  {std::make_shared<myir::Operand>("tag", myir::OperandType::INT32)}, false, *this),
+                  {std::make_shared<myir::Variable>("tag", myir::OperandType::INT32)}, false, *this),
 
       _dispatch_abort(module, SYMBOLS[RuntimeMyIRSymbols::DISPATCH_ABORT], myir::OperandType::VOID,
-                      {std::make_shared<myir::Operand>("filename", myir::OperandType::POINTER),
-                       std::make_shared<myir::Operand>("linenumber", myir::OperandType::INT32)},
+                      {std::make_shared<myir::Variable>("filename", myir::OperandType::POINTER),
+                       std::make_shared<myir::Variable>("linenumber", myir::OperandType::INT32)},
                       false, *this),
 
       _case_abort_2(module, SYMBOLS[RuntimeMyIRSymbols::CASE_ABORT_2], myir::OperandType::VOID,
-                    {std::make_shared<myir::Operand>("filename", myir::OperandType::POINTER),
-                     std::make_shared<myir::Operand>("linenumber", myir::OperandType::INT32)},
+                    {std::make_shared<myir::Variable>("filename", myir::OperandType::POINTER),
+                     std::make_shared<myir::Variable>("linenumber", myir::OperandType::INT32)},
                     false, *this),
 
       _init_runtime(module, SYMBOLS[RuntimeMyIRSymbols::INIT_RUNTIME], myir::OperandType::VOID,
-                    {std::make_shared<myir::Operand>("argc", myir::OperandType::INT32),
-                     std::make_shared<myir::Operand>("argv", myir::OperandType::POINTER)},
+                    {std::make_shared<myir::Variable>("argc", myir::OperandType::INT32),
+                     std::make_shared<myir::Variable>("argv", myir::OperandType::POINTER)},
                     false, *this),
 
       _finish_runtime(module, SYMBOLS[RuntimeMyIRSymbols::FINISH_RUNTIME], myir::OperandType::VOID, {}, false, *this)
@@ -52,7 +53,7 @@ RuntimeMyIR::RuntimeMyIR(myir::Module &module)
 #ifdef DEBUG
       ,
       _verify_oop(module, SYMBOLS[RuntimeMyIRSymbols::VERIFY_OOP], myir::OperandType::VOID,
-                  {std::make_shared<myir::Operand>("oop", myir::OperandType::POINTER)}, false, *this)
+                  {std::make_shared<myir::Variable>("oop", myir::OperandType::POINTER)}, false, *this)
 #endif // DEBUG
 
       ,
