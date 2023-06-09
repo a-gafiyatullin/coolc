@@ -1,68 +1,39 @@
 #include "IR.hpp"
 
-using namespace myir;
+template <class T> bool myir::Operand::isa(Operand *o) { return dynamic_cast<T *>(o); }
 
-template <class T> bool Operand::isa(const oper &o) { return std::dynamic_pointer_cast<T>(o) != nullptr; }
+template <class T> T *myir::Operand::as(Operand *o) { return dynamic_cast<T *>(o); }
 
-template <class T> std::shared_ptr<T> Operand::as(const oper &o) { return std::dynamic_pointer_cast<T>(o); }
+template <class T> bool myir::Instruction::isa(Instruction *inst) { return dynamic_cast<T *>(inst); }
 
-template <class T> bool Instruction::isa(const inst &instruction)
+template <class T> T *myir::Instruction::as(Instruction *inst) { return dynamic_cast<T *>(inst); }
+
+template <class T> myir::Operand *myir::IRBuilder::binary(Operand *lhs, Operand *rhs)
 {
-    return std::dynamic_pointer_cast<T>(instruction) != nullptr;
-}
-
-template <class T> std::shared_ptr<T> Instruction::as(const inst &instruction)
-{
-    return std::dynamic_pointer_cast<T>(instruction);
-}
-
-template <class T> oper IRBuilder::binary(const oper &lhs, const oper &rhs)
-{
-    auto res = Operand::operand(lhs->type());
-
-    auto inst = std::make_shared<T>(res, lhs, rhs);
-
-    lhs->used_by(inst);
-    rhs->used_by(inst);
-
-    res->defed_by(inst);
-
-    _curr_block->append(inst);
+    auto *res = new Operand(lhs->type());
+    _curr_block->append(new T(res, lhs, rhs, _curr_block));
 
     return res;
 }
 
-template <class T> oper IRBuilder::unary(const oper &operand)
+template <class T> myir::Operand *myir::IRBuilder::unary(Operand *operand)
 {
-    auto res = Operand::operand(operand->type());
-
-    auto inst = std::make_shared<T>(res, operand);
-
-    operand->used_by(inst);
-    res->defed_by(inst);
-
-    _curr_block->append(inst);
+    auto *res = new Operand(operand->type());
+    _curr_block->append(new T(res, operand, _curr_block));
 
     return res;
 }
 
-template <OperandType type> oper IRBuilder::ld(const oper &base, const oper &offset)
+template <myir::OperandType type> myir::Operand *myir::IRBuilder::ld(Operand *base, Operand *offset)
 {
-    myir::oper res = myir::Operand::operand(type);
-
-    auto inst = std::make_shared<Load>(res, base, offset);
-
-    base->used_by(inst);
-    offset->used_by(inst);
-
-    res->defed_by(inst);
-
-    _curr_block->append(inst);
+    myir::Operand *res = new Operand(type);
+    _curr_block->append(new Load(res, base, offset, _curr_block));
 
     return res;
 }
 
-template <class T> T Module::get_by_name(const std::string &name, const std::unordered_map<std::string, T> &map) const
+template <class T>
+T myir::Module::get_by_name(const std::string &name, const std::unordered_map<std::string, T> &map) const
 {
     auto iter = map.find(name);
     if (iter != map.end())
@@ -72,17 +43,18 @@ template <class T> T Module::get_by_name(const std::string &name, const std::uno
     return nullptr;
 }
 
-template <class T> void Module::add(const T &elem)
+template <class T> void myir::Module::add(T elem)
 {
-    if constexpr (std::is_same_v<T, func>)
+    assert(elem);
+    if constexpr (std::is_same_v<T, Function *>)
     {
         _funcs[elem->short_name()] = elem;
     }
-    else if constexpr (std::is_same_v<T, global_const>)
+    else if constexpr (std::is_same_v<T, GlobalConstant *>)
     {
         _constants[elem->name()] = elem;
     }
-    else if constexpr (std::is_same_v<T, global_var>)
+    else if constexpr (std::is_same_v<T, GlobalVariable *>)
     {
         _variables[elem->name()] = elem;
     }
@@ -90,17 +62,17 @@ template <class T> void Module::add(const T &elem)
         static_assert("Unexpected type");
 }
 
-template <class T> T Module::get(const std::string &name) const
+template <class T> T *myir::Module::get(const std::string &name) const
 {
-    if constexpr (std::is_same_v<T, func>)
+    if constexpr (std::is_same_v<T, Function>)
     {
         return get_by_name(name, _funcs);
     }
-    else if constexpr (std::is_same_v<T, global_const>)
+    else if constexpr (std::is_same_v<T, GlobalConstant>)
     {
         return get_by_name(name, _constants);
     }
-    else if constexpr (std::is_same_v<T, global_var>)
+    else if constexpr (std::is_same_v<T, GlobalVariable>)
     {
         return get_by_name(name, _variables);
     }
@@ -108,17 +80,17 @@ template <class T> T Module::get(const std::string &name) const
         static_assert("Unexpected type");
 }
 
-template <class T> const std::unordered_map<std::string, T> &Module::get() const
+template <class T> const std::unordered_map<std::string, T *> &myir::Module::get() const
 {
-    if constexpr (std::is_same_v<T, func>)
+    if constexpr (std::is_same_v<T, Function>)
     {
         return _funcs;
     }
-    else if constexpr (std::is_same_v<T, global_const>)
+    else if constexpr (std::is_same_v<T, GlobalConstant>)
     {
         return _constants;
     }
-    else if constexpr (std::is_same_v<T, global_var>)
+    else if constexpr (std::is_same_v<T, GlobalVariable>)
     {
         return _variables;
     }

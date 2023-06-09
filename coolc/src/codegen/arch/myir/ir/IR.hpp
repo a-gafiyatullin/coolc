@@ -12,11 +12,12 @@ class Block
 
   private:
     const std::string _name;
+    Function *_func;
 
-    std::vector<block> _preds;
-    std::vector<block> _succs;
+    std::vector<Block *> _preds;
+    std::vector<Block *> _succs;
 
-    std::list<inst> _insts;
+    std::list<Instruction *> _insts;
 
     bool _is_visited;
 
@@ -24,54 +25,55 @@ class Block
 
   public:
     // construction
-    Block(const std::string &name) : _name(name), _is_visited(false), _postorder_num(-1) {}
+    Block(const std::string &name, Function *f) : _name(name), _is_visited(false), _postorder_num(-1), _func(f) {}
 
     // add instruction
-    inline void append(const inst &inst) { _insts.push_back(inst); }
+    inline void append(Instruction *inst) { _insts.push_back(inst); }
+    inline void append_front(Instruction *inst) { _insts.push_front(inst); }
 
     // create edges in CFG
-    static void connect(const block &pred, const block &succ);
+    static void connect(Block *pred, Block *succ);
 
     // number that was set by postorder traversal
     inline int postorder() const { return _postorder_num; }
 
-    // access to insts
-    inline std::list<inst> &insts() { return _insts; }
+    // getters
+    inline std::list<Instruction *> &insts() { return _insts; }
+    inline Function *holder() const { return _func; }
+    inline const std::vector<Block *> &succs() const { return _succs; }
 
     // debugging
     const std::string &name() const { return _name; }
     std::string dump() const;
 };
 
-typedef std::shared_ptr<GlobalConstant> global_const;
-typedef std::shared_ptr<GlobalVariable> global_var;
-
 class Module
 {
   private:
     // text segment
-    std::unordered_map<std::string, func> _funcs;
+    std::unordered_map<std::string, Function *> _funcs;
 
     // rodata segment
-    std::unordered_map<std::string, global_const> _constants;
+    std::unordered_map<std::string, GlobalConstant *> _constants;
 
     // data segment
-    std::unordered_map<std::string, global_var> _variables;
+    std::unordered_map<std::string, GlobalVariable *> _variables;
 
     // convinient access to arrays
     template <class T> T get_by_name(const std::string &name, const std::unordered_map<std::string, T> &map) const;
 
   public:
     // add and get global variables and constants
-    template <class T> void add(const T &elem);
-    template <class T> T get(const std::string &name) const;
+    template <class T> void add(T elem);
+    template <class T> T *get(const std::string &name) const;
 
     // raw access to variables and constants
-    template <class T> const std::unordered_map<std::string, T> &get() const;
+    template <class T> const std::unordered_map<std::string, T *> &get() const;
 
     // Transform all functions' CFG to SSA form
     void construct_ssa();
 
+    // debugging
     std::string dump() const;
 };
 
@@ -81,74 +83,73 @@ class IRBuilder
   private:
     Module &_module;
 
-    block _curr_block;
+    Block *_curr_block;
 
-    func _curr_func;
+    Function *_curr_func;
 
     // convinience methods for bnary and unary instructions
-    template <class T> oper binary(const oper &lhs, const oper &rhs);
-    template <class T> oper unary(const oper &operand);
+    template <class T> Operand *binary(Operand *lhs, Operand *rhs);
+    template <class T> Operand *unary(Operand *operand);
 
   public:
     // construction
     IRBuilder(Module &module) : _module(module), _curr_block(nullptr) {}
 
     // create a new block
-    inline static block new_block(const std::string &name) { return std::make_shared<Block>(name); }
+    inline Block *new_block(const std::string &name) { return new Block(name, _curr_func); }
 
     // set a state
-    inline void set_current_function(const func &func) { _curr_func = func; }
-    inline void set_current_block(const block &block) { _curr_block = block; }
+    inline void set_current_function(Function *func) { _curr_func = func; }
+    inline void set_current_block(Block *block) { _curr_block = block; }
 
     // get a state
-    inline block curr_block() const { return _curr_block; }
+    inline Block *curr_block() const { return _curr_block; }
 
     // create instructions
-    static inst phi(const oper &var);
+    static void phi(Operand *var, Block *b);
 
-    void ret(const oper &value);
+    void ret(Operand *value);
 
-    void st(const oper &base, const oper &offset, const oper &value);
+    void st(Operand *base, Operand *offset, Operand *value);
 
-    template <OperandType type> oper ld(const oper &base, const oper &offset);
+    template <OperandType type> Operand *ld(Operand *base, Operand *offset);
 
-    oper call(const func &f, const std::vector<oper> &args);
+    Operand *call(Function *f, const std::vector<Operand *> &args);
 
-    oper call(const func &f, const oper &dst, const std::vector<oper> &args);
+    Operand *call(Function *f, Operand *dst, const std::vector<Operand *> &args);
 
-    void cond_br(const oper &pred, const block &taken, const block &fall_through);
+    void cond_br(Operand *pred, Block *taken, Block *fall_through);
 
-    void br(const block &taken);
+    void br(Block *taken);
 
-    oper add(const oper &lhs, const oper &rhs);
+    Operand *add(Operand *lhs, Operand *rhs);
 
-    oper sub(const oper &lhs, const oper &rhs);
+    Operand *sub(Operand *lhs, Operand *rhs);
 
-    oper div(const oper &lhs, const oper &rhs);
+    Operand *div(Operand *lhs, Operand *rhs);
 
-    oper mul(const oper &lhs, const oper &rhs);
+    Operand *mul(Operand *lhs, Operand *rhs);
 
-    oper shl(const oper &lhs, const oper &rhs);
+    Operand *shl(Operand *lhs, Operand *rhs);
 
-    oper lt(const oper &lhs, const oper &rhs);
+    Operand *lt(Operand *lhs, Operand *rhs);
 
-    oper le(const oper &lhs, const oper &rhs);
+    Operand *le(Operand *lhs, Operand *rhs);
 
-    oper eq(const oper &lhs, const oper &rhs);
+    Operand *eq(Operand *lhs, Operand *rhs);
 
-    oper gt(const oper &lhs, const oper &rhs);
+    Operand *gt(Operand *lhs, Operand *rhs);
 
-    oper or2(const oper &lhs, const oper &rhs);
+    Operand *or2(Operand *lhs, Operand *rhs);
 
-    oper xor2(const oper &lhs, const oper &rhs);
+    Operand *xor2(Operand *lhs, Operand *rhs);
 
-    oper neg(const oper &operand);
+    Operand *neg(Operand *operand);
 
-    oper not1(const oper &operand);
+    Operand *not1(Operand *operand);
 
-    oper move(const oper &src);
+    Operand *move(Operand *src);
 
-    void move(const oper &src, const oper &dst);
+    void move(Operand *src, Operand *dst);
 };
-
 } // namespace myir

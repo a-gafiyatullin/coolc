@@ -11,3 +11,12 @@ const std::pair<std::string, bool> Names::COMMENT_NAMES[CommentsNumber] = {
     {"bool_const_", false},  {"int_const_", false},  {"str_const_", false}};
 
 int Names::CommentNumber[CommentsNumber] = {};
+
+void Names::reset()
+{
+    static int RESET_IDX[] = {ENTRY_BLOCK, TRUE_BRANCH, FALSE_BRANCH, MERGE_BLOCK, LOOP_HEADER, LOOP_BODY, LOOP_TAIL};
+    for (auto idx : RESET_IDX)
+    {
+        CommentNumber[idx] = 0;
+    }
+}

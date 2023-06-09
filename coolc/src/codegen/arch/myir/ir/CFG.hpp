@@ -2,8 +2,6 @@
 
 #include "IR.hpp"
 #include <functional>
-#include <set>
-#include <string>
 
 namespace myir
 {
@@ -20,22 +18,23 @@ class CFG
     };
 
   private:
-    block _root;
+    Block *_root;
 
     // traversals
-    std::vector<block> _postorder;
-    std::vector<block> _preorder;
-    std::vector<block> _reverse_postorder;
+    std::vector<Block *> _postorder;
+    std::vector<Block *> _preorder;
+    std::vector<Block *> _reverse_postorder;
 
     // dominance info
-    std::unordered_map<block, block> _dominance;
-    std::unordered_map<block, std::set<block>> _dominance_frontier;
+    std::unordered_map<Block *, Block *> _dominance;
+    std::unordered_map<Block *, std::vector<Block *>> _dominator_tree;
 
-    block dominance_intersect(const block &b1, const block &b2);
+    std::unordered_map<Block *, std::set<Block *>> _dominance_frontier;
+
+    Block *dominance_intersect(Block *b1, Block *b2);
 
     // common DFS
-    template <DFSType type>
-    void dfs(const block &root, const std::function<void(const block &s, const block &d)> &visitor);
+    template <DFSType type> void dfs(Block *root, const std::function<void(Block *s, Block *d)> &visitor);
 
 #ifdef DEBUG
     void dump_dominance();
@@ -44,27 +43,29 @@ class CFG
 
   public:
     // graph traversals
-    template <DFSType type> std::vector<block> &traversal();
+    template <DFSType type> std::vector<Block *> &traversal();
 
     // helpers
     void clear_visited();
 
     // setters
-    inline void set_cfg(const block &b) { _root = b; }
+    inline void set_cfg(Block *b) { _root = b; }
 
     // getters
-    inline block root() const { return _root; }
+    inline Block *root() const { return _root; }
     inline bool empty() const { return !root(); }
 
-    // for every block gather all blocks that dominate it
+    // for every Block* gather all blocks that dominate it
     // Implements approach was described in "A Simple, Fast Dominance Algorithm"
     // by Keith D. Cooper, Timothy J. Harvey, and Ken Kennedy
-    std::unordered_map<block, block> &dominance();
+    std::unordered_map<Block *, Block *> &dominance();
+    std::unordered_map<Block *, std::vector<Block *>> &dominator_tree();
+    bool dominate(Block *dominator, Block *dominatee);
 
-    // for every block gather all blocks in its DF
+    // for every Block* gather all blocks in its DF
     // Implements approach was described in "A Simple, Fast Dominance Algorithm"
     // by Keith D. Cooper, Timothy J. Harvey, and Ken Kennedy
-    std::unordered_map<block, std::set<block>> &dominance_frontier();
+    std::unordered_map<Block *, std::set<Block *>> &dominance_frontier();
 
     // debugging
     std::string dump() const;

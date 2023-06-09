@@ -1,8 +1,6 @@
 #include "CFG.hpp"
-using namespace myir;
 
-template <CFG::DFSType type>
-void CFG::dfs(const block &b, const std::function<void(const block &s, const block &d)> &visitor)
+template <myir::CFG::DFSType type> void myir::CFG::dfs(Block *b, const std::function<void(Block *s, Block *d)> &visitor)
 {
     if (b->_is_visited)
     {
@@ -16,7 +14,7 @@ void CFG::dfs(const block &b, const std::function<void(const block &s, const blo
         visitor(b, nullptr);
     }
 
-    for (auto s : b->_succs)
+    for (auto *s : b->_succs)
     {
         if constexpr (type == INORDER)
         {
@@ -32,7 +30,7 @@ void CFG::dfs(const block &b, const std::function<void(const block &s, const blo
     }
 }
 
-template <CFG::DFSType type> std::vector<block> &CFG::traversal()
+template <myir::CFG::DFSType type> std::vector<myir::Block *> &myir::CFG::traversal()
 {
     bool need_clear = false;
 
@@ -42,13 +40,13 @@ template <CFG::DFSType type> std::vector<block> &CFG::traversal()
         {
             need_clear = true;
 
-            dfs<POSTORDER>(_root, [this](const myir::block &b, const myir::block &s) { _postorder.push_back(b); });
+            dfs<POSTORDER>(_root, [this](Block *b, Block *s) { _postorder.push_back(b); });
             _reverse_postorder.resize(_postorder.size());
             std::reverse_copy(_postorder.begin(), _postorder.end(), _reverse_postorder.begin());
 
             // set postorder numbers
             int num = 0;
-            std::for_each(_postorder.begin(), _postorder.end(), [&num](const block &b) { b->_postorder_num = num++; });
+            std::for_each(_postorder.begin(), _postorder.end(), [&num](Block *b) { b->_postorder_num = num++; });
         }
     }
     else
@@ -56,7 +54,7 @@ template <CFG::DFSType type> std::vector<block> &CFG::traversal()
         if (_preorder.empty())
         {
             need_clear = true;
-            dfs<PREORDER>(_root, [this](const myir::block &b, const myir::block &s) { _preorder.push_back(b); });
+            dfs<PREORDER>(_root, [this](Block *b, Block *s) { _preorder.push_back(b); });
         }
     }
 

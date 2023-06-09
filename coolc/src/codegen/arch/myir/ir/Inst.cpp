@@ -1,11 +1,33 @@
 #include "CFG.hpp"
-#include "IR.hpp"
+#include <cassert>
+
 using namespace myir;
+
+Instruction::Instruction(const std::vector<Operand *> &defs, const std::vector<Operand *> &uses, Block *b) : _block(b)
+{
+    for (auto *use : uses)
+    {
+        if (use)
+        {
+            use->used_by(this);
+            _uses.push_back(use);
+        }
+    }
+
+    for (auto *def : defs)
+    {
+        if (def)
+        {
+            def->defed_by(this);
+            _defs.push_back(def);
+        }
+    }
+}
 
 std::string Phi::dump() const
 {
     assert(_defs.size() >= 1);
-    auto result = _defs.at(0);
+    auto *result = _defs.at(0);
 
     std::string s = "phi " + result->name() + " <- [";
     for (auto &[def, block] : _def_from_block)
@@ -18,13 +40,19 @@ std::string Phi::dump() const
     return s + "]";
 }
 
+void Phi::add_path(Operand *use, Block *b)
+{
+    _uses.push_back(use);
+    _def_from_block[use] = b;
+}
+
 std::string Store::dump() const
 {
     assert(_uses.size() >= 3);
 
-    auto base = _uses.at(0);
-    auto offset = _uses.at(1);
-    auto result = _uses.at(2);
+    auto *base = _uses.at(0);
+    auto *offset = _uses.at(1);
+    auto *result = _uses.at(2);
 
     return "store " + result->name() + " -> [" + base->name() + " + " + offset->name() + "]";
 }
@@ -34,9 +62,9 @@ std::string Load::dump() const
     assert(_uses.size() >= 2);
     assert(_defs.size() >= 1);
 
-    auto base = _uses.at(0);
-    auto offset = _uses.at(1);
-    auto result = _defs.at(0);
+    auto *base = _uses.at(0);
+    auto *offset = _uses.at(1);
+    auto *result = _defs.at(0);
 
     return "load " + result->name() + " <- [" + base->name() + " + " + offset->name() + "]";
 }

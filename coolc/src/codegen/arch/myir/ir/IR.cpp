@@ -1,12 +1,13 @@
 #include "IR.inline.hpp"
 #include "codegen/arch/myir/ir/CFG.hpp"
+#include <cassert>
+
 using namespace myir;
 
 int Operand::ID = 0;
 
-Function::Function(const std::string &name, const std::vector<oper> &params, OperandType return_type)
-    : GlobalConstant(name, {}, POINTER), _params(params), _return_type(return_type), _is_leaf(false),
-      _cfg(std::make_shared<CFG>())
+Function::Function(const std::string &name, const std::vector<Variable *> &params, OperandType return_type)
+    : GlobalConstant(name, {}, POINTER), _params(params), _return_type(return_type), _is_leaf(false), _cfg(new CFG())
 {
 }
 
@@ -14,7 +15,7 @@ std::string Block::dump() const
 {
     std::string s = "  Block \"" + _name + "\", preds = [";
 
-    for (auto p : _preds)
+    for (auto *p : _preds)
     {
         s += p->_name + ", ";
     }
@@ -23,7 +24,7 @@ std::string Block::dump() const
 
     s += "], succs = [";
 
-    for (auto p : _succs)
+    for (auto *p : _succs)
     {
         s += p->_name + ", ";
     }
@@ -32,7 +33,7 @@ std::string Block::dump() const
 
     s += "]:\n";
 
-    for (auto i : _insts)
+    for (auto *i : _insts)
     {
         s += "    " + i->dump() + "\n";
     }
@@ -42,7 +43,7 @@ std::string Block::dump() const
     return s;
 }
 
-void Block::connect(const block &pred, const block &succ)
+void Block::connect(Block *pred, Block *succ)
 {
     assert(find(pred->_succs.begin(), pred->_succs.end(), succ) == pred->_succs.end());
     pred->_succs.push_back(succ);
@@ -62,7 +63,7 @@ std::string Function::name() const
 {
     std::string s = type_to_string(_return_type) + " " + _name + "(";
 
-    for (auto p : _params)
+    for (auto *p : _params)
     {
         s += p->dump() + ", ";
     }
@@ -83,7 +84,7 @@ std::string Function::dump() const
 
     std::string s = name() + " {\n";
 
-    for (auto b : _cfg->traversal<CFG::REVERSE_POSTORDER>())
+    for (auto *b : _cfg->traversal<CFG::REVERSE_POSTORDER>())
     {
         s += b->dump() + "\n\n";
     }
@@ -119,11 +120,16 @@ std::string Operand::dump() const { return type_to_string(_type) + " " + name();
 
 std::string Constant::dump() const { return std::to_string(_value); }
 
+std::string Variable::name() const
+{
+    return Operand::name() + (this != _original_var ? "[" + _original_var->name() + "]" : "");
+}
+
 std::string StructuredOperand::dump() const
 {
     std::string s = "{";
 
-    for (auto f : _fields)
+    for (auto *f : _fields)
     {
         s += f->name() + ", ";
     }
@@ -135,129 +141,80 @@ std::string StructuredOperand::dump() const
     return s;
 }
 
-void IRBuilder::ret(const oper &value)
-{
-    inst instr = nullptr;
-    if (value)
-    {
-        instr = std::make_shared<Ret>(value);
-        value->used_by(instr);
-    }
-    else
-    {
-        instr = std::make_shared<Ret>();
-    }
+void IRBuilder::ret(Operand *value) { _curr_block->append(new Ret(value, _curr_block)); }
 
-    _curr_block->append(instr);
+void IRBuilder::phi(Operand *var, Block *b) { b->append_front(new Phi(var, b)); }
+
+void IRBuilder::st(Operand *base, Operand *offset, Operand *value)
+{
+    _curr_block->append(new Store(base, offset, value, _curr_block));
 }
 
-inst IRBuilder::phi(const oper &var)
+Operand *IRBuilder::call(Function *f, const std::vector<Operand *> &args) { return call(f, f, args); }
+
+Operand *IRBuilder::call(Function *f, Operand *dst, const std::vector<Operand *> &args)
 {
-    auto inst = std::make_shared<Phi>(var);
-    var->defed_by(inst);
-
-    return inst;
-}
-
-void IRBuilder::st(const oper &base, const oper &offset, const oper &value)
-{
-    auto inst = std::make_shared<Store>(base, offset, value);
-
-    base->used_by(inst);
-    offset->used_by(inst);
-    value->used_by(inst);
-
-    _curr_block->append(inst);
-}
-
-oper IRBuilder::call(const func &f, const std::vector<oper> &args) { return call(f, f, args); }
-
-oper IRBuilder::call(const func &f, const oper &dst, const std::vector<oper> &args)
-{
-    std::vector<oper> uses;
+    std::vector<Operand *> uses;
     uses.push_back(dst);
     uses.insert(uses.end(), args.begin(), args.end());
 
-    inst inst = nullptr;
-    oper retval = nullptr;
+    Operand *retval = nullptr;
 
     if (f->has_return())
     {
-        retval = Operand::operand(f->return_type());
-        inst = std::make_shared<Call>(f, retval, uses);
-
-        retval->defed_by(inst);
-    }
-    else
-    {
-        inst = std::make_shared<Call>(f, uses);
+        retval = new Operand(f->return_type());
     }
 
-    for (auto a : args)
-    {
-        a->used_by(inst);
-    }
-
-    _curr_block->append(inst);
-
+    _curr_block->append(new Call(f, retval, uses, _curr_block));
     return retval;
 }
 
-void IRBuilder::cond_br(const oper &pred, const block &taken, const block &fall_through)
+void IRBuilder::cond_br(Operand *pred, Block *taken, Block *fall_through)
 {
-    auto inst = std::make_shared<CondBranch>(pred, taken, fall_through);
-    pred->used_by(inst);
-
-    _curr_block->append(inst);
+    _curr_block->append(new CondBranch(pred, taken, fall_through, _curr_block));
 
     Block::connect(_curr_block, taken);
     Block::connect(_curr_block, fall_through);
 }
 
-void IRBuilder::br(const block &taken)
+void IRBuilder::br(Block *taken)
 {
-    auto inst = std::make_shared<Branch>(taken);
-    _curr_block->append(inst);
+    _curr_block->append(new Branch(taken, _curr_block));
 
     Block::connect(_curr_block, taken);
 }
 
-oper IRBuilder::add(const oper &lhs, const oper &rhs) { return binary<Add>(lhs, rhs); }
+Operand *IRBuilder::add(Operand *lhs, Operand *rhs) { return binary<Add>(lhs, rhs); }
 
-oper IRBuilder::sub(const oper &lhs, const oper &rhs) { return binary<Sub>(lhs, rhs); }
+Operand *IRBuilder::sub(Operand *lhs, Operand *rhs) { return binary<Sub>(lhs, rhs); }
 
-oper IRBuilder::div(const oper &lhs, const oper &rhs) { return binary<Div>(lhs, rhs); }
+Operand *IRBuilder::div(Operand *lhs, Operand *rhs) { return binary<Div>(lhs, rhs); }
 
-oper IRBuilder::mul(const oper &lhs, const oper &rhs) { return binary<Mul>(lhs, rhs); }
+Operand *IRBuilder::mul(Operand *lhs, Operand *rhs) { return binary<Mul>(lhs, rhs); }
 
-oper IRBuilder::shl(const oper &lhs, const oper &rhs) { return binary<Shl>(lhs, rhs); }
+Operand *IRBuilder::shl(Operand *lhs, Operand *rhs) { return binary<Shl>(lhs, rhs); }
 
-oper IRBuilder::lt(const oper &lhs, const oper &rhs) { return binary<LT>(lhs, rhs); }
+Operand *IRBuilder::lt(Operand *lhs, Operand *rhs) { return binary<LT>(lhs, rhs); }
 
-oper IRBuilder::le(const oper &lhs, const oper &rhs) { return binary<LE>(lhs, rhs); }
+Operand *IRBuilder::le(Operand *lhs, Operand *rhs) { return binary<LE>(lhs, rhs); }
 
-oper IRBuilder::eq(const oper &lhs, const oper &rhs) { return binary<EQ>(lhs, rhs); }
+Operand *IRBuilder::eq(Operand *lhs, Operand *rhs) { return binary<EQ>(lhs, rhs); }
 
-oper IRBuilder::gt(const oper &lhs, const oper &rhs) { return binary<GT>(lhs, rhs); }
+Operand *IRBuilder::gt(Operand *lhs, Operand *rhs) { return binary<GT>(lhs, rhs); }
 
-oper IRBuilder::or2(const oper &lhs, const oper &rhs) { return binary<Or>(lhs, rhs); }
+Operand *IRBuilder::or2(Operand *lhs, Operand *rhs) { return binary<Or>(lhs, rhs); }
 
-oper IRBuilder::xor2(const oper &lhs, const oper &rhs) { return binary<Xor>(lhs, rhs); }
+Operand *IRBuilder::xor2(Operand *lhs, Operand *rhs) { return binary<Xor>(lhs, rhs); }
 
-oper IRBuilder::neg(const oper &operand) { return unary<Neg>(operand); }
+Operand *IRBuilder::neg(Operand *operand) { return unary<Neg>(operand); }
 
-oper IRBuilder::not1(const oper &operand) { return unary<Not>(operand); }
+Operand *IRBuilder::not1(Operand *operand) { return unary<Not>(operand); }
 
-oper IRBuilder::move(const oper &src) { return add(src, Constant::constval(src->type(), 0)); }
+Operand *IRBuilder::move(Operand *src) { return add(src, new Constant(0, src->type())); }
 
-void IRBuilder::move(const oper &src, const oper &dst)
+void IRBuilder::move(Operand *src, Operand *dst)
 {
-    auto inst = std::make_shared<Add>(dst, src, Constant::constval(src->type(), 0));
-
-    src->used_by(inst);
-    dst->defed_by(inst);
-
-    _curr_block->append(inst);
+    _curr_block->append(new Add(dst, src, new Constant(0, src->type()), _curr_block));
 }
 
-void Function::set_cfg(const block &cfg) { _cfg->set_cfg(cfg); }
+void Function::set_cfg(Block *cfg) { _cfg->set_cfg(cfg); }

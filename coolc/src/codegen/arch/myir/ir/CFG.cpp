@@ -16,22 +16,22 @@ void CFG::clear_visited()
 {
     if (!_preorder.empty())
     {
-        for (auto b : _preorder)
+        for (auto *b : _preorder)
         {
             b->_is_visited = false;
         }
     }
 
-    for (auto b : _postorder)
+    for (auto *b : _postorder)
     {
         b->_is_visited = false;
     }
 }
 
-block CFG::dominance_intersect(const block &b1, const block &b2)
+Block *CFG::dominance_intersect(Block *b1, Block *b2)
 {
-    auto finger1 = b1;
-    auto finger2 = b2;
+    auto *finger1 = b1;
+    auto *finger2 = b2;
 
     while (finger1->postorder() != finger2->postorder())
     {
@@ -49,7 +49,7 @@ block CFG::dominance_intersect(const block &b1, const block &b2)
     return finger1;
 }
 
-std::unordered_map<block, block> &CFG::dominance()
+std::unordered_map<Block *, Block *> &CFG::dominance()
 {
     if (!_dominance.empty())
     {
@@ -61,7 +61,7 @@ std::unordered_map<block, block> &CFG::dominance()
     rpo.erase(find(rpo.begin(), rpo.end(), _root));
 
     _dominance.reserve(rpo.size());
-    for (auto b : rpo) // initialize it
+    for (auto *b : rpo) // initialize it
     {
         _dominance[b] = nullptr;
     }
@@ -72,15 +72,15 @@ std::unordered_map<block, block> &CFG::dominance()
     while (changed)
     {
         changed = false;
-        for (auto b : rpo)
+        for (auto *b : rpo)
         {
             // first (processed) predecessor of b
             auto new_idom_iter =
-                std::find_if(b->_preds.begin(), b->_preds.end(), [this](const block &b) { return _dominance.at(b); });
+                std::find_if(b->_preds.begin(), b->_preds.end(), [this](Block *b) { return _dominance.at(b); });
             assert(new_idom_iter != b->_preds.end());
-            auto new_idom = *new_idom_iter;
+            auto *new_idom = *new_idom_iter;
 
-            for (auto p : b->_preds)
+            for (auto *p : b->_preds)
             {
                 if (_dominance[p])
                 {
@@ -96,11 +96,55 @@ std::unordered_map<block, block> &CFG::dominance()
         }
     }
 
+    // also construct the dominator tree from dominance info
+    for (auto &[bb, dom] : _dominance)
+    {
+        _dominator_tree[dom].push_back(bb);
+    }
+
+    _dominator_tree[_root].erase(find(_dominator_tree[_root].begin(), _dominator_tree[_root].end(), _root));
+
     DEBUG_ONLY(dump_dominance());
     return _dominance;
 }
 
-std::unordered_map<block, std::set<block>> &CFG::dominance_frontier()
+std::unordered_map<Block *, std::vector<Block *>> &CFG::dominator_tree()
+{
+    dominance();
+    return _dominator_tree;
+}
+
+bool CFG::dominate(Block *dominator, Block *dominatee)
+{
+    if (dominator == dominatee)
+    {
+        return true;
+    }
+
+    auto &dt = dominator_tree();
+
+    std::stack<Block *> s;
+    s.push(dominator);
+
+    while (!s.empty())
+    {
+        auto *bb = s.top();
+        s.pop();
+
+        for (auto *child : dt[bb])
+        {
+            if (child == dominatee)
+            {
+                return true;
+            }
+            s.push(child);
+        }
+    }
+
+    return false;
+}
+
+std::unordered_map<Block *, std::set<Block *>> &CFG::dominance_frontier()
 {
 
     if (!_dominance_frontier.empty())
@@ -117,7 +161,7 @@ std::unordered_map<block, std::set<block>> &CFG::dominance_frontier()
         {
             for (auto &p : b->_preds)
             {
-                auto runner = p;
+                auto *runner = p;
                 while (runner != d)
                 {
                     _dominance_frontier[runner].insert(b);
@@ -145,6 +189,19 @@ void CFG::dump_dominance()
     {
         std::cout << "  Dom(" << b->name() << ") = " << d->name() << "\n";
     }
+
+    std::cout << "Dominator Tree:\n";
+    for (auto &[b, d] : _dominator_tree)
+    {
+        std::string str = " " + b->name() + " dominates [";
+        for (auto *dominatee : d)
+        {
+            str += dominatee->name() + ", ";
+        }
+
+        trim(str, ", ");
+        std::cout << str + "]\n";
+    }
 }
 
 void CFG::dump_dominance_frontier()
@@ -158,7 +215,7 @@ void CFG::dump_dominance_frontier()
     for (auto &[b, dfset] : _dominance_frontier)
     {
         s += "  DF(" + b->name() + ") = [";
-        for (auto dfb : dfset)
+        for (auto *dfb : dfset)
         {
             s += dfb->name() + ", ";
         }

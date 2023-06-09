@@ -51,6 +51,10 @@ In Algorithm 3.3, we compute and cache the reaching definition for *v* in the pe
 
 ![Procedure updateReachingDef(v,p) Utility function for SSA renaming](../pics/algorithm-3-3-1.png)
 
+Honestly speaking I prefer a standard algorithm for the renaming phase that uses stacks, because it's more straightforward:
+
+![Renaming algorithm for second phase of SSA construction](../pics/ssa-rename-phase.png)
+
 ### 3.1.4 Summary
 The flavour of SSA form that this simple construction algorithm produces:
 1. minimal;

@@ -42,7 +42,7 @@ enum HeaderLayoutOffsets
  */
 struct RuntimeMethod
 {
-    std::shared_ptr<myir::Function> _func;
+    myir::Function *_func;
 
     /**
      * @brief Construct info for runtime method
@@ -55,7 +55,7 @@ struct RuntimeMethod
      * @param runtime Runtime info
      */
     RuntimeMethod(myir::Module &module, const std::string &name, myir::OperandType ret,
-                  const std::vector<myir::oper> &args, bool need_gc, RuntimeMyIR &runtime);
+                  const std::vector<myir::Variable *> &args, bool need_gc, RuntimeMyIR &runtime);
 };
 
 class RuntimeMyIR : public Runtime<RuntimeMethod>
@@ -114,8 +114,8 @@ class RuntimeMyIR : public Runtime<RuntimeMethod>
     const RuntimeMethod _verify_oop;
 #endif // DEBUG
 
-    std::shared_ptr<myir::GlobalVariable> _stack_pointer;
-    std::shared_ptr<myir::GlobalVariable> _frame_pointer;
+    myir::GlobalVariable *_stack_pointer;
+    myir::GlobalVariable *_frame_pointer;
 
   public:
     /**
@@ -131,34 +131,22 @@ class RuntimeMyIR : public Runtime<RuntimeMethod>
      * @param elem Element
      * @return Type
      */
-    inline myir::OperandType header_elem_type(const HeaderLayout &elem) const
-    {
-        return _header_layout_types[elem];
-    }
+    inline myir::OperandType header_elem_type(const HeaderLayout &elem) const { return _header_layout_types[elem]; }
 
-    std::string symbol_name(const int &id) const override
-    {
-        return SYMBOLS[id];
-    }
+    std::string symbol_name(const int &id) const override { return SYMBOLS[id]; }
 
     /**
      * @brief Get thread local variable to store stack pointer
      *
-     * @return myir::oper
+     * @return myir::Operand*
      */
-    myir::oper stack_pointer() const
-    {
-        return _stack_pointer;
-    }
+    myir::Operand *stack_pointer() const { return _stack_pointer; }
 
     /**
      * @brief Get thread local variable to store frame pointer
      *
-     * @return myir::oper
+     * @return myir::Operand*
      */
-    myir::oper frame_pointer() const
-    {
-        return _frame_pointer;
-    }
+    myir::Operand *frame_pointer() const { return _frame_pointer; }
 };
 }; // namespace codegen

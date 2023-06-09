@@ -52,10 +52,7 @@ class Names
      *
      * @return Integer constant name
      */
-    inline static std::string int_constant()
-    {
-        return name(CONST_INT);
-    }
+    inline static std::string int_constant() { return name(CONST_INT); }
 
     /**
      * @brief Get free bool constant name
@@ -73,10 +70,7 @@ class Names
      *
      * @return String constant name
      */
-    inline static std::string string_constant()
-    {
-        return name(CONST_STRING);
-    }
+    inline static std::string string_constant() { return name(CONST_STRING); }
 
     /**
      * @brief Get name for string
@@ -117,9 +111,8 @@ class Names
      * @param type Name type
      * @return Raw Name of the specified type
      */
-    inline static std::string comment(const Comment &type)
-    {
-        return COMMENT_NAMES[type].first;
-    }
+    inline static std::string comment(const Comment &type) { return COMMENT_NAMES[type].first; }
+
+    static void reset();
 };
 }; // namespace codegen

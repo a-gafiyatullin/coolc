@@ -5,8 +5,8 @@
 using namespace codegen;
 
 RuntimeMethod::RuntimeMethod(myir::Module &module, const std::string &name, myir::OperandType ret,
-                             const std::vector<myir::oper> &args, bool need_gc, RuntimeMyIR &runtime)
-    : _func(std::make_shared<myir::Function>(name, args, ret))
+                             const std::vector<myir::Variable *> &args, bool need_gc, RuntimeMyIR &runtime)
+    : _func(new myir::Function(name, args, ret))
 {
     runtime._symbol_by_name.insert({name, this});
     module.add(_func);
@@ -20,32 +20,32 @@ RuntimeMethod::RuntimeMethod(myir::Module &module, const std::string &name, myir
 
 RuntimeMyIR::RuntimeMyIR(myir::Module &module)
     : _equals(module, SYMBOLS[RuntimeMyIRSymbols::EQUALS], myir::OperandType::INT32,
-              {std::make_shared<myir::Variable>("lhs", myir::OperandType::POINTER),
-               std::make_shared<myir::Variable>("rhs", myir::OperandType::POINTER)},
+              {new myir::Variable("lhs", myir::OperandType::POINTER),
+               new myir::Variable("rhs", myir::OperandType::POINTER)},
               false, *this),
 
       _gc_alloc(module, SYMBOLS[RuntimeMyIRSymbols::GC_ALLOC], myir::OperandType::POINTER,
-                {std::make_shared<myir::Variable>("tag", myir::OperandType::INT32),
-                 std::make_shared<myir::Variable>("size", myir::OperandType::UINT64),
-                 std::make_shared<myir::Variable>("dt", myir::OperandType::POINTER)},
+                {new myir::Variable("tag", myir::OperandType::INT32),
+                 new myir::Variable("size", myir::OperandType::UINT64),
+                 new myir::Variable("dt", myir::OperandType::POINTER)},
                 true, *this),
 
       _case_abort(module, SYMBOLS[RuntimeMyIRSymbols::CASE_ABORT], myir::OperandType::VOID,
-                  {std::make_shared<myir::Variable>("tag", myir::OperandType::INT32)}, false, *this),
+                  {new myir::Variable("tag", myir::OperandType::INT32)}, false, *this),
 
       _dispatch_abort(module, SYMBOLS[RuntimeMyIRSymbols::DISPATCH_ABORT], myir::OperandType::VOID,
-                      {std::make_shared<myir::Variable>("filename", myir::OperandType::POINTER),
-                       std::make_shared<myir::Variable>("linenumber", myir::OperandType::INT32)},
+                      {new myir::Variable("filename", myir::OperandType::POINTER),
+                       new myir::Variable("linenumber", myir::OperandType::INT32)},
                       false, *this),
 
       _case_abort_2(module, SYMBOLS[RuntimeMyIRSymbols::CASE_ABORT_2], myir::OperandType::VOID,
-                    {std::make_shared<myir::Variable>("filename", myir::OperandType::POINTER),
-                     std::make_shared<myir::Variable>("linenumber", myir::OperandType::INT32)},
+                    {new myir::Variable("filename", myir::OperandType::POINTER),
+                     new myir::Variable("linenumber", myir::OperandType::INT32)},
                     false, *this),
 
       _init_runtime(module, SYMBOLS[RuntimeMyIRSymbols::INIT_RUNTIME], myir::OperandType::VOID,
-                    {std::make_shared<myir::Variable>("argc", myir::OperandType::INT32),
-                     std::make_shared<myir::Variable>("argv", myir::OperandType::POINTER)},
+                    {new myir::Variable("argc", myir::OperandType::INT32),
+                     new myir::Variable("argv", myir::OperandType::POINTER)},
                     false, *this),
 
       _finish_runtime(module, SYMBOLS[RuntimeMyIRSymbols::FINISH_RUNTIME], myir::OperandType::VOID, {}, false, *this)
@@ -53,15 +53,13 @@ RuntimeMyIR::RuntimeMyIR(myir::Module &module)
 #ifdef DEBUG
       ,
       _verify_oop(module, SYMBOLS[RuntimeMyIRSymbols::VERIFY_OOP], myir::OperandType::VOID,
-                  {std::make_shared<myir::Variable>("oop", myir::OperandType::POINTER)}, false, *this)
+                  {new myir::Variable("oop", myir::OperandType::POINTER)}, false, *this)
 #endif // DEBUG
 
       ,
-      _stack_pointer(std::make_shared<myir::GlobalVariable>(SYMBOLS[RuntimeMyIRSymbols::STACK_POINTER],
-                                                            std::vector<myir::oper>{}, myir::POINTER)),
+      _stack_pointer(new myir::GlobalVariable(SYMBOLS[RuntimeMyIRSymbols::STACK_POINTER], {}, myir::POINTER)),
 
-      _frame_pointer(std::make_shared<myir::GlobalVariable>(SYMBOLS[RuntimeMyIRSymbols::FRAME_POINTER],
-                                                            std::vector<myir::oper>{}, myir::POINTER))
+      _frame_pointer(new myir::GlobalVariable(SYMBOLS[RuntimeMyIRSymbols::FRAME_POINTER], {}, myir::POINTER))
 {
     _header_layout_types[HeaderLayout::Mark] = myir::OperandType::UINT32;
     _header_layout_types[HeaderLayout::Tag] = myir::OperandType::UINT32;

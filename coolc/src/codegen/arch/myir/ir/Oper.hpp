@@ -1,9 +1,7 @@
 #pragma once
 
-#include <cassert>
-#include <cstdint>
-#include <memory>
 #include <set>
+#include <stack>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -18,13 +16,6 @@ class Operand;
 class Function;
 class Variable;
 class CFG;
-
-typedef std::shared_ptr<Instruction> inst;
-typedef std::shared_ptr<Block> block;
-typedef std::shared_ptr<Operand> oper;
-typedef std::shared_ptr<Constant> constant;
-typedef std::shared_ptr<Variable> variable;
-typedef std::shared_ptr<Function> func;
 
 enum OperandType
 {
@@ -47,19 +38,19 @@ enum OperandType
 // class represents temporary result
 class Operand
 {
-    friend class IRBuilder;
+    friend class Instruction;
 
   protected:
     const std::string _name;
     const OperandType _type;
     int _id;
 
-    std::vector<inst> _uses;
-    std::vector<inst> _defs;
+    std::vector<Instruction *> _uses;
+    std::vector<Instruction *> _defs;
 
     // record use-def and def-use chains during instruction construction
-    inline void used_by(const inst &inst) { _uses.push_back(inst); }
-    inline void defed_by(const inst &inst) { _defs.push_back(inst); }
+    inline void used_by(Instruction *inst) { _uses.push_back(inst); }
+    inline void defed_by(Instruction *inst) { _defs.push_back(inst); }
 
     Operand(const std::string &name, OperandType type) : _name(name), _type(type), _id(INCORRECT_ID) {}
 
@@ -74,18 +65,15 @@ class Operand
 
     Operand(const Operand &other) : _type(other._type), _name(other._name), _id(ID++) {}
 
-    // convinient construction
-    static inline oper operand(OperandType type) { return std::make_shared<Operand>(type); }
-
     // type
     inline OperandType type() const { return _type; }
 
     // typecheck
-    template <class T> static bool isa(const oper &o);
-    template <class T> static std::shared_ptr<T> as(const oper &o);
+    template <class T> static bool isa(Operand *o);
+    template <class T> static T *as(Operand *o);
 
     // array of defs
-    inline std::vector<inst> &defs() { return _defs; }
+    inline std::vector<Instruction *> &defs() { return _defs; }
 
     // debugging
     virtual std::string dump() const;
@@ -101,9 +89,6 @@ class Constant : public Operand
     // constructors
     Constant(uint64_t value, OperandType type) : Operand("imm", type), _value(value) {}
 
-    // convinient construction
-    static inline constant constval(OperandType type, int value) { return std::make_shared<Constant>(value, type); }
-
     // type
     inline uint64_t value() const { return _value; }
 
@@ -115,31 +100,33 @@ class Constant : public Operand
 class Variable : public Operand
 {
   private:
-    oper _reaching_def;
+    Variable *_original_var; // original variable for all renamed vars
 
   public:
     // constructors
-    Variable(const std::string &name, OperandType type) : Operand(name, type), _reaching_def(nullptr) {}
+    Variable(const std::string &name, OperandType type) : Operand(name, type), _original_var(this) {}
 
-    // convinient construction
-    static inline variable var(const std::string &name, OperandType type)
-    {
-        return std::make_shared<Variable>(name, type);
-    }
+    Variable(OperandType type) : Operand(type), _original_var(this) {}
 
-    static inline variable var(const variable &var) { return std::make_shared<Variable>(*var); }
+    Variable(const Variable &other) : Operand(other), _original_var(other._original_var) {}
+
+    // getters
+    inline Variable *original_var() const { return _original_var; }
+
+    // debugging
+    std::string name() const override;
 };
 
 class StructuredOperand : public Operand
 {
   private:
-    std::vector<oper> _fields;
+    std::vector<Operand *> _fields;
 
   public:
     // constructors
 
     // if type is STRUCTURE, then use internal structure in _fields
-    StructuredOperand(const std::string &name, const std::vector<oper> &fields, OperandType type)
+    StructuredOperand(const std::string &name, const std::vector<Operand *> &fields, OperandType type)
         : Operand(name, type), _fields(fields)
     {
     }
@@ -153,7 +140,7 @@ class GlobalConstant : public StructuredOperand
 {
   public:
     // constructors
-    GlobalConstant(const std::string &name, const std::vector<oper> &fields, OperandType type)
+    GlobalConstant(const std::string &name, const std::vector<Operand *> &fields, OperandType type)
         : StructuredOperand(name, fields, type)
     {
     }
@@ -164,9 +151,8 @@ class GlobalVariable final : public StructuredOperand
 {
   public:
     // constructors
-
     // if type is STRUCTURE, then use internal structure in _fields
-    GlobalVariable(const std::string &name, const std::vector<oper> &fields, OperandType type)
+    GlobalVariable(const std::string &name, const std::vector<Operand *> &fields, OperandType type)
         : StructuredOperand(name, fields, type)
     {
     }
@@ -175,37 +161,40 @@ class GlobalVariable final : public StructuredOperand
 class Function final : public GlobalConstant
 {
   private:
-    const std::vector<oper> _params;
+    const std::vector<Variable *> _params;
+
+    CFG *_cfg;
+
     const OperandType _return_type;
-
-    const std::shared_ptr<CFG> _cfg;
-
     bool _is_leaf;
 
     // for every variable with multiple defs find all blocks that contain it
-    std::unordered_map<oper, std::set<block>> defs_in_blocks() const;
+    std::unordered_map<Operand *, std::set<Block *>> defs_in_blocks() const;
 
-    // standard algorithm for iinserting phi-functions
-    void insert_phis(const std::unordered_map<oper, std::set<block>> &vars_in_blocks,
-                     const std::unordered_map<block, std::set<block>> &df);
+    // standard algorithm for inserting phi-functions
+    void insert_phis(const std::unordered_map<Operand *, std::set<Block *>> &vars_in_blocks,
+                     const std::unordered_map<Block *, std::set<Block *>> &df);
+
+    // renaming algorithm for second phase of SSA construction
+    void rename_phis(Block *b, std::unordered_map<Variable *, std::stack<Variable *>> &varstacks);
 
 #ifdef DEBUG
-    static void dump_defs(const std::unordered_map<oper, std::set<block>> &defs);
+    static void dump_defs(const std::unordered_map<Operand *, std::set<Block *>> &defs);
 #endif // DEBUG
 
   public:
     // constructors
-    Function(const std::string &name, const std::vector<oper> &params, OperandType return_type);
+    Function(const std::string &name, const std::vector<Variable *> &params, OperandType return_type);
 
     // CFG
-    void set_cfg(const block &cfg);
-    inline std::shared_ptr<CFG> cfg() const { return _cfg; }
+    void set_cfg(Block *cfg);
+    inline CFG *cfg() const { return _cfg; }
 
     // Transform CFG to SSA form
     void construct_ssa();
 
     // params
-    inline oper param(int i) const { return _params.at(i); }
+    inline Variable *param(int i) const { return _params.at(i); }
     inline int params_size() const { return _params.size(); }
 
     // return

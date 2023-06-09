@@ -19,7 +19,7 @@ struct Symbol
     const std::shared_ptr<ast::Type> _value_type;
 
     // for variables
-    const myir::oper _variable;
+    myir::Operand *_variable;
 
     // for fields
     const uint64_t _offset;
@@ -41,7 +41,7 @@ struct Symbol
      * @param val Value
      * @param type Value type
      */
-    Symbol(const myir::oper &var, const std::shared_ptr<ast::Type> &type)
+    Symbol(myir::Operand *var, const std::shared_ptr<ast::Type> &type)
         : _type(SymbolType::LOCAL), _value_type(type), _variable(var), _offset(-1)
     {
     }
