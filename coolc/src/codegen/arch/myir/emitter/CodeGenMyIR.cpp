@@ -1,4 +1,5 @@
 #include "CodeGenMyIR.hpp"
+#include "codegen/arch/myir/ir/Allocator.hpp"
 #include "codegen/arch/myir/ir/IR.inline.hpp"
 #include "codegen/emitter/CodeGen.inline.h"
 #include "codegen/emitter/data/Data.inline.h"
@@ -8,10 +9,11 @@ using namespace codegen;
 #define __ _ir_builder.
 
 CodeGenMyIR::CodeGenMyIR(const std::shared_ptr<semant::ClassNode> &root)
-    : CodeGen(std::make_shared<KlassBuilderMyIR>(root)), _runtime(_module), _data(_builder, _module, _runtime),
-      _ir_builder(_module), _true_val(new myir::Constant(TrueValue, myir::INT8)),
-      _false_val(new myir::Constant(FalseValue, myir::INT8)), _true_obj(_data.bool_const(true)),
-      _false_obj(_data.bool_const(false)), _null_val(new myir::Constant(0, myir::POINTER))
+    : CodeGen(std::make_shared<KlassBuilderMyIR>(root)), _alloc(allocator::IRObject::DEFAULT_CHUNK_SIZE, true),
+      _runtime(_module), _data(_builder, _module, _runtime), _ir_builder(_module),
+      _true_val(new myir::Constant(TrueValue, myir::INT8)), _false_val(new myir::Constant(FalseValue, myir::INT8)),
+      _true_obj(_data.bool_const(true)), _false_obj(_data.bool_const(false)),
+      _null_val(new myir::Constant(0, myir::POINTER))
 {
     DEBUG_ONLY(_table.set_printer([](const std::string &name, const Symbol &s) {
         LOG("Added symbol \"" + name + "\": " + static_cast<std::string>(s))

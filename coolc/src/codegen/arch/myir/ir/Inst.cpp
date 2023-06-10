@@ -3,7 +3,8 @@
 
 using namespace myir;
 
-Instruction::Instruction(const std::vector<Operand *> &defs, const std::vector<Operand *> &uses, Block *b) : _block(b)
+Instruction::Instruction(const std::vector<Operand *> &defs, const std::vector<Operand *> &uses, Block *b)
+    : _block(b), _defs(ALLOC1), _uses(ALLOC1)
 {
     for (auto *use : uses)
     {

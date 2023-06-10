@@ -12,6 +12,8 @@ class CodeGenMyIR : public CodeGen<myir::Operand *, Symbol>
     static constexpr std::string_view RUNTIME_MAIN_FUNC = "main";
     static constexpr std::string_view EXT = ".o";
 
+    allocator::LinearAllocator _alloc;
+
     myir::Module _module;
     myir::IRBuilder _ir_builder;
 

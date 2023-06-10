@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Allocator.hpp"
 #include <set>
 #include <stack>
 #include <string>
@@ -36,23 +37,26 @@ enum OperandType
 };
 
 // class represents temporary result
-class Operand
+class Operand : public allocator::IRObject
 {
     friend class Instruction;
 
   protected:
-    const std::string _name;
+    const allocator::irstring _name;
     const OperandType _type;
     int _id;
 
-    std::vector<Instruction *> _uses;
-    std::vector<Instruction *> _defs;
+    allocator::irvector<Instruction *> _uses;
+    allocator::irvector<Instruction *> _defs;
 
     // record use-def and def-use chains during instruction construction
     inline void used_by(Instruction *inst) { _uses.push_back(inst); }
     inline void defed_by(Instruction *inst) { _defs.push_back(inst); }
 
-    Operand(const std::string &name, OperandType type) : _name(name), _type(type), _id(INCORRECT_ID) {}
+    Operand(const std::string &name, OperandType type)
+        : _name(name ALLOC1COMMA), _type(type), _id(INCORRECT_ID), _uses(ALLOC1), _defs(ALLOC1)
+    {
+    }
 
   private:
     static constexpr std::string_view PREFIX = "tmp";
@@ -61,9 +65,9 @@ class Operand
 
   public:
     // constructors
-    Operand(OperandType type) : _name(PREFIX), _id(ID++), _type(type) {}
+    Operand(OperandType type) : _name(PREFIX ALLOC1COMMA), _id(ID++), _type(type), _uses(ALLOC1), _defs(ALLOC1) {}
 
-    Operand(const Operand &other) : _type(other._type), _name(other._name), _id(ID++) {}
+    Operand(const Operand &other) : _type(other._type), _name(other._name), _id(ID++), _uses(ALLOC1), _defs(ALLOC1) {}
 
     // type
     inline OperandType type() const { return _type; }
@@ -73,11 +77,14 @@ class Operand
     template <class T> static T *as(Operand *o);
 
     // array of defs
-    inline std::vector<Instruction *> &defs() { return _defs; }
+    inline allocator::irvector<Instruction *> &defs() { return _defs; }
 
     // debugging
     virtual std::string dump() const;
-    virtual std::string name() const { return _id != INCORRECT_ID ? _name + std::to_string(_id) : _name; }
+    virtual std::string name() const
+    {
+        return _id != INCORRECT_ID ? std::string(_name) + std::to_string(_id) : std::string(_name);
+    }
 };
 
 class Constant : public Operand
@@ -120,14 +127,14 @@ class Variable : public Operand
 class StructuredOperand : public Operand
 {
   private:
-    std::vector<Operand *> _fields;
+    allocator::irvector<Operand *> _fields;
 
   public:
     // constructors
 
     // if type is STRUCTURE, then use internal structure in _fields
     StructuredOperand(const std::string &name, const std::vector<Operand *> &fields, OperandType type)
-        : Operand(name, type), _fields(fields)
+        : Operand(name, type), _fields(fields.begin(), fields.end() ALLOC1COMMA)
     {
     }
 
@@ -161,7 +168,7 @@ class GlobalVariable final : public StructuredOperand
 class Function final : public GlobalConstant
 {
   private:
-    const std::vector<Variable *> _params;
+    const allocator::irvector<Variable *> _params;
 
     CFG *_cfg;
 
@@ -173,7 +180,7 @@ class Function final : public GlobalConstant
 
     // standard algorithm for inserting phi-functions
     void insert_phis(const std::unordered_map<Operand *, std::set<Block *>> &vars_in_blocks,
-                     const std::unordered_map<Block *, std::set<Block *>> &df);
+                     const allocator::irunordered_map<Block *, allocator::irset<Block *>> &df);
 
     // renaming algorithm for second phase of SSA construction
     void rename_phis(Block *b, std::unordered_map<Variable *, std::stack<Variable *>> &varstacks);

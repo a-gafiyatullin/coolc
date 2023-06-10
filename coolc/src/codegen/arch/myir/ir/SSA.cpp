@@ -71,7 +71,7 @@ std::unordered_map<Operand *, std::set<Block *>> Function::defs_in_blocks() cons
 }
 
 void Function::insert_phis(const std::unordered_map<Operand *, std::set<Block *>> &vars_in_blocks,
-                           const std::unordered_map<Block *, std::set<Block *>> &df)
+                           const allocator::irunordered_map<Block *, allocator::irset<Block *>> &df)
 {
     for (auto &[var, blocks] : vars_in_blocks)
     {
@@ -175,9 +175,12 @@ void Function::rename_phis(Block *b, std::unordered_map<Variable *, std::stack<V
     }
 
     // recurse on b’s children in the dominance tree
-    for (auto *dsucc : _cfg->dominator_tree()[b])
+    if (_cfg->dominator_tree().contains(b))
     {
-        rename_phis(dsucc, varstacks);
+        for (auto *dsucc : _cfg->dominator_tree().at(b))
+        {
+            rename_phis(dsucc, varstacks);
+        }
     }
 
     // < on exit from b > pop names generated in b from stacks

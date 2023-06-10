@@ -6,18 +6,18 @@
 namespace myir
 {
 
-class Block
+class Block : public allocator::IRObject
 {
     friend class CFG;
 
   private:
-    const std::string _name;
+    const allocator::irstring _name;
     Function *_func;
 
-    std::vector<Block *> _preds;
-    std::vector<Block *> _succs;
+    allocator::irvector<Block *> _preds;
+    allocator::irvector<Block *> _succs;
 
-    std::list<Instruction *> _insts;
+    allocator::irlist<Instruction *> _insts;
 
     bool _is_visited;
 
@@ -25,7 +25,11 @@ class Block
 
   public:
     // construction
-    Block(const std::string &name, Function *f) : _name(name), _is_visited(false), _postorder_num(-1), _func(f) {}
+    Block(const std::string &name, Function *f)
+        : _name(name ALLOC1COMMA), _is_visited(false), _postorder_num(-1), _func(f), _preds(ALLOC1), _succs(ALLOC1),
+          _insts(ALLOC1)
+    {
+    }
 
     // add instruction
     inline void append(Instruction *inst) { _insts.push_back(inst); }
@@ -38,12 +42,12 @@ class Block
     inline int postorder() const { return _postorder_num; }
 
     // getters
-    inline std::list<Instruction *> &insts() { return _insts; }
+    inline allocator::irlist<Instruction *> &insts() { return _insts; }
     inline Function *holder() const { return _func; }
-    inline const std::vector<Block *> &succs() const { return _succs; }
+    inline const allocator::irvector<Block *> &succs() const { return _succs; }
 
     // debugging
-    const std::string &name() const { return _name; }
+    std::string name() const { return std::string(_name); }
     std::string dump() const;
 };
 

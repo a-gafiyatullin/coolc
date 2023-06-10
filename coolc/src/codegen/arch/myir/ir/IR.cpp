@@ -7,13 +7,14 @@ using namespace myir;
 int Operand::ID = 0;
 
 Function::Function(const std::string &name, const std::vector<Variable *> &params, OperandType return_type)
-    : GlobalConstant(name, {}, POINTER), _params(params), _return_type(return_type), _is_leaf(false), _cfg(new CFG())
+    : GlobalConstant(name, {}, POINTER), _params(params.begin(), params.end() ALLOC1COMMA), _return_type(return_type),
+      _is_leaf(false), _cfg(new CFG())
 {
 }
 
 std::string Block::dump() const
 {
-    std::string s = "  Block \"" + _name + "\", preds = [";
+    std::string s = "  Block \"" + name() + "\", preds = [";
 
     for (auto *p : _preds)
     {
@@ -61,7 +62,7 @@ std::string type_to_string(OperandType type)
 
 std::string Function::name() const
 {
-    std::string s = type_to_string(_return_type) + " " + _name + "(";
+    std::string s = type_to_string(_return_type) + " " + short_name() + "(";
 
     for (auto *p : _params)
     {
@@ -73,7 +74,7 @@ std::string Function::name() const
     return s + ")";
 }
 
-std::string Function::short_name() const { return _name; }
+std::string Function::short_name() const { return std::string(_name); }
 
 std::string Function::dump() const
 {

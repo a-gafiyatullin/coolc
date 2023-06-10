@@ -6,7 +6,7 @@
 namespace myir
 {
 
-class CFG
+class CFG : public allocator::IRObject
 {
   public:
     enum DFSType
@@ -21,15 +21,15 @@ class CFG
     Block *_root;
 
     // traversals
-    std::vector<Block *> _postorder;
-    std::vector<Block *> _preorder;
-    std::vector<Block *> _reverse_postorder;
+    allocator::irvector<Block *> _postorder;
+    allocator::irvector<Block *> _preorder;
+    allocator::irvector<Block *> _reverse_postorder;
 
     // dominance info
-    std::unordered_map<Block *, Block *> _dominance;
-    std::unordered_map<Block *, std::vector<Block *>> _dominator_tree;
+    allocator::irunordered_map<Block *, Block *> _dominance;
+    allocator::irunordered_map<Block *, allocator::irvector<Block *>> _dominator_tree;
 
-    std::unordered_map<Block *, std::set<Block *>> _dominance_frontier;
+    allocator::irunordered_map<Block *, allocator::irset<Block *>> _dominance_frontier;
 
     Block *dominance_intersect(Block *b1, Block *b2);
 
@@ -42,8 +42,14 @@ class CFG
 #endif // DEBUG
 
   public:
+    CFG()
+        : _postorder(ALLOC1), _preorder(ALLOC1), _reverse_postorder(ALLOC1), _dominance(ALLOC2),
+          _dominator_tree(ALLOC2), _dominance_frontier(ALLOC2), _root(nullptr)
+    {
+    }
+
     // graph traversals
-    template <DFSType type> std::vector<Block *> &traversal();
+    template <DFSType type> allocator::irvector<Block *> &traversal();
 
     // helpers
     void clear_visited();
@@ -58,14 +64,14 @@ class CFG
     // for every Block* gather all blocks that dominate it
     // Implements approach was described in "A Simple, Fast Dominance Algorithm"
     // by Keith D. Cooper, Timothy J. Harvey, and Ken Kennedy
-    std::unordered_map<Block *, Block *> &dominance();
-    std::unordered_map<Block *, std::vector<Block *>> &dominator_tree();
+    allocator::irunordered_map<Block *, Block *> &dominance();
+    allocator::irunordered_map<Block *, allocator::irvector<Block *>> &dominator_tree();
     bool dominate(Block *dominator, Block *dominatee);
 
     // for every Block* gather all blocks in its DF
     // Implements approach was described in "A Simple, Fast Dominance Algorithm"
     // by Keith D. Cooper, Timothy J. Harvey, and Ken Kennedy
-    std::unordered_map<Block *, std::set<Block *>> &dominance_frontier();
+    allocator::irunordered_map<Block *, allocator::irset<Block *>> &dominance_frontier();
 
     // debugging
     std::string dump() const;

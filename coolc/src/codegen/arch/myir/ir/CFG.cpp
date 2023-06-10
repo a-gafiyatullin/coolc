@@ -49,7 +49,7 @@ Block *CFG::dominance_intersect(Block *b1, Block *b2)
     return finger1;
 }
 
-std::unordered_map<Block *, Block *> &CFG::dominance()
+allocator::irunordered_map<Block *, Block *> &CFG::dominance()
 {
     if (!_dominance.empty())
     {
@@ -60,7 +60,6 @@ std::unordered_map<Block *, Block *> &CFG::dominance()
     auto rpo = traversal<REVERSE_POSTORDER>();
     rpo.erase(find(rpo.begin(), rpo.end(), _root));
 
-    _dominance.reserve(rpo.size());
     for (auto *b : rpo) // initialize it
     {
         _dominance[b] = nullptr;
@@ -99,16 +98,25 @@ std::unordered_map<Block *, Block *> &CFG::dominance()
     // also construct the dominator tree from dominance info
     for (auto &[bb, dom] : _dominance)
     {
-        _dominator_tree[dom].push_back(bb);
+        if (!_dominator_tree.contains(dom))
+        {
+            _dominator_tree.insert({dom, allocator::irvector<Block *>(ALLOC1)});
+        }
+
+        _dominator_tree.at(dom).push_back(bb);
     }
 
-    _dominator_tree[_root].erase(find(_dominator_tree[_root].begin(), _dominator_tree[_root].end(), _root));
+    if (_dominator_tree.contains(_root))
+    {
+        auto &rootset = _dominator_tree.at(_root);
+        rootset.erase(find(rootset.begin(), rootset.end(), _root));
+    }
 
     DEBUG_ONLY(dump_dominance());
     return _dominance;
 }
 
-std::unordered_map<Block *, std::vector<Block *>> &CFG::dominator_tree()
+allocator::irunordered_map<Block *, allocator::irvector<Block *>> &CFG::dominator_tree()
 {
     dominance();
     return _dominator_tree;
@@ -131,7 +139,12 @@ bool CFG::dominate(Block *dominator, Block *dominatee)
         auto *bb = s.top();
         s.pop();
 
-        for (auto *child : dt[bb])
+        if (!dt.contains(bb))
+        {
+            continue;
+        }
+
+        for (auto *child : dt.at(bb))
         {
             if (child == dominatee)
             {
@@ -144,7 +157,7 @@ bool CFG::dominate(Block *dominator, Block *dominatee)
     return false;
 }
 
-std::unordered_map<Block *, std::set<Block *>> &CFG::dominance_frontier()
+allocator::irunordered_map<Block *, allocator::irset<Block *>> &CFG::dominance_frontier()
 {
 
     if (!_dominance_frontier.empty())
@@ -153,7 +166,6 @@ std::unordered_map<Block *, std::set<Block *>> &CFG::dominance_frontier()
     }
 
     dominance();
-    _dominance_frontier.reserve(_dominance.size());
 
     for (auto &[b, d] : _dominance)
     {
@@ -164,7 +176,12 @@ std::unordered_map<Block *, std::set<Block *>> &CFG::dominance_frontier()
                 auto *runner = p;
                 while (runner != d)
                 {
-                    _dominance_frontier[runner].insert(b);
+                    if (!_dominance_frontier.contains(runner))
+                    {
+                        _dominance_frontier.insert({runner, allocator::irset<Block *>(ALLOC1)});
+                    }
+
+                    _dominance_frontier.at(runner).insert(b);
                     runner = _dominance[runner];
                 }
             }

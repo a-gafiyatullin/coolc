@@ -30,6 +30,7 @@ if(ARCH STREQUAL "MYIR")
     arch/myir/ir/Inst.cpp
     arch/myir/ir/CFG.cpp
     arch/myir/ir/SSA.cpp
+    arch/myir/ir/Allocator.cpp
   )
 endif()
 

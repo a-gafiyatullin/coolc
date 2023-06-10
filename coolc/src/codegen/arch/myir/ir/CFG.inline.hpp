@@ -30,7 +30,7 @@ template <myir::CFG::DFSType type> void myir::CFG::dfs(Block *b, const std::func
     }
 }
 
-template <myir::CFG::DFSType type> std::vector<myir::Block *> &myir::CFG::traversal()
+template <myir::CFG::DFSType type> allocator::irvector<myir::Block *> &myir::CFG::traversal()
 {
     bool need_clear = false;
 

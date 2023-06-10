@@ -8,11 +8,12 @@ namespace myir
 class Block;
 class Function;
 
-class Instruction
+class Instruction : public allocator::IRObject
 {
   protected:
-    std::vector<Operand *> _uses;
-    std::vector<Operand *> _defs;
+    allocator::irvector<Operand *> _uses;
+    allocator::irvector<Operand *> _defs;
+
     Block *_block;
 
   public:
@@ -20,8 +21,8 @@ class Instruction
     Instruction(const std::vector<Operand *> &defs, const std::vector<Operand *> &uses, Block *b);
 
     // getters
-    inline std::vector<Operand *> &defs() { return _defs; }
-    inline std::vector<Operand *> &uses() { return _uses; }
+    inline allocator::irvector<Operand *> &defs() { return _defs; }
+    inline allocator::irvector<Operand *> &uses() { return _uses; }
     inline Block *holder() const { return _block; }
 
     // typecheck
@@ -35,10 +36,10 @@ class Instruction
 class Phi : public Instruction
 {
   private:
-    std::unordered_map<Operand *, Block *> _def_from_block;
+    allocator::irunordered_map<Operand *, Block *> _def_from_block;
 
   public:
-    Phi(Operand *result, Block *b) : Instruction({result}, {}, b) {}
+    Phi(Operand *result, Block *b) : Instruction({result}, {}, b), _def_from_block(ALLOC2) {}
 
     void add_path(Operand *use, Block *b);
 
