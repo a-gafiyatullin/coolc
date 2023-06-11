@@ -7,7 +7,7 @@ using namespace myir;
 int Operand::ID = 0;
 
 Function::Function(const std::string &name, const std::vector<Variable *> &params, OperandType return_type)
-    : GlobalConstant(name, {}, POINTER), _params(params.begin(), params.end() ALLOC1COMMA), _return_type(return_type),
+    : GlobalConstant(name, {}, POINTER), _params(params.begin(), params.end() ALLOCCOMMA), _return_type(return_type),
       _is_leaf(false), _cfg(new CFG())
 {
 }

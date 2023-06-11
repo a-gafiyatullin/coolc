@@ -10,8 +10,16 @@
 namespace allocator
 {
 
+class StackObject
+{
+    void *operator new(std::size_t size);
+    void operator delete(void *ptr);
+    void *operator new[](std::size_t size);
+    void operator delete[](void *ptr);
+};
+
 // Allocator that grows and free memory in the end of scope
-class LinearAllocator
+class LinearAllocator : public StackObject
 {
   private:
     size_t _chunk_size;
@@ -25,12 +33,6 @@ class LinearAllocator
     std::list<Chunk> _chunks;
 
     void grow();
-
-    // Allocate LinearAllocator only on stack
-    void *operator new(std::size_t size);
-    void operator delete(void *ptr);
-    void *operator new[](std::size_t size);
-    void operator delete[](void *ptr);
 
   public:
     LinearAllocator(int chunk_size, bool is_global = false);
@@ -94,12 +96,11 @@ class IRObject
   protected:
     static LinearAllocator *Alloca;
 
-    irallocator<void *> _alloc1;
-    irkvallocator<void *, void *> _alloc2;
+    irallocator<void *> _alloc;
 
   public:
 #ifdef USE_CUSTOM_ALLOC
-    IRObject() : _alloc1(Alloca), _alloc2(Alloca) {}
+    IRObject() : _alloc(Alloca) {}
 #else
     IRObject() {}
 #endif
@@ -119,15 +120,11 @@ class IRObject
 #define COMMAS ,
 
 #ifdef USE_CUSTOM_ALLOC
-#define ALLOC1 _alloc1
-#define ALLOC1COMMA COMMAS _alloc1
-#define ALLOC2 _alloc2
-#define ALLOC2COMMA COMMAS _alloc2
+#define ALLOC _alloc
+#define ALLOCCOMMA COMMAS _alloc
 #else
-#define ALLOC1
-#define ALLOC1COMMA
-#define ALLOC2
-#define ALLOC2COMMA
+#define ALLOC
+#define ALLOCCOMMA
 #endif
 
 template <class T> using irvector = std::vector<T, irallocator<T>>;

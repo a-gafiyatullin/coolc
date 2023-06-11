@@ -23,6 +23,11 @@ class Instruction : public allocator::IRObject
     // getters
     inline allocator::irvector<Operand *> &defs() { return _defs; }
     inline allocator::irvector<Operand *> &uses() { return _uses; }
+
+    // setters
+    void update_def(int i, Operand *oper);
+    void update_use(int i, Operand *oper);
+
     inline Block *holder() const { return _block; }
 
     // typecheck
@@ -39,7 +44,7 @@ class Phi : public Instruction
     allocator::irunordered_map<Operand *, Block *> _def_from_block;
 
   public:
-    Phi(Operand *result, Block *b) : Instruction({result}, {}, b), _def_from_block(ALLOC2) {}
+    Phi(Operand *result, Block *b) : Instruction({result}, {}, b), _def_from_block(ALLOC) {}
 
     void add_path(Operand *use, Block *b);
 

@@ -1,7 +1,11 @@
 #include "IR.hpp"
+#include "codegen/arch/myir/ir/CFG.hpp"
 #include "codegen/arch/myir/ir/CFG.inline.hpp"
 #include "codegen/arch/myir/ir/IR.inline.hpp"
+#include "codegen/arch/myir/ir/Inst.hpp"
+#include "codegen/arch/myir/ir/Oper.hpp"
 #include "utils/Utils.h"
+#include <unordered_set>
 
 using namespace myir;
 
@@ -30,6 +34,9 @@ void Function::construct_ssa()
     // 2. renaming phase
     std::unordered_map<Variable *, std::stack<Variable *>> varstacks;
     rename_phis(_cfg->root(), varstacks);
+
+    // 3. pruning
+    prune_ssa();
 
 #ifdef DEBUG
     if (TraceSSAConstruction)
@@ -105,12 +112,11 @@ void Function::insert_phis(const std::unordered_map<Operand *, std::set<Block *>
 
 void Function::rename_phis(Block *b, std::unordered_map<Variable *, std::stack<Variable *>> &varstacks)
 {
-    if (!b)
-    {
-        return;
-    }
+    assert(b);
 
+    // track how variable stack has changed during this recursion call
     std::unordered_map<Variable *, int> popcount;
+
     for (auto *i : b->insts())
     {
         // generate unique name for each phi-function
@@ -122,37 +128,43 @@ void Function::rename_phis(Block *b, std::unordered_map<Variable *, std::stack<V
             auto *var = as<Variable>(def);
             auto *newvar = new Variable(*var);
 
-            i->defs()[0] = newvar;
+            i->update_def(0, newvar);
             varstacks[var].push(newvar);
             popcount[var]++;
         }
         else
         {
             // Rewrite uses of global names with the current version
-            for (auto *&use : i->uses())
+            int num = 0;
+            for (auto *use : i->uses())
             {
                 if (isa<Variable>(use))
                 {
-                    // use without def - formal
-                    if (!varstacks[as<Variable>(use)].empty())
+                    // use without def - function formal. Skip this case.
+                    // All other variables have to be defed before use
+                    auto *var = as<Variable>(use);
+                    if (!varstacks[var].empty())
                     {
-                        use = varstacks[as<Variable>(use)].top();
+                        i->update_use(num, varstacks[var].top());
                     }
                 }
+                num++;
             }
 
             // Rewrite definition by inventing & pushing new name
-            for (auto *&def : i->defs())
+            num = 0;
+            for (auto *def : i->defs())
             {
                 if (isa<Variable>(def))
                 {
                     auto *var = as<Variable>(def);
                     auto *newvar = new Variable(*var);
 
-                    def = newvar;
+                    i->update_def(num, newvar);
                     varstacks[var].push(newvar);
                     popcount[var]++;
                 }
+                num++;
             }
         }
     }
@@ -183,12 +195,124 @@ void Function::rename_phis(Block *b, std::unordered_map<Variable *, std::stack<V
         }
     }
 
-    // < on exit from b > pop names generated in b from stacks
+    // on exit from b pop names generated in b from stacks
     for (auto [var, count] : popcount)
     {
         for (int i = 0; i < count; i++)
         {
             varstacks[var].pop();
+        }
+    }
+}
+
+void Function::prune_ssa()
+{
+    std::stack<Variable *> vars_stack;
+    std::unordered_set<Variable *> alive_vars;
+
+    prune_ssa_initialize(_cfg->root(), alive_vars, vars_stack);
+    prune_ssa_propagate(alive_vars, vars_stack);
+    prune_ssa_delete_dead_phis(alive_vars);
+}
+
+void Function::prune_ssa_initialize(Block *b, std::unordered_set<Variable *> &alive_vars,
+                                    std::stack<Variable *> &vars_stack)
+{
+    for (auto *i : b->insts())
+    {
+        if (!Instruction::isa<Phi>(i))
+        {
+            for (auto *use : i->uses())
+            {
+                // only variables bother us
+                if (Operand::isa<Variable>(use))
+                {
+                    // dominance property and function formal case
+                    assert(use->defs().size() <= 1);
+
+                    // use defined by phi function
+                    if (!use->defs().empty() && Instruction::isa<Phi>(use->defs().at(0)))
+                    {
+                        auto *var = Operand::as<Variable>(use);
+                        alive_vars.insert(var); // mark as useful
+                        vars_stack.push(var);
+                    }
+                }
+            }
+        }
+    }
+
+    // dominance order
+    auto &dt = _cfg->dominator_tree();
+    if (dt.contains(b))
+    {
+        for (auto *succ : dt.at(b))
+        {
+            prune_ssa_initialize(succ, alive_vars, vars_stack);
+        }
+    }
+}
+
+void Function::prune_ssa_propagate(std::unordered_set<Variable *> &alive_vars, std::stack<Variable *> &vars_stack)
+{
+    while (!vars_stack.empty())
+    {
+        auto *var = vars_stack.top();
+        vars_stack.pop();
+
+        auto *inst = var->defs().at(0);
+        if (Instruction::isa<Phi>(inst))
+        {
+            for (auto *use : inst->uses())
+            {
+                auto *phiuse = Operand::as<Variable>(use);
+                alive_vars.insert(phiuse);
+                vars_stack.push(phiuse);
+            }
+        }
+    }
+}
+
+void Function::prune_ssa_delete_dead_phis(std::unordered_set<Variable *> &alive_vars)
+{
+#ifdef DEBUG
+    if (TraceSSAConstruction)
+    {
+        std::string alive_vars_out = "Alive variables = [";
+
+        for (auto *var : alive_vars)
+        {
+            alive_vars_out += var->name() + ", ";
+        }
+
+        trim(alive_vars_out, ", ");
+        alive_vars_out += "]";
+
+        std::cout << alive_vars_out << std::endl;
+    }
+#endif // DEBUG
+
+    for (auto *bb : _cfg->traversal<CFG::PREORDER>())
+    {
+        for (auto inst_iter = bb->insts().begin(); inst_iter != bb->insts().end();)
+        {
+            auto *inst = *inst_iter;
+            // destination operand of I marked as useless
+            if (Instruction::isa<Phi>(inst))
+            {
+                if (!alive_vars.contains(Operand::as<Variable>(inst->defs().at(0))))
+                {
+                    inst_iter = bb->insts().erase(inst_iter);
+                }
+                else
+                {
+                    inst_iter++;
+                }
+            }
+            else
+            {
+                break;
+            }
         }
     }
 }

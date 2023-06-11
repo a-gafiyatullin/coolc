@@ -26,8 +26,8 @@ class Block : public allocator::IRObject
   public:
     // construction
     Block(const std::string &name, Function *f)
-        : _name(name ALLOC1COMMA), _is_visited(false), _postorder_num(-1), _func(f), _preds(ALLOC1), _succs(ALLOC1),
-          _insts(ALLOC1)
+        : _name(name ALLOCCOMMA), _is_visited(false), _postorder_num(-1), _func(f), _preds(ALLOC), _succs(ALLOC),
+          _insts(ALLOC)
     {
     }
 
@@ -51,7 +51,7 @@ class Block : public allocator::IRObject
     std::string dump() const;
 };
 
-class Module
+class Module : public allocator::StackObject
 {
   private:
     // text segment
@@ -82,7 +82,7 @@ class Module
 };
 
 // track the current state of the CFG construction
-class IRBuilder
+class IRBuilder : public allocator::StackObject
 {
   private:
     Module &_module;

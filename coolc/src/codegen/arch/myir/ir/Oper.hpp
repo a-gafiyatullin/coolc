@@ -5,6 +5,7 @@
 #include <stack>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace myir
@@ -54,7 +55,7 @@ class Operand : public allocator::IRObject
     inline void defed_by(Instruction *inst) { _defs.push_back(inst); }
 
     Operand(const std::string &name, OperandType type)
-        : _name(name ALLOC1COMMA), _type(type), _id(INCORRECT_ID), _uses(ALLOC1), _defs(ALLOC1)
+        : _name(name ALLOCCOMMA), _type(type), _id(INCORRECT_ID), _uses(ALLOC), _defs(ALLOC)
     {
     }
 
@@ -65,9 +66,9 @@ class Operand : public allocator::IRObject
 
   public:
     // constructors
-    Operand(OperandType type) : _name(PREFIX ALLOC1COMMA), _id(ID++), _type(type), _uses(ALLOC1), _defs(ALLOC1) {}
+    Operand(OperandType type) : _name(PREFIX ALLOCCOMMA), _id(ID++), _type(type), _uses(ALLOC), _defs(ALLOC) {}
 
-    Operand(const Operand &other) : _type(other._type), _name(other._name), _id(ID++), _uses(ALLOC1), _defs(ALLOC1) {}
+    Operand(const Operand &other) : _type(other._type), _name(other._name), _id(ID++), _uses(ALLOC), _defs(ALLOC) {}
 
     // type
     inline OperandType type() const { return _type; }
@@ -134,7 +135,7 @@ class StructuredOperand : public Operand
 
     // if type is STRUCTURE, then use internal structure in _fields
     StructuredOperand(const std::string &name, const std::vector<Operand *> &fields, OperandType type)
-        : Operand(name, type), _fields(fields.begin(), fields.end() ALLOC1COMMA)
+        : Operand(name, type), _fields(fields.begin(), fields.end() ALLOCCOMMA)
     {
     }
 
@@ -182,8 +183,15 @@ class Function final : public GlobalConstant
     void insert_phis(const std::unordered_map<Operand *, std::set<Block *>> &vars_in_blocks,
                      const allocator::irunordered_map<Block *, allocator::irset<Block *>> &df);
 
-    // renaming algorithm for second phase of SSA construction
+    // renaming algorithm for second phase of SSA construction.
+    // Uses standard algorithm with stack for every variable
     void rename_phis(Block *b, std::unordered_map<Variable *, std::stack<Variable *>> &varstacks);
+
+    // φ-function pruning algorithm
+    void prune_ssa();
+    void prune_ssa_initialize(Block *b, std::unordered_set<Variable *> &alive_vars, std::stack<Variable *> &vars_stack);
+    void prune_ssa_propagate(std::unordered_set<Variable *> &alive_vars, std::stack<Variable *> &vars_stack);
+    void prune_ssa_delete_dead_phis(std::unordered_set<Variable *> &alive_vars);
 
 #ifdef DEBUG
     static void dump_defs(const std::unordered_map<Operand *, std::set<Block *>> &defs);

@@ -100,7 +100,7 @@ allocator::irunordered_map<Block *, Block *> &CFG::dominance()
     {
         if (!_dominator_tree.contains(dom))
         {
-            _dominator_tree.insert({dom, allocator::irvector<Block *>(ALLOC1)});
+            _dominator_tree.insert({dom, allocator::irvector<Block *>(ALLOC)});
         }
 
         _dominator_tree.at(dom).push_back(bb);
@@ -178,7 +178,7 @@ allocator::irunordered_map<Block *, allocator::irset<Block *>> &CFG::dominance_f
                 {
                     if (!_dominance_frontier.contains(runner))
                     {
-                        _dominance_frontier.insert({runner, allocator::irset<Block *>(ALLOC1)});
+                        _dominance_frontier.insert({runner, allocator::irset<Block *>(ALLOC)});
                     }
 
                     _dominance_frontier.at(runner).insert(b);

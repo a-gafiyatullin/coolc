@@ -43,8 +43,8 @@ class CFG : public allocator::IRObject
 
   public:
     CFG()
-        : _postorder(ALLOC1), _preorder(ALLOC1), _reverse_postorder(ALLOC1), _dominance(ALLOC2),
-          _dominator_tree(ALLOC2), _dominance_frontier(ALLOC2), _root(nullptr)
+        : _postorder(ALLOC), _preorder(ALLOC), _reverse_postorder(ALLOC), _dominance(ALLOC),
+          _dominator_tree(ALLOC), _dominance_frontier(ALLOC), _root(nullptr)
     {
     }
 

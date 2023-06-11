@@ -61,3 +61,31 @@ The flavour of SSA form that this simple construction algorithm produces:
 2. not pruned;
 3. conventional;
 4. has the dominance property (strict).
+
+## 3.2 Destruction
+
+When freshly constructed, an untransformed SSA code is conventional and its destruction is straightforward: One simply has to rename all φ-related variable (source and destination operands of the same φ-function) into a unique representative variable.
+
+if all variables of a φ-web have non-overlapping live ranges, then the SSA form is conventional.
+
+The discovery of φ-webs can be performed efficiently using the classical **union-find** algorithm with a disjoint-set data structure.
+
+![The φ-webs discovery algorithm, based on the union-find pattern](../pics/algorithm-3-4.png)
+
+The simplest (although not the most efficient) way to destroy non-conventional SSA form is to split all critical edges, and then replace φ-functions by copies at the end of direct predecessor basic blocks:
+* a **critical edge** is an edge from a node with several direct successors to a node with several direct predecessors.
+
+![Critical edge splitting algorithm for making non-conventional SSA form conventional](../pics/algorithm-3-5.png)
+
+Once φ-functions have been replaced by parallel copies, we need to sequentialize the parallel copies, i.e., replace them by a sequence of simple copies.
+
+![Replacement of parallel copies with sequences of sequential copy operations](../pics/algorithm-3-6.png)
+
+## 3.3 SSA Property Transformations
+
+Making SSA **strict**, i.e., fulfil the **dominance property**, is as “hard” as constructing SSA.
+
+**Pruning SSA form** is equivalent to a dead code elimination pass after SSA construction:
+* dead- φ-function elimination simply relies on marking actual use (non-φ-function ones) as useful and propagating usefulness backwards through φ-functions.
+
+![φ-function pruning algorithm](../pics/algorithm-3-7.png)

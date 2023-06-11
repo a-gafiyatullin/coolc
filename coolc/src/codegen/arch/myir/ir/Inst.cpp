@@ -4,7 +4,7 @@
 using namespace myir;
 
 Instruction::Instruction(const std::vector<Operand *> &defs, const std::vector<Operand *> &uses, Block *b)
-    : _block(b), _defs(ALLOC1), _uses(ALLOC1)
+    : _block(b), _defs(ALLOC), _uses(ALLOC)
 {
     for (auto *use : uses)
     {
@@ -23,6 +23,24 @@ Instruction::Instruction(const std::vector<Operand *> &defs, const std::vector<O
             _defs.push_back(def);
         }
     }
+}
+
+void Instruction::update_def(int i, Operand *oper)
+{
+    assert(i < _defs.size());
+    assert(oper);
+
+    oper->defed_by(this);
+    _defs[i] = oper;
+}
+
+void Instruction::update_use(int i, Operand *oper)
+{
+    assert(i < _uses.size());
+    assert(oper);
+
+    oper->used_by(this);
+    _uses[i] = oper;
 }
 
 std::string Phi::dump() const
