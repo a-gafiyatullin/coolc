@@ -10,11 +10,16 @@
 namespace allocator
 {
 
+// Objects of this class cannot be allocted in heap
 class StackObject
 {
+  private:
     void *operator new(std::size_t size);
+
     void operator delete(void *ptr);
+
     void *operator new[](std::size_t size);
+
     void operator delete[](void *ptr);
 };
 
@@ -79,13 +84,17 @@ bool operator!=(const IRAllocator<T, Strategy> &lhs, const IRAllocator<U, Strate
 {
     return !(lhs == rhs);
 }
+}; // namespace allocator
 
+namespace myir
+{
 #define USE_CUSTOM_ALLOC
 
 // default data types
 #ifdef USE_CUSTOM_ALLOC
-template <class T> using irallocator = IRAllocator<T, LinearAllocator>;
-template <class Key, class T> using irkvallocator = IRAllocator<std::pair<const Key, T>, LinearAllocator>;
+template <class T> using irallocator = allocator::IRAllocator<T, allocator::LinearAllocator>;
+template <class Key, class T>
+using irkvallocator = allocator::IRAllocator<std::pair<const Key, T>, allocator::LinearAllocator>;
 #else
 template <class T> using irallocator = std::allocator<T>;
 template <class Key, class T> using irkvallocator = std::allocator<std::pair<const Key, T>>;
@@ -94,7 +103,7 @@ template <class Key, class T> using irkvallocator = std::allocator<std::pair<con
 class IRObject
 {
   protected:
-    static LinearAllocator *Alloca;
+    static allocator::LinearAllocator *Alloca;
 
     irallocator<void *> _alloc;
 
@@ -107,7 +116,7 @@ class IRObject
 
     static constexpr size_t DEFAULT_CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
 
-    static void set_alloca(LinearAllocator *alloca) { Alloca = alloca; }
+    static void set_alloca(allocator::LinearAllocator *alloca) { Alloca = alloca; }
 
 #ifdef USE_CUSTOM_ALLOC
     void *operator new(std::size_t size) { return Alloca->allocate(size, alignof(std::max_align_t)); }
@@ -138,4 +147,4 @@ template <class Key, class T> using irunordered_map = std::map<Key, T, std::less
 
 template <class Key> using irset = std::set<Key, std::less<Key>, irallocator<Key>>;
 
-}; // namespace allocator
+}; // namespace myir

@@ -1,6 +1,7 @@
 #include "CodeGenMyIR.hpp"
-#include "codegen/arch/myir/ir/Allocator.hpp"
 #include "codegen/arch/myir/ir/IR.inline.hpp"
+#include "codegen/arch/myir/ir/pass/PassManager.hpp"
+#include "codegen/arch/myir/ir/pass/ssa_construction/SSAConstruction.hpp"
 #include "codegen/emitter/CodeGen.inline.h"
 #include "codegen/emitter/data/Data.inline.h"
 
@@ -9,7 +10,7 @@ using namespace codegen;
 #define __ _ir_builder.
 
 CodeGenMyIR::CodeGenMyIR(const std::shared_ptr<semant::ClassNode> &root)
-    : CodeGen(std::make_shared<KlassBuilderMyIR>(root)), _alloc(allocator::IRObject::DEFAULT_CHUNK_SIZE, true),
+    : CodeGen(std::make_shared<KlassBuilderMyIR>(root)), _alloc(myir::IRObject::DEFAULT_CHUNK_SIZE, true),
       _runtime(_module), _data(_builder, _module, _runtime), _ir_builder(_module),
       _true_val(new myir::Constant(TrueValue, myir::INT8)), _false_val(new myir::Constant(FalseValue, myir::INT8)),
       _true_obj(_data.bool_const(true)), _false_obj(_data.bool_const(false)),
@@ -743,7 +744,12 @@ void CodeGenMyIR::emit(const std::string &out_file)
 
     _data.emit(obj_file);
 
-    _module.construct_ssa();
+    // prepare passes
+    myir::PassManager passes(_module);
+    passes.add(new myir::SSAConstruction());
+
+    // apply passes
+    passes.run();
 
     std::cout << _module.dump();
 }

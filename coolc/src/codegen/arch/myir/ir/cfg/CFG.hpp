@@ -1,12 +1,12 @@
 #pragma once
 
-#include "IR.hpp"
+#include "codegen/arch/myir/ir/IR.hpp"
 #include <functional>
 
 namespace myir
 {
 
-class CFG : public allocator::IRObject
+class CFG : public IRObject
 {
   public:
     enum DFSType
@@ -21,15 +21,14 @@ class CFG : public allocator::IRObject
     Block *_root;
 
     // traversals
-    allocator::irvector<Block *> _postorder;
-    allocator::irvector<Block *> _preorder;
-    allocator::irvector<Block *> _reverse_postorder;
+    irvector<Block *> _postorder;
+    irvector<Block *> _preorder;
+    irvector<Block *> _reverse_postorder;
 
     // dominance info
-    allocator::irunordered_map<Block *, Block *> _dominance;
-    allocator::irunordered_map<Block *, allocator::irvector<Block *>> _dominator_tree;
-
-    allocator::irunordered_map<Block *, allocator::irset<Block *>> _dominance_frontier;
+    irunordered_map<Block *, Block *> _dominance;
+    irunordered_map<Block *, irvector<Block *>> _dominator_tree;
+    irunordered_map<Block *, irset<Block *>> _dominance_frontier;
 
     Block *dominance_intersect(Block *b1, Block *b2);
 
@@ -43,13 +42,13 @@ class CFG : public allocator::IRObject
 
   public:
     CFG()
-        : _postorder(ALLOC), _preorder(ALLOC), _reverse_postorder(ALLOC), _dominance(ALLOC),
-          _dominator_tree(ALLOC), _dominance_frontier(ALLOC), _root(nullptr)
+        : _postorder(ALLOC), _preorder(ALLOC), _reverse_postorder(ALLOC), _dominance(ALLOC), _dominator_tree(ALLOC),
+          _dominance_frontier(ALLOC), _root(nullptr)
     {
     }
 
     // graph traversals
-    template <DFSType type> allocator::irvector<Block *> &traversal();
+    template <DFSType type> irvector<Block *> &traversal();
 
     // helpers
     void clear_visited();
@@ -64,14 +63,14 @@ class CFG : public allocator::IRObject
     // for every Block* gather all blocks that dominate it
     // Implements approach was described in "A Simple, Fast Dominance Algorithm"
     // by Keith D. Cooper, Timothy J. Harvey, and Ken Kennedy
-    allocator::irunordered_map<Block *, Block *> &dominance();
-    allocator::irunordered_map<Block *, allocator::irvector<Block *>> &dominator_tree();
+    irunordered_map<Block *, Block *> &dominance();
+    irunordered_map<Block *, irvector<Block *>> &dominator_tree();
     bool dominate(Block *dominator, Block *dominatee);
 
     // for every Block* gather all blocks in its DF
     // Implements approach was described in "A Simple, Fast Dominance Algorithm"
     // by Keith D. Cooper, Timothy J. Harvey, and Ken Kennedy
-    allocator::irunordered_map<Block *, allocator::irset<Block *>> &dominance_frontier();
+    irunordered_map<Block *, irset<Block *>> &dominance_frontier();
 
     // debugging
     std::string dump() const;

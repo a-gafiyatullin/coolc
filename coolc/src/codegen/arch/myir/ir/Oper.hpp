@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Allocator.hpp"
+#include "allocator/Allocator.hpp"
 #include <set>
 #include <stack>
 #include <string>
@@ -38,17 +38,17 @@ enum OperandType
 };
 
 // class represents temporary result
-class Operand : public allocator::IRObject
+class Operand : public IRObject
 {
     friend class Instruction;
 
   protected:
-    const allocator::irstring _name;
+    const irstring _name;
     const OperandType _type;
     int _id;
 
-    allocator::irvector<Instruction *> _uses;
-    allocator::irvector<Instruction *> _defs;
+    irvector<Instruction *> _uses;
+    irvector<Instruction *> _defs;
 
     // record use-def and def-use chains during instruction construction
     inline void used_by(Instruction *inst) { _uses.push_back(inst); }
@@ -78,7 +78,7 @@ class Operand : public allocator::IRObject
     template <class T> static T *as(Operand *o);
 
     // array of defs
-    inline allocator::irvector<Instruction *> &defs() { return _defs; }
+    inline irvector<Instruction *> &defs() { return _defs; }
 
     // debugging
     virtual std::string dump() const;
@@ -128,7 +128,7 @@ class Variable : public Operand
 class StructuredOperand : public Operand
 {
   private:
-    allocator::irvector<Operand *> _fields;
+    irvector<Operand *> _fields;
 
   public:
     // constructors
@@ -169,33 +169,12 @@ class GlobalVariable final : public StructuredOperand
 class Function final : public GlobalConstant
 {
   private:
-    const allocator::irvector<Variable *> _params;
+    const irvector<Variable *> _params;
 
     CFG *_cfg;
 
     const OperandType _return_type;
     bool _is_leaf;
-
-    // for every variable with multiple defs find all blocks that contain it
-    std::unordered_map<Operand *, std::set<Block *>> defs_in_blocks() const;
-
-    // standard algorithm for inserting phi-functions
-    void insert_phis(const std::unordered_map<Operand *, std::set<Block *>> &vars_in_blocks,
-                     const allocator::irunordered_map<Block *, allocator::irset<Block *>> &df);
-
-    // renaming algorithm for second phase of SSA construction.
-    // Uses standard algorithm with stack for every variable
-    void rename_phis(Block *b, std::unordered_map<Variable *, std::stack<Variable *>> &varstacks);
-
-    // φ-function pruning algorithm
-    void prune_ssa();
-    void prune_ssa_initialize(Block *b, std::unordered_set<Variable *> &alive_vars, std::stack<Variable *> &vars_stack);
-    void prune_ssa_propagate(std::unordered_set<Variable *> &alive_vars, std::stack<Variable *> &vars_stack);
-    void prune_ssa_delete_dead_phis(std::unordered_set<Variable *> &alive_vars);
-
-#ifdef DEBUG
-    static void dump_defs(const std::unordered_map<Operand *, std::set<Block *>> &defs);
-#endif // DEBUG
 
   public:
     // constructors
@@ -204,9 +183,6 @@ class Function final : public GlobalConstant
     // CFG
     void set_cfg(Block *cfg);
     inline CFG *cfg() const { return _cfg; }
-
-    // Transform CFG to SSA form
-    void construct_ssa();
 
     // params
     inline Variable *param(int i) const { return _params.at(i); }

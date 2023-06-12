@@ -1,4 +1,4 @@
-#include "CFG.hpp"
+#include "cfg/CFG.hpp"
 #include <cassert>
 
 using namespace myir;

@@ -1,5 +1,6 @@
 #include "IR.inline.hpp"
-#include "codegen/arch/myir/ir/CFG.hpp"
+#include "cfg/CFG.hpp"
+#include "cfg/CFG.inline.hpp"
 #include <cassert>
 
 using namespace myir;

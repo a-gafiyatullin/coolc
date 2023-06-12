@@ -67,8 +67,8 @@ bool ReduceGCSpills = true;
 
 #ifdef MYIR
 #ifdef DEBUG
-bool PrintDominanceInfo = true;
-bool TraceSSAConstruction = true;
+bool PrintDominanceInfo = false;
+bool TraceSSAConstruction = false;
 #endif // DEBUG
 #endif
 

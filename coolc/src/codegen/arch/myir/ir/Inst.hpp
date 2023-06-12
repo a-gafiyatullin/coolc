@@ -8,11 +8,11 @@ namespace myir
 class Block;
 class Function;
 
-class Instruction : public allocator::IRObject
+class Instruction : public IRObject
 {
   protected:
-    allocator::irvector<Operand *> _uses;
-    allocator::irvector<Operand *> _defs;
+    irvector<Operand *> _uses;
+    irvector<Operand *> _defs;
 
     Block *_block;
 
@@ -21,8 +21,8 @@ class Instruction : public allocator::IRObject
     Instruction(const std::vector<Operand *> &defs, const std::vector<Operand *> &uses, Block *b);
 
     // getters
-    inline allocator::irvector<Operand *> &defs() { return _defs; }
-    inline allocator::irvector<Operand *> &uses() { return _uses; }
+    inline irvector<Operand *> &defs() { return _defs; }
+    inline irvector<Operand *> &uses() { return _uses; }
 
     // setters
     void update_def(int i, Operand *oper);
@@ -41,7 +41,7 @@ class Instruction : public allocator::IRObject
 class Phi : public Instruction
 {
   private:
-    allocator::irunordered_map<Operand *, Block *> _def_from_block;
+    irunordered_map<Operand *, Block *> _def_from_block;
 
   public:
     Phi(Operand *result, Block *b) : Instruction({result}, {}, b), _def_from_block(ALLOC) {}

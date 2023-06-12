@@ -49,7 +49,7 @@ Block *CFG::dominance_intersect(Block *b1, Block *b2)
     return finger1;
 }
 
-allocator::irunordered_map<Block *, Block *> &CFG::dominance()
+irunordered_map<Block *, Block *> &CFG::dominance()
 {
     if (!_dominance.empty())
     {
@@ -100,7 +100,7 @@ allocator::irunordered_map<Block *, Block *> &CFG::dominance()
     {
         if (!_dominator_tree.contains(dom))
         {
-            _dominator_tree.insert({dom, allocator::irvector<Block *>(ALLOC)});
+            _dominator_tree.insert({dom, irvector<Block *>(ALLOC)});
         }
 
         _dominator_tree.at(dom).push_back(bb);
@@ -116,7 +116,7 @@ allocator::irunordered_map<Block *, Block *> &CFG::dominance()
     return _dominance;
 }
 
-allocator::irunordered_map<Block *, allocator::irvector<Block *>> &CFG::dominator_tree()
+irunordered_map<Block *, irvector<Block *>> &CFG::dominator_tree()
 {
     dominance();
     return _dominator_tree;
@@ -157,7 +157,7 @@ bool CFG::dominate(Block *dominator, Block *dominatee)
     return false;
 }
 
-allocator::irunordered_map<Block *, allocator::irset<Block *>> &CFG::dominance_frontier()
+irunordered_map<Block *, irset<Block *>> &CFG::dominance_frontier()
 {
 
     if (!_dominance_frontier.empty())
@@ -178,7 +178,7 @@ allocator::irunordered_map<Block *, allocator::irset<Block *>> &CFG::dominance_f
                 {
                     if (!_dominance_frontier.contains(runner))
                     {
-                        _dominance_frontier.insert({runner, allocator::irset<Block *>(ALLOC)});
+                        _dominance_frontier.insert({runner, irset<Block *>(ALLOC)});
                     }
 
                     _dominance_frontier.at(runner).insert(b);

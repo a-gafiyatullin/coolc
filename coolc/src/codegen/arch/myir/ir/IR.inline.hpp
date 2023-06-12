@@ -1,12 +1,21 @@
 #include "IR.hpp"
+#include <cassert>
 
 template <class T> bool myir::Operand::isa(Operand *o) { return dynamic_cast<T *>(o); }
 
-template <class T> T *myir::Operand::as(Operand *o) { return dynamic_cast<T *>(o); }
+template <class T> T *myir::Operand::as(Operand *o)
+{
+    assert(isa<T>(o));
+    return dynamic_cast<T *>(o);
+}
 
 template <class T> bool myir::Instruction::isa(Instruction *inst) { return dynamic_cast<T *>(inst); }
 
-template <class T> T *myir::Instruction::as(Instruction *inst) { return dynamic_cast<T *>(inst); }
+template <class T> T *myir::Instruction::as(Instruction *inst)
+{
+    assert(isa<T>(inst));
+    return dynamic_cast<T *>(inst);
+}
 
 template <class T> myir::Operand *myir::IRBuilder::binary(Operand *lhs, Operand *rhs)
 {

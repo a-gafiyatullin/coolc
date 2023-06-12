@@ -1,7 +1,7 @@
 #include "Allocator.hpp"
 #include <cassert>
 
-allocator::LinearAllocator *allocator::IRObject::Alloca = nullptr;
+allocator::LinearAllocator *myir::IRObject::Alloca = nullptr;
 
 allocator::LinearAllocator::LinearAllocator(int chunk_size, bool is_global) : _chunk_size(chunk_size)
 {
@@ -9,7 +9,7 @@ allocator::LinearAllocator::LinearAllocator(int chunk_size, bool is_global) : _c
 
     if (is_global)
     {
-        IRObject::set_alloca(this);
+        myir::IRObject::set_alloca(this);
     }
 }
 

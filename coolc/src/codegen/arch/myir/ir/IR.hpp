@@ -6,18 +6,18 @@
 namespace myir
 {
 
-class Block : public allocator::IRObject
+class Block : public IRObject
 {
     friend class CFG;
 
   private:
-    const allocator::irstring _name;
+    const irstring _name;
     Function *_func;
 
-    allocator::irvector<Block *> _preds;
-    allocator::irvector<Block *> _succs;
+    irvector<Block *> _preds;
+    irvector<Block *> _succs;
 
-    allocator::irlist<Instruction *> _insts;
+    irlist<Instruction *> _insts;
 
     bool _is_visited;
 
@@ -42,9 +42,9 @@ class Block : public allocator::IRObject
     inline int postorder() const { return _postorder_num; }
 
     // getters
-    inline allocator::irlist<Instruction *> &insts() { return _insts; }
+    inline irlist<Instruction *> &insts() { return _insts; }
     inline Function *holder() const { return _func; }
-    inline const allocator::irvector<Block *> &succs() const { return _succs; }
+    inline const irvector<Block *> &succs() const { return _succs; }
 
     // debugging
     std::string name() const { return std::string(_name); }
@@ -73,9 +73,6 @@ class Module : public allocator::StackObject
 
     // raw access to variables and constants
     template <class T> const std::unordered_map<std::string, T *> &get() const;
-
-    // Transform all functions' CFG to SSA form
-    void construct_ssa();
 
     // debugging
     std::string dump() const;

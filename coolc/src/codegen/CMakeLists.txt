@@ -28,9 +28,11 @@ if(ARCH STREQUAL "MYIR")
     arch/myir/runtime/RuntimeMyIR.cpp
     arch/myir/ir/IR.cpp
     arch/myir/ir/Inst.cpp
-    arch/myir/ir/CFG.cpp
-    arch/myir/ir/SSA.cpp
-    arch/myir/ir/Allocator.cpp
+    arch/myir/ir/cfg/CFG.cpp
+    arch/myir/ir/allocator/Allocator.cpp
+    arch/myir/ir/pass/PassManager.cpp
+
+    arch/myir/ir/pass/ssa_construction/SSAConstruction.cpp
   )
 endif()
 

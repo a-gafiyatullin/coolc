@@ -1,16 +1,17 @@
-#include "IR.hpp"
-#include "codegen/arch/myir/ir/CFG.hpp"
-#include "codegen/arch/myir/ir/CFG.inline.hpp"
+#include "SSAConstruction.hpp"
 #include "codegen/arch/myir/ir/IR.inline.hpp"
-#include "codegen/arch/myir/ir/Inst.hpp"
 #include "codegen/arch/myir/ir/Oper.hpp"
+#include "codegen/arch/myir/ir/cfg/CFG.hpp"
+#include "codegen/arch/myir/ir/cfg/CFG.inline.hpp"
 #include "utils/Utils.h"
-#include <unordered_set>
 
 using namespace myir;
 
-void Function::construct_ssa()
+void SSAConstruction::run(Function *func)
 {
+    _func = func;
+    _cfg = _func->cfg();
+
     if (_cfg->empty())
     {
         return; // function was declared but not defined
@@ -19,42 +20,29 @@ void Function::construct_ssa()
 #ifdef DEBUG
     if (TraceSSAConstruction)
     {
-        std::cout << "\nSSA construction for " << short_name() << ":\n";
+        std::cout << "\nSSA construction for " << _func->short_name() << ":\n";
     }
 #endif // DEBUG
 
-    // 1.   insert phi-functions
-    // 1.1. calcaulate DF
-    auto &df = _cfg->dominance_frontier();
-    // 1.2 find all variables with multiple defs
-    auto defs = defs_in_blocks();
-    // 1.3 insert
-    insert_phis(defs, df);
+    // 1. insert phis phase
+    insert_phis();
 
     // 2. renaming phase
-    std::unordered_map<Variable *, std::stack<Variable *>> varstacks;
+    std::unordered_map<Variable *, std::stack<Operand *>> varstacks;
     rename_phis(_cfg->root(), varstacks);
 
-    // 3. pruning
+    // 3. pruning phase
     prune_ssa();
 
 #ifdef DEBUG
     if (TraceSSAConstruction)
     {
-        std::cout << "\nAfter phi-functions insertion:\n" + dump() << std::endl;
+        std::cout << "\nAfter phi-functions insertion:\n" + _func->dump() << std::endl;
     }
 #endif // DEBUG
 }
 
-void Module::construct_ssa()
-{
-    for (auto &[name, func] : get<myir::Function>())
-    {
-        func->construct_ssa();
-    }
-}
-
-std::unordered_map<Operand *, std::set<Block *>> Function::defs_in_blocks() const
+std::unordered_map<Operand *, std::set<Block *>> SSAConstruction::defs_in_blocks() const
 {
     std::unordered_map<Operand *, std::set<Block *>> var_to_blocks;
 
@@ -77,10 +65,14 @@ std::unordered_map<Operand *, std::set<Block *>> Function::defs_in_blocks() cons
     return var_to_blocks;
 }
 
-void Function::insert_phis(const std::unordered_map<Operand *, std::set<Block *>> &vars_in_blocks,
-                           const allocator::irunordered_map<Block *, allocator::irset<Block *>> &df)
+void SSAConstruction::insert_phis()
 {
-    for (auto &[var, blocks] : vars_in_blocks)
+    // 1.1. calcaulate DF
+    auto &df = _cfg->dominance_frontier();
+    // 1.2 find all variables with multiple defs
+    auto defs = defs_in_blocks();
+
+    for (auto &[var, blocks] : defs)
     {
         std::set<Block *> f;          // set of basic blocks where phi is added
         std::set<Block *> w = blocks; // set of basic blocks that contain definitions of v
@@ -110,7 +102,7 @@ void Function::insert_phis(const std::unordered_map<Operand *, std::set<Block *>
     }
 }
 
-void Function::rename_phis(Block *b, std::unordered_map<Variable *, std::stack<Variable *>> &varstacks)
+void SSAConstruction::rename_phis(Block *b, std::unordered_map<Variable *, std::stack<Operand *>> &varstacks)
 {
     assert(b);
 
@@ -124,8 +116,7 @@ void Function::rename_phis(Block *b, std::unordered_map<Variable *, std::stack<V
         {
             auto *def = i->defs().at(0);
 
-            assert(isa<Variable>(def));
-            auto *var = as<Variable>(def);
+            auto *var = Operand::as<Variable>(def);
             auto *newvar = new Variable(*var);
 
             i->update_def(0, newvar);
@@ -138,11 +129,11 @@ void Function::rename_phis(Block *b, std::unordered_map<Variable *, std::stack<V
             int num = 0;
             for (auto *use : i->uses())
             {
-                if (isa<Variable>(use))
+                if (Operand::isa<Variable>(use))
                 {
                     // use without def - function formal. Skip this case.
                     // All other variables have to be defed before use
-                    auto *var = as<Variable>(use);
+                    auto *var = Operand::as<Variable>(use);
                     if (!varstacks[var].empty())
                     {
                         i->update_use(num, varstacks[var].top());
@@ -155,9 +146,9 @@ void Function::rename_phis(Block *b, std::unordered_map<Variable *, std::stack<V
             num = 0;
             for (auto *def : i->defs())
             {
-                if (isa<Variable>(def))
+                if (Operand::isa<Variable>(def))
                 {
-                    auto *var = as<Variable>(def);
+                    auto *var = Operand::as<Variable>(def);
                     auto *newvar = new Variable(*var);
 
                     i->update_def(num, newvar);
@@ -175,7 +166,7 @@ void Function::rename_phis(Block *b, std::unordered_map<Variable *, std::stack<V
         auto i = succ->insts().begin();
         while (Instruction::isa<Phi>(*i))
         {
-            auto *def = as<Variable>((*i)->defs().at(0))->original_var();
+            auto *def = Operand::as<Variable>((*i)->defs().at(0))->original_var();
             if (varstacks.contains(def))
             {
                 assert(!varstacks[def].empty());
@@ -205,18 +196,18 @@ void Function::rename_phis(Block *b, std::unordered_map<Variable *, std::stack<V
     }
 }
 
-void Function::prune_ssa()
+void SSAConstruction::prune_ssa()
 {
-    std::stack<Variable *> vars_stack;
-    std::unordered_set<Variable *> alive_vars;
+    std::stack<Operand *> varsstack;
+    std::unordered_set<Operand *> alivevars;
 
-    prune_ssa_initialize(_cfg->root(), alive_vars, vars_stack);
-    prune_ssa_propagate(alive_vars, vars_stack);
-    prune_ssa_delete_dead_phis(alive_vars);
+    prune_ssa_initialize(_cfg->root(), alivevars, varsstack);
+    prune_ssa_propagate(alivevars, varsstack);
+    prune_ssa_delete_dead_phis(alivevars);
 }
 
-void Function::prune_ssa_initialize(Block *b, std::unordered_set<Variable *> &alive_vars,
-                                    std::stack<Variable *> &vars_stack)
+void SSAConstruction::prune_ssa_initialize(Block *b, std::unordered_set<Operand *> &alivevars,
+                                           std::stack<Operand *> &varsstack)
 {
     for (auto *i : b->insts())
     {
@@ -233,9 +224,8 @@ void Function::prune_ssa_initialize(Block *b, std::unordered_set<Variable *> &al
                     // use defined by phi function
                     if (!use->defs().empty() && Instruction::isa<Phi>(use->defs().at(0)))
                     {
-                        auto *var = Operand::as<Variable>(use);
-                        alive_vars.insert(var); // mark as useful
-                        vars_stack.push(var);
+                        alivevars.insert(use); // mark as useful
+                        varsstack.push(use);
                     }
                 }
             }
@@ -248,39 +238,38 @@ void Function::prune_ssa_initialize(Block *b, std::unordered_set<Variable *> &al
     {
         for (auto *succ : dt.at(b))
         {
-            prune_ssa_initialize(succ, alive_vars, vars_stack);
+            prune_ssa_initialize(succ, alivevars, varsstack);
         }
     }
 }
 
-void Function::prune_ssa_propagate(std::unordered_set<Variable *> &alive_vars, std::stack<Variable *> &vars_stack)
+void SSAConstruction::prune_ssa_propagate(std::unordered_set<Operand *> &alivevars, std::stack<Operand *> &varsstack)
 {
-    while (!vars_stack.empty())
+    while (!varsstack.empty())
     {
-        auto *var = vars_stack.top();
-        vars_stack.pop();
+        auto *var = varsstack.top();
+        varsstack.pop();
 
         auto *inst = var->defs().at(0);
         if (Instruction::isa<Phi>(inst))
         {
             for (auto *use : inst->uses())
             {
-                auto *phiuse = Operand::as<Variable>(use);
-                alive_vars.insert(phiuse);
-                vars_stack.push(phiuse);
+                alivevars.insert(use);
+                varsstack.push(use);
             }
         }
     }
 }
 
-void Function::prune_ssa_delete_dead_phis(std::unordered_set<Variable *> &alive_vars)
+void SSAConstruction::prune_ssa_delete_dead_phis(std::unordered_set<Operand *> &alivevars)
 {
 #ifdef DEBUG
     if (TraceSSAConstruction)
     {
         std::string alive_vars_out = "Alive variables = [";
 
-        for (auto *var : alive_vars)
+        for (auto *var : alivevars)
         {
             alive_vars_out += var->name() + ", ";
         }
@@ -300,7 +289,7 @@ void Function::prune_ssa_delete_dead_phis(std::unordered_set<Variable *> &alive_
             // destination operand of I marked as useless
             if (Instruction::isa<Phi>(inst))
             {
-                if (!alive_vars.contains(Operand::as<Variable>(inst->defs().at(0))))
+                if (!alivevars.contains(inst->defs().at(0)))
                 {
                     inst_iter = bb->insts().erase(inst_iter);
                 }
@@ -318,7 +307,7 @@ void Function::prune_ssa_delete_dead_phis(std::unordered_set<Variable *> &alive_
 }
 
 #ifdef DEBUG
-void Function::dump_defs(const std::unordered_map<Operand *, std::set<Block *>> &defs)
+void SSAConstruction::dump_defs(const std::unordered_map<Operand *, std::set<Block *>> &defs)
 {
     if (!TraceSSAConstruction)
     {
