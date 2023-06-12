@@ -89,3 +89,16 @@ Making SSA **strict**, i.e., fulfil the **dominance property**, is as “hard”
 * dead- φ-function elimination simply relies on marking actual use (non-φ-function ones) as useful and propagating usefulness backwards through φ-functions.
 
 ![φ-function pruning algorithm](../pics/algorithm-3-7.png)
+
+### 3.3.1 Pessimistic φ-Function Insertion
+
+* φ-functions may be inserted in a pessimistic fashion when a φ-function is inserted at the start of each CFG node (basic block) for each variable that is live at the start of that node;
+* A crude strategy is to insert a φ-function for each variable at the start of each CFG node.
+
+When a pessimistic approach is used, many inserted φ-functions are redundant:
+* avoid applying copy propagations that involve ⊥;
+* simplify Identity φ-functions.
+
+A CFG is **reducible** if there are no jumps into the middle of loops from the outside, so the only entry to a loop is through its header.
+
+![Removal of redundant φ-functions using  rewriting rules and work queue](../pics/algorithm-3-8.png)
