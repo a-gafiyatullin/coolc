@@ -45,6 +45,10 @@ class Block : public IRObject
     inline irlist<Instruction *> &insts() { return _insts; }
     inline Function *holder() const { return _func; }
     inline const irvector<Block *> &succs() const { return _succs; }
+    inline bool is_visited() const { return _is_visited; }
+
+    // setters
+    inline void visit() { _is_visited = true; }
 
     // debugging
     std::string name() const { return std::string(_name); }

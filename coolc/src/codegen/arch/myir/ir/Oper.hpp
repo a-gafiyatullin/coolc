@@ -52,7 +52,7 @@ class Operand : public IRObject
 
     // record use-def and def-use chains during instruction construction
     inline void used_by(Instruction *inst) { _uses.push_back(inst); }
-    inline void defed_by(Instruction *inst) { _defs.push_back(inst); }
+    inline void defined_by(Instruction *inst) { _defs.push_back(inst); }
 
     Operand(const std::string &name, OperandType type)
         : _name(name ALLOCCOMMA), _type(type), _id(INCORRECT_ID), _uses(ALLOC), _defs(ALLOC)

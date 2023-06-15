@@ -19,7 +19,7 @@ Instruction::Instruction(const std::vector<Operand *> &defs, const std::vector<O
     {
         if (def)
         {
-            def->defed_by(this);
+            def->defined_by(this);
             _defs.push_back(def);
         }
     }
@@ -30,7 +30,7 @@ void Instruction::update_def(int i, Operand *oper)
     assert(i < _defs.size());
     assert(oper);
 
-    oper->defed_by(this);
+    oper->defined_by(this);
     _defs[i] = oper;
 }
 

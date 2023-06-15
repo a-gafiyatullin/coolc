@@ -132,7 +132,7 @@ void SSAConstruction::rename_phis(Block *b, std::unordered_map<Variable *, std::
                 if (Operand::isa<Variable>(use))
                 {
                     // use without def - function formal. Skip this case.
-                    // All other variables have to be defed before use
+                    // All other variables have to be defined before use
                     auto *var = Operand::as<Variable>(use);
                     if (!varstacks[var].empty())
                     {
@@ -255,8 +255,11 @@ void SSAConstruction::prune_ssa_propagate(std::unordered_set<Operand *> &aliveva
         {
             for (auto *use : inst->uses())
             {
-                alivevars.insert(use);
-                varsstack.push(use);
+                if (!alivevars.contains(use))
+                {
+                    alivevars.insert(use);
+                    varsstack.push(use);
+                }
             }
         }
     }
@@ -316,7 +319,7 @@ void SSAConstruction::dump_defs(const std::unordered_map<Operand *, std::set<Blo
 
     for (auto &[var, defs] : defs)
     {
-        std::string s = "Variable " + var->name() + " was defed in [";
+        std::string s = "Variable " + var->name() + " was defined in [";
         for (auto *b : defs)
         {
             s += b->name() + ", ";
