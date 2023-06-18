@@ -12,6 +12,10 @@ class Block : public IRObject
 
   private:
     const irstring _name;
+
+    const int _id;
+    int _postorder_num;
+
     Function *_func;
 
     irvector<Block *> _preds;
@@ -19,17 +23,18 @@ class Block : public IRObject
 
     irlist<Instruction *> _insts;
 
-    bool _is_visited;
-
-    int _postorder_num;
+    static int ID;
 
   public:
     // construction
     Block(const std::string &name, Function *f)
-        : _name(name ALLOCCOMMA), _is_visited(false), _postorder_num(-1), _func(f), _preds(ALLOC), _succs(ALLOC),
-          _insts(ALLOC)
+        : _name(name ALLOCCOMMA), _postorder_num(-1), _func(f), _preds(ALLOC), _succs(ALLOC), _insts(ALLOC), _id(ID++)
     {
     }
+
+    // ID
+    static void reset_id() { ID = 0; }
+    static int max_id() { return ID; }
 
     // add instruction
     inline void append(Instruction *inst) { _insts.push_back(inst); }
@@ -45,10 +50,7 @@ class Block : public IRObject
     inline irlist<Instruction *> &insts() { return _insts; }
     inline Function *holder() const { return _func; }
     inline const irvector<Block *> &succs() const { return _succs; }
-    inline bool is_visited() const { return _is_visited; }
-
-    // setters
-    inline void visit() { _is_visited = true; }
+    inline int id() const { return _id; }
 
     // debugging
     std::string name() const { return std::string(_name); }
@@ -99,6 +101,9 @@ class IRBuilder : public allocator::StackObject
   public:
     // construction
     IRBuilder(Module &module) : _module(module), _curr_block(nullptr) {}
+
+    // reset
+    static void reset();
 
     // create a new block
     inline Block *new_block(const std::string &name) { return new Block(name, _curr_func); }

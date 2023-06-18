@@ -45,7 +45,7 @@ class Operand : public IRObject
   protected:
     const irstring _name;
     const OperandType _type;
-    int _id;
+    const int _id;
 
     irvector<Instruction *> _uses;
     irvector<Instruction *> _defs;
@@ -70,15 +70,18 @@ class Operand : public IRObject
 
     Operand(const Operand &other) : _type(other._type), _name(other._name), _id(ID++), _uses(ALLOC), _defs(ALLOC) {}
 
-    // type
+    // ID
+    static void reset_id() { ID = 0; }
+    static int max_id() { return ID; }
+
+    // getters
     inline OperandType type() const { return _type; }
+    inline irvector<Instruction *> &defs() { return _defs; }
+    inline int id() const { return _id; }
 
     // typecheck
     template <class T> static bool isa(Operand *o);
     template <class T> static T *as(Operand *o);
-
-    // array of defs
-    inline irvector<Instruction *> &defs() { return _defs; }
 
     // debugging
     virtual std::string dump() const;

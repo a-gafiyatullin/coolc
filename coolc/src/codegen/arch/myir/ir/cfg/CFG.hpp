@@ -17,41 +17,54 @@ class CFG : public IRObject
         REVERSE_POSTORDER // reversed POSTORDER
     };
 
+    // hold all info about dominators in one structure
+    struct DominanceInfo
+    {
+        friend class CFG;
+
+      private:
+        std::unordered_map<Block *, Block *> _dominance;
+        std::unordered_map<Block *, std::vector<Block *>> _dominator_tree;
+        std::unordered_map<Block *, std::set<Block *>> _dominance_frontier;
+
+      public:
+        inline auto &dominance() const { return _dominance; }
+        inline auto &dominator_tree() const { return _dominator_tree; }
+        inline auto &dominance_frontier() const { return _dominance_frontier; }
+
+        bool dominate(Block *dominator, Block *dominatee) const;
+    };
+
   private:
     Block *_root;
 
-    // traversals
-    irvector<Block *> _postorder;
-    irvector<Block *> _preorder;
-    irvector<Block *> _reverse_postorder;
-
-    // dominance info
-    irunordered_map<Block *, Block *> _dominance;
-    irunordered_map<Block *, irvector<Block *>> _dominator_tree;
-    irunordered_map<Block *, irset<Block *>> _dominance_frontier;
-
-    Block *dominance_intersect(Block *b1, Block *b2);
-
     // common DFS
-    template <DFSType type> void dfs(Block *root, const std::function<void(Block *s, Block *d)> &visitor);
+    template <DFSType type>
+    void dfs(Block *root, std::vector<bool> &bitset, const std::function<void(Block *s, Block *d)> &visitor);
+
+    // for every Block* gather all blocks that dominate it
+    // Implements approach was described in "A Simple, Fast Dominance Algorithm"
+    // by Keith D. Cooper, Timothy J. Harvey, and Ken Kennedy
+    void dominance(DominanceInfo &info);
+    void dominator_tree(DominanceInfo &info);
+
+    // for every Block* gather all blocks in its DF
+    // Implements approach was described in "A Simple, Fast Dominance Algorithm"
+    // by Keith D. Cooper, Timothy J. Harvey, and Ken Kennedy
+    void dominance_frontier(DominanceInfo &info);
+
+    // helper for dominance info creation
+    Block *dominance_intersect(const DominanceInfo &info, Block *b1, Block *b2);
 
 #ifdef DEBUG
-    void dump_dominance();
-    void dump_dominance_frontier();
+    void dump_dominance(const DominanceInfo &info);
 #endif // DEBUG
 
   public:
-    CFG()
-        : _postorder(ALLOC), _preorder(ALLOC), _reverse_postorder(ALLOC), _dominance(ALLOC), _dominator_tree(ALLOC),
-          _dominance_frontier(ALLOC), _root(nullptr)
-    {
-    }
+    CFG() : _root(nullptr) {}
 
     // graph traversals
-    template <DFSType type> irvector<Block *> &traversal();
-
-    // helpers
-    void clear_visited();
+    template <DFSType type> std::vector<Block *> traversal();
 
     // setters
     inline void set_cfg(Block *b) { _root = b; }
@@ -60,17 +73,8 @@ class CFG : public IRObject
     inline Block *root() const { return _root; }
     inline bool empty() const { return !root(); }
 
-    // for every Block* gather all blocks that dominate it
-    // Implements approach was described in "A Simple, Fast Dominance Algorithm"
-    // by Keith D. Cooper, Timothy J. Harvey, and Ken Kennedy
-    irunordered_map<Block *, Block *> &dominance();
-    irunordered_map<Block *, irvector<Block *>> &dominator_tree();
-    bool dominate(Block *dominator, Block *dominatee);
-
-    // for every Block* gather all blocks in its DF
-    // Implements approach was described in "A Simple, Fast Dominance Algorithm"
-    // by Keith D. Cooper, Timothy J. Harvey, and Ken Kennedy
-    irunordered_map<Block *, irset<Block *>> &dominance_frontier();
+    // get dominance info about this CFG
+    DominanceInfo dominance();
 
     // debugging
     std::string dump() const;

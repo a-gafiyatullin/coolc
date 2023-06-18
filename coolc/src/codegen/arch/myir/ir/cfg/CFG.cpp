@@ -12,23 +12,7 @@ void myir::trim(std::string &where, const std::string &what)
     }
 }
 
-void CFG::clear_visited()
-{
-    if (!_preorder.empty())
-    {
-        for (auto *b : _preorder)
-        {
-            b->_is_visited = false;
-        }
-    }
-
-    for (auto *b : _postorder)
-    {
-        b->_is_visited = false;
-    }
-}
-
-Block *CFG::dominance_intersect(Block *b1, Block *b2)
+Block *CFG::dominance_intersect(const DominanceInfo &info, Block *b1, Block *b2)
 {
     auto *finger1 = b1;
     auto *finger2 = b2;
@@ -37,34 +21,38 @@ Block *CFG::dominance_intersect(Block *b1, Block *b2)
     {
         while (finger1->postorder() < finger2->postorder())
         {
-            finger1 = _dominance.at(finger1);
+            finger1 = info.dominance().at(finger1);
         }
 
         while (finger2->postorder() < finger1->postorder())
         {
-            finger2 = _dominance.at(finger2);
+            finger2 = info.dominance().at(finger2);
         }
     }
 
     return finger1;
 }
 
-irunordered_map<Block *, Block *> &CFG::dominance()
+CFG::DominanceInfo CFG::dominance()
 {
-    if (!_dominance.empty())
-    {
-        return _dominance;
-    }
+    DominanceInfo info;
+    dominance(info);
 
+    DEBUG_ONLY(dump_dominance(info));
+    return info;
+}
+
+void CFG::dominance(DominanceInfo &info)
+{
     // copy here
     auto rpo = traversal<REVERSE_POSTORDER>();
     rpo.erase(find(rpo.begin(), rpo.end(), _root));
 
     for (auto *b : rpo) // initialize it
     {
-        _dominance[b] = nullptr;
+        info._dominance[b] = nullptr;
     }
-    _dominance[_root] = _root;
+    info._dominance[_root] = _root;
 
     bool changed = true;
 
@@ -75,54 +63,48 @@ irunordered_map<Block *, Block *> &CFG::dominance()
         {
             // first (processed) predecessor of b
             auto new_idom_iter =
-                std::find_if(b->_preds.begin(), b->_preds.end(), [this](Block *b) { return _dominance.at(b); });
+                std::find_if(b->_preds.begin(), b->_preds.end(), [&info](Block *b) { return info._dominance.at(b); });
             assert(new_idom_iter != b->_preds.end());
             auto *new_idom = *new_idom_iter;
 
             for (auto *p : b->_preds)
             {
-                if (_dominance[p])
+                if (info._dominance[p])
                 {
-                    new_idom = dominance_intersect(p, new_idom);
+                    new_idom = dominance_intersect(info, p, new_idom);
                 }
             }
 
-            if (_dominance[b] != new_idom)
+            if (info._dominance[b] != new_idom)
             {
-                _dominance[b] = new_idom;
+                info._dominance[b] = new_idom;
                 changed = true;
             }
         }
     }
 
-    // also construct the dominator tree from dominance info
-    for (auto &[bb, dom] : _dominance)
-    {
-        if (!_dominator_tree.contains(dom))
-        {
-            _dominator_tree.insert({dom, irvector<Block *>(ALLOC)});
-        }
+    dominator_tree(info);
+    dominance_frontier(info);
+}
 
-        _dominator_tree.at(dom).push_back(bb);
+void CFG::dominator_tree(DominanceInfo &info)
+{
+    assert(!info._dominance.empty());
+
+    // construct the dominator tree from dominance info
+    for (auto &[bb, dom] : info.dominance())
+    {
+        info._dominator_tree[dom].push_back(bb);
     }
 
-    if (_dominator_tree.contains(_root))
+    if (info._dominator_tree.contains(_root))
     {
-        auto &rootset = _dominator_tree.at(_root);
+        auto &rootset = info._dominator_tree.at(_root);
         rootset.erase(find(rootset.begin(), rootset.end(), _root));
     }
-
-    DEBUG_ONLY(dump_dominance());
-    return _dominance;
 }
 
-irunordered_map<Block *, irvector<Block *>> &CFG::dominator_tree()
-{
-    dominance();
-    return _dominator_tree;
-}
-
-bool CFG::dominate(Block *dominator, Block *dominatee)
+bool CFG::DominanceInfo::dominate(Block *dominator, Block *dominatee) const
 {
     if (dominator == dominatee)
     {
@@ -157,17 +139,11 @@ bool CFG::dominate(Block *dominator, Block *dominatee)
     return false;
 }
 
-irunordered_map<Block *, irset<Block *>> &CFG::dominance_frontier()
+void CFG::dominance_frontier(DominanceInfo &info)
 {
+    assert(!info._dominance.empty());
 
-    if (!_dominance_frontier.empty())
-    {
-        return _dominance_frontier;
-    }
-
-    dominance();
-
-    for (auto &[b, d] : _dominance)
+    for (auto &[b, d] : info.dominance())
     {
         if (b->_preds.size() >= 2)
         {
@@ -176,24 +152,16 @@ irunordered_map<Block *, irset<Block *>> &CFG::dominance_frontier()
                 auto *runner = p;
                 while (runner != d)
                 {
-                    if (!_dominance_frontier.contains(runner))
-                    {
-                        _dominance_frontier.insert({runner, irset<Block *>(ALLOC)});
-                    }
-
-                    _dominance_frontier.at(runner).insert(b);
-                    runner = _dominance[runner];
+                    info._dominance_frontier[runner].insert(b);
+                    runner = info._dominance[runner];
                 }
             }
         }
     }
-
-    DEBUG_ONLY(dump_dominance_frontier());
-    return _dominance_frontier;
 }
 
 #ifdef DEBUG
-void CFG::dump_dominance()
+void CFG::dump_dominance(const DominanceInfo &info)
 {
     if (!PrintDominanceInfo)
     {
@@ -202,13 +170,13 @@ void CFG::dump_dominance()
 
     std::cout << "Dominance:\n";
 
-    for (auto &[b, d] : _dominance)
+    for (auto &[b, d] : info.dominance())
     {
         std::cout << "  Dom(" << b->name() << ") = " << d->name() << "\n";
     }
 
     std::cout << "Dominator Tree:\n";
-    for (auto &[b, d] : _dominator_tree)
+    for (auto &[b, d] : info.dominator_tree())
     {
         std::string str = " " + b->name() + " dominates [";
         for (auto *dominatee : d)
@@ -219,17 +187,9 @@ void CFG::dump_dominance()
         trim(str, ", ");
         std::cout << str + "]\n";
     }
-}
-
-void CFG::dump_dominance_frontier()
-{
-    if (!TraceSSAConstruction)
-    {
-        return;
-    }
 
     std::string s = "Dominance frontier:\n";
-    for (auto &[b, dfset] : _dominance_frontier)
+    for (auto &[b, dfset] : info.dominance_frontier())
     {
         s += "  DF(" + b->name() + ") = [";
         for (auto *dfb : dfset)

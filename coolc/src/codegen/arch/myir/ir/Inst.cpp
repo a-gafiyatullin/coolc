@@ -3,8 +3,10 @@
 
 using namespace myir;
 
+int Instruction::ID = 0;
+
 Instruction::Instruction(const std::vector<Operand *> &defs, const std::vector<Operand *> &uses, Block *b)
-    : _block(b), _defs(ALLOC), _uses(ALLOC)
+    : _block(b), _defs(ALLOC), _uses(ALLOC), _id(ID++)
 {
     for (auto *use : uses)
     {

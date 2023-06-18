@@ -1,11 +1,21 @@
 #include "IR.inline.hpp"
 #include "cfg/CFG.hpp"
 #include "cfg/CFG.inline.hpp"
+#include "codegen/symnames/NameConstructor.h"
 #include <cassert>
 
 using namespace myir;
 
 int Operand::ID = 0;
+int Block::ID = 0;
+
+void IRBuilder::reset()
+{
+    codegen::Names::reset();
+    Operand::reset_id();
+    Instruction::reset_id();
+    Block::reset_id();
+}
 
 Function::Function(const std::string &name, const std::vector<Variable *> &params, OperandType return_type)
     : GlobalConstant(name, {}, POINTER), _params(params.begin(), params.end() ALLOCCOMMA), _return_type(return_type),

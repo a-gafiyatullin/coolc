@@ -24,15 +24,17 @@ void SSAConstruction::run(Function *func)
     }
 #endif // DEBUG
 
+    auto dominfo = _cfg->dominance();
+
     // 1. insert phis phase
-    insert_phis();
+    insert_phis(dominfo);
 
     // 2. renaming phase
     std::unordered_map<Variable *, std::stack<Operand *>> varstacks;
-    rename_phis(_cfg->root(), varstacks);
+    rename_phis(dominfo, _cfg->root(), varstacks);
 
     // 3. pruning phase
-    prune_ssa();
+    prune_ssa(dominfo);
 
 #ifdef DEBUG
     if (TraceSSAConstruction)
@@ -65,10 +67,10 @@ std::unordered_map<Operand *, std::set<Block *>> SSAConstruction::defs_in_blocks
     return var_to_blocks;
 }
 
-void SSAConstruction::insert_phis()
+void SSAConstruction::insert_phis(const CFG::DominanceInfo &info)
 {
     // 1.1. calcaulate DF
-    auto &df = _cfg->dominance_frontier();
+    auto &df = info.dominance_frontier();
     // 1.2 find all variables with multiple defs
     auto defs = defs_in_blocks();
 
@@ -102,7 +104,8 @@ void SSAConstruction::insert_phis()
     }
 }
 
-void SSAConstruction::rename_phis(Block *b, std::unordered_map<Variable *, std::stack<Operand *>> &varstacks)
+void SSAConstruction::rename_phis(const CFG::DominanceInfo &info, Block *b,
+                                  std::unordered_map<Variable *, std::stack<Operand *>> &varstacks)
 {
     assert(b);
 
@@ -177,12 +180,12 @@ void SSAConstruction::rename_phis(Block *b, std::unordered_map<Variable *, std::
         }
     }
 
-    // recurse on b’s children in the dominance tree
-    if (_cfg->dominator_tree().contains(b))
+    if (info.dominator_tree().contains(b))
     {
-        for (auto *dsucc : _cfg->dominator_tree().at(b))
+        // recurse on b’s children in the dominance tree
+        for (auto *dsucc : info.dominator_tree().at(b))
         {
-            rename_phis(dsucc, varstacks);
+            rename_phis(info, dsucc, varstacks);
         }
     }
 
@@ -196,18 +199,18 @@ void SSAConstruction::rename_phis(Block *b, std::unordered_map<Variable *, std::
     }
 }
 
-void SSAConstruction::prune_ssa()
+void SSAConstruction::prune_ssa(const CFG::DominanceInfo &info)
 {
     std::stack<Operand *> varsstack;
-    std::unordered_set<Operand *> alivevars;
+    std::vector<bool> alivevars(Operand::max_id());
 
-    prune_ssa_initialize(_cfg->root(), alivevars, varsstack);
+    prune_ssa_initialize(info, _cfg->root(), alivevars, varsstack);
     prune_ssa_propagate(alivevars, varsstack);
     prune_ssa_delete_dead_phis(alivevars);
 }
 
-void SSAConstruction::prune_ssa_initialize(Block *b, std::unordered_set<Operand *> &alivevars,
-                                           std::stack<Operand *> &varsstack)
+void SSAConstruction::prune_ssa_initialize(const CFG::DominanceInfo &info, Block *b, std::vector<bool> &alivevars,
+                                           std::stack<Operand *> &varstack)
 {
     for (auto *i : b->insts())
     {
@@ -224,8 +227,8 @@ void SSAConstruction::prune_ssa_initialize(Block *b, std::unordered_set<Operand 
                     // use defined by phi function
                     if (!use->defs().empty() && Instruction::isa<Phi>(use->defs().at(0)))
                     {
-                        alivevars.insert(use); // mark as useful
-                        varsstack.push(use);
+                        alivevars[use->id()] = true; // mark as useful
+                        varstack.push(use);
                     }
                 }
             }
@@ -233,57 +236,40 @@ void SSAConstruction::prune_ssa_initialize(Block *b, std::unordered_set<Operand 
     }
 
     // dominance order
-    auto &dt = _cfg->dominator_tree();
+    auto &dt = info.dominator_tree();
     if (dt.contains(b))
     {
         for (auto *succ : dt.at(b))
         {
-            prune_ssa_initialize(succ, alivevars, varsstack);
+            prune_ssa_initialize(info, succ, alivevars, varstack);
         }
     }
 }
 
-void SSAConstruction::prune_ssa_propagate(std::unordered_set<Operand *> &alivevars, std::stack<Operand *> &varsstack)
+void SSAConstruction::prune_ssa_propagate(std::vector<bool> &alivevars, std::stack<Operand *> &varstack)
 {
-    while (!varsstack.empty())
+    while (!varstack.empty())
     {
-        auto *var = varsstack.top();
-        varsstack.pop();
+        auto *var = varstack.top();
+        varstack.pop();
 
         auto *inst = var->defs().at(0);
         if (Instruction::isa<Phi>(inst))
         {
             for (auto *use : inst->uses())
             {
-                if (!alivevars.contains(use))
+                if (!alivevars[use->id()])
                 {
-                    alivevars.insert(use);
-                    varsstack.push(use);
+                    alivevars[use->id()] = true;
+                    varstack.push(use);
                 }
             }
         }
     }
 }
 
-void SSAConstruction::prune_ssa_delete_dead_phis(std::unordered_set<Operand *> &alivevars)
+void SSAConstruction::prune_ssa_delete_dead_phis(const std::vector<bool> &alivevars)
 {
-#ifdef DEBUG
-    if (TraceSSAConstruction)
-    {
-        std::string alive_vars_out = "Alive variables = [";
-
-        for (auto *var : alivevars)
-        {
-            alive_vars_out += var->name() + ", ";
-        }
-
-        trim(alive_vars_out, ", ");
-        alive_vars_out += "]";
-
-        std::cout << alive_vars_out << std::endl;
-    }
-#endif // DEBUG
-
     for (auto *bb : _cfg->traversal<CFG::PREORDER>())
     {
         for (auto inst_iter = bb->insts().begin(); inst_iter != bb->insts().end();)
@@ -292,7 +278,7 @@ void SSAConstruction::prune_ssa_delete_dead_phis(std::unordered_set<Operand *> &
             // destination operand of I marked as useless
             if (Instruction::isa<Phi>(inst))
             {
-                if (!alivevars.contains(inst->defs().at(0)))
+                if (!alivevars[inst->defs().at(0)->id()])
                 {
                     inst_iter = bb->insts().erase(inst_iter);
                 }

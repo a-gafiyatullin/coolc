@@ -16,13 +16,22 @@ class Instruction : public IRObject
 
     Block *_block;
 
+  private:
+    static int ID;
+    const int _id;
+
   public:
     // construction
     Instruction(const std::vector<Operand *> &defs, const std::vector<Operand *> &uses, Block *b);
 
+    // ID
+    static void reset_id() { ID = 0; }
+    static int max_id() { return ID; }
+
     // getters
     inline irvector<Operand *> &defs() { return _defs; }
     inline irvector<Operand *> &uses() { return _uses; }
+    inline int id() const { return _id; }
 
     // setters
     void update_def(int i, Operand *oper);

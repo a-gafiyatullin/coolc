@@ -41,7 +41,7 @@ void CodeGenMyIR::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
         return;
     }
 
-    Names::reset();
+    __ reset();
 
     auto *func = _module.get<myir::Function>(
         _builder->klass(_current_class->_type->_string)->method_full_name(method->_object->_object));
@@ -88,7 +88,7 @@ void CodeGenMyIR::verify_oop(myir::Operand *object)
 
 void CodeGenMyIR::emit_class_init_method_inner()
 {
-    Names::reset();
+    __ reset();
 
     auto &klass = _builder->klass(_current_class->_type->_string);
 
@@ -703,7 +703,7 @@ myir::Operand *CodeGenMyIR::emit_in_scope(const std::shared_ptr<ast::ObjectExpre
 
 void CodeGenMyIR::emit_runtime_main()
 {
-    Names::reset();
+    __ reset();
 
     auto *runtime_main = new myir::Function(
         static_cast<std::string>(RUNTIME_MAIN_FUNC),

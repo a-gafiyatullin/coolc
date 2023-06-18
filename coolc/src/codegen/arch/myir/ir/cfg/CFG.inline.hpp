@@ -1,13 +1,14 @@
 #include "CFG.hpp"
 
-template <myir::CFG::DFSType type> void myir::CFG::dfs(Block *b, const std::function<void(Block *s, Block *d)> &visitor)
+template <myir::CFG::DFSType type>
+void myir::CFG::dfs(Block *b, std::vector<bool> &bitset, const std::function<void(Block *s, Block *d)> &visitor)
 {
-    if (b->_is_visited)
+    if (bitset[b->id()])
     {
         return;
     }
 
-    b->_is_visited = true;
+    bitset[b->id()] = true;
 
     if constexpr (type == PREORDER)
     {
@@ -21,7 +22,7 @@ template <myir::CFG::DFSType type> void myir::CFG::dfs(Block *b, const std::func
             visitor(b, s);
         }
 
-        dfs<type>(s, visitor);
+        dfs<type>(s, bitset, visitor);
     }
 
     if constexpr (type == POSTORDER)
@@ -30,49 +31,29 @@ template <myir::CFG::DFSType type> void myir::CFG::dfs(Block *b, const std::func
     }
 }
 
-template <myir::CFG::DFSType type> myir::irvector<myir::Block *> &myir::CFG::traversal()
+template <myir::CFG::DFSType type> std::vector<myir::Block *> myir::CFG::traversal()
 {
-    bool need_clear = false;
+    // note that modern C++ compilers optimize it to bitset
+    std::vector<bool> bitset(Block::max_id());
+    std::vector<Block *> traversal;
 
     if constexpr (type == POSTORDER || type == REVERSE_POSTORDER)
     {
-        if (_postorder.empty())
+        dfs<POSTORDER>(_root, bitset, [&traversal](Block *b, Block *s) { traversal.push_back(b); });
+
+        // set postorder numbers
+        int num = 0;
+        std::for_each(traversal.begin(), traversal.end(), [&num](Block *b) { b->_postorder_num = num++; });
+
+        if constexpr (type == REVERSE_POSTORDER)
         {
-            need_clear = true;
-
-            dfs<POSTORDER>(_root, [this](Block *b, Block *s) { _postorder.push_back(b); });
-            _reverse_postorder.resize(_postorder.size());
-            std::reverse_copy(_postorder.begin(), _postorder.end(), _reverse_postorder.begin());
-
-            // set postorder numbers
-            int num = 0;
-            std::for_each(_postorder.begin(), _postorder.end(), [&num](Block *b) { b->_postorder_num = num++; });
+            std::reverse(traversal.begin(), traversal.end());
         }
     }
     else
     {
-        if (_preorder.empty())
-        {
-            need_clear = true;
-            dfs<PREORDER>(_root, [this](Block *b, Block *s) { _preorder.push_back(b); });
-        }
+        dfs<PREORDER>(_root, bitset, [&traversal](Block *b, Block *s) { traversal.push_back(b); });
     }
 
-    if (need_clear)
-    {
-        clear_visited();
-    }
-
-    if constexpr (type == POSTORDER)
-    {
-        return _postorder;
-    }
-    else if constexpr (type == PREORDER)
-    {
-        return _preorder;
-    }
-    else
-    {
-        return _reverse_postorder;
-    }
+    return traversal;
 }
