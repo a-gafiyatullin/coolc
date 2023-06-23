@@ -1,6 +1,7 @@
 #include "IR.inline.hpp"
 #include "cfg/CFG.hpp"
 #include "cfg/CFG.inline.hpp"
+#include "codegen/arch/myir/runtime/RuntimeMyIR.hpp"
 #include "codegen/symnames/NameConstructor.h"
 #include <cassert>
 
@@ -66,8 +67,8 @@ void Block::connect(Block *pred, Block *succ)
 
 std::string type_to_string(OperandType type)
 {
-    static std::string OPERAND_TYPE_NAME[] = {"int8",   "uint8", "int32",     "uint32", "int64",
-                                              "uint64", "void*", "structure", "void"};
+    static std::string OPERAND_TYPE_NAME[] = {"int8",   "uint8", "int32",   "uint32",    "int64",
+                                              "uint64", "void*", "integer", "structure", "void"};
     return OPERAND_TYPE_NAME[type];
 }
 
@@ -130,11 +131,32 @@ std::string Module::dump() const
 
 std::string Operand::dump() const { return type_to_string(_type) + " " + name(); }
 
-std::string Constant::dump() const { return std::to_string(_value); }
+std::string Constant::name() const { return std::to_string(_value); }
 
 std::string Variable::name() const
 {
     return Operand::name() + (this != _original_var ? "[" + _original_var->name() + "]" : "");
+}
+
+Operand *StructuredOperand::field(int offset) const
+{
+    switch (offset)
+    {
+    case codegen::HeaderLayoutOffsets::MarkOffset:
+        return _fields.at(0);
+    case codegen::HeaderLayoutOffsets::TagOffset:
+        return _fields.at(1);
+    case codegen::HeaderLayoutOffsets::SizeOffset:
+        return _fields.at(2);
+    case codegen::HeaderLayoutOffsets::DispatchTableOffset:
+        return _fields.at(3);
+    }
+
+    int field_offset_from_header = offset - codegen::HeaderLayoutSizes::HeaderSize;
+    assert(field_offset_from_header % WORD_SIZE == 0);
+    assert(4 + field_offset_from_header / WORD_SIZE < _fields.size());
+
+    return _fields.at(4 + field_offset_from_header / WORD_SIZE);
 }
 
 std::string StructuredOperand::dump() const
@@ -148,7 +170,7 @@ std::string StructuredOperand::dump() const
 
     trim(s, ", ");
 
-    s += "} " + _name;
+    s += "} " + name();
 
     return s;
 }
@@ -226,6 +248,7 @@ Operand *IRBuilder::move(Operand *src) { return add(src, new Constant(0, src->ty
 
 void IRBuilder::move(Operand *src, Operand *dst)
 {
+    assert(src);
     _curr_block->append(new Add(dst, src, new Constant(0, src->type()), _curr_block));
 }
 

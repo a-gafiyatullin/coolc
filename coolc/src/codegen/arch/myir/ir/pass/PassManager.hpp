@@ -7,6 +7,10 @@ namespace myir
 
 class Pass
 {
+  protected:
+    Function *_func; // currently processing function
+    CFG *_cfg;       // corresponding CFG
+
   public:
     virtual void run(Function *func) = 0;
 

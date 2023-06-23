@@ -23,9 +23,7 @@ template <class T> class SymbolTable
      * @brief Construct a new SymbolTable with initial scope
      *
      */
-    SymbolTable() : _symbols(1)
-    {
-    }
+    SymbolTable() : _symbols(1) {}
 
     /**
      * @brief Find symbol
@@ -47,10 +45,7 @@ template <class T> class SymbolTable
      * @brief Push new scope
      *
      */
-    inline void push_scope()
-    {
-        _symbols.emplace_back();
-    }
+    inline void push_scope() { _symbols.emplace_back(); }
 
     /**
      * @brief Pop current scope
@@ -63,10 +58,7 @@ template <class T> class SymbolTable
     }
 
 #ifdef DEBUG
-    void set_printer(const std::function<void(const std::string &, const T &)> &debug_print)
-    {
-        _debug = debug_print;
-    }
+    void set_printer(const std::function<void(const std::string &, const T &)> &debug_print) { _debug = debug_print; }
 #endif // DEBUG
 };
 
@@ -79,7 +71,7 @@ template <class T> void SymbolTable<T>::add_symbol(const std::string &name, cons
 template <class T> T &SymbolTable<T>::symbol(const std::string &symbol)
 {
     // search in reverse order
-    for (auto i = _symbols.size() - 1; i >= 0; i--)
+    for (int i = _symbols.size() - 1; i >= 0; i--)
     {
         const auto symbol_ptr = _symbols[i].find(symbol);
         if (symbol_ptr != _symbols[i].end())

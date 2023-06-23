@@ -8,9 +8,6 @@ namespace myir
 class SSAConstruction : public Pass
 {
   private:
-    Function *_func; // currently processing function
-    CFG *_cfg;
-
     // for every variable with multiple defs find all blocks that contain it
     std::unordered_map<Operand *, std::set<Block *>> defs_in_blocks() const;
 

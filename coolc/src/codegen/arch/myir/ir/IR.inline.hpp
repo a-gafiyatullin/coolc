@@ -35,6 +35,15 @@ template <class T> myir::Operand *myir::IRBuilder::unary(Operand *operand)
 
 template <myir::OperandType type> myir::Operand *myir::IRBuilder::ld(Operand *base, Operand *offset)
 {
+    // we can optimize loads from constant objects by constant offset
+    if (Operand::isa<GlobalConstant>(base) && Operand::isa<Constant>(offset))
+    {
+        auto *global_constant = Operand::as<GlobalConstant>(base);
+        auto *constant_offset = Operand::as<Constant>(offset);
+
+        return global_constant->field(constant_offset->value());
+    }
+
     myir::Operand *res = new Operand(type);
     _curr_block->append(new Load(res, base, offset, _curr_block));
 
@@ -68,7 +77,9 @@ template <class T> void myir::Module::add(T elem)
         _variables[elem->name()] = elem;
     }
     else
-        static_assert("Unexpected type");
+    {
+        assert(false && "Unexpected type");
+    }
 }
 
 template <class T> T *myir::Module::get(const std::string &name) const
@@ -86,7 +97,9 @@ template <class T> T *myir::Module::get(const std::string &name) const
         return get_by_name(name, _variables);
     }
     else
-        static_assert("Unexpected type");
+    {
+        assert(false && "Unexpected type");
+    }
 }
 
 template <class T> const std::unordered_map<std::string, T *> &myir::Module::get() const
@@ -104,5 +117,7 @@ template <class T> const std::unordered_map<std::string, T *> &myir::Module::get
         return _variables;
     }
     else
-        static_assert("Unexpected type");
+    {
+        assert(false && "Unexpected type");
+    }
 }

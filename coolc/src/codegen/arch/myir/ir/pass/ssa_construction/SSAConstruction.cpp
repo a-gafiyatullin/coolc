@@ -31,6 +31,12 @@ void SSAConstruction::run(Function *func)
 
     // 2. renaming phase
     std::unordered_map<Variable *, std::stack<Operand *>> varstacks;
+    // formals of the method - first defs
+    for (int i = 0; i < _func->params_size(); i++)
+    {
+        // replace formals with tmp, because they have correct id
+        varstacks[_func->param(i)].push(_func->param(i));
+    }
     rename_phis(dominfo, _cfg->root(), varstacks);
 
     // 3. pruning phase
@@ -252,6 +258,12 @@ void SSAConstruction::prune_ssa_propagate(std::vector<bool> &alivevars, std::sta
     {
         auto *var = varstack.top();
         varstack.pop();
+
+        // no defs - function formal
+        if (var->defs().empty())
+        {
+            continue;
+        }
 
         auto *inst = var->defs().at(0);
         if (Instruction::isa<Phi>(inst))

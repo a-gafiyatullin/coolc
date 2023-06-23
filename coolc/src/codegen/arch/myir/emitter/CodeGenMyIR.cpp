@@ -64,8 +64,9 @@ void CodeGenMyIR::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
     for (auto i = 0; i < func->params_size(); i++)
     {
         auto *arg = func->param(i);
+        auto name = i != 0 ? formals[i - 1]->_object->_object : SelfObject;
 
-        _table.add_symbol(arg->name(), Symbol(arg, i != 0 ? formals[i - 1]->_type : _current_class->_type));
+        _table.add_symbol(name, Symbol(arg, i != 0 ? formals[i - 1]->_type : _current_class->_type));
 
         DEBUG_ONLY(verify_oop(arg));
     }

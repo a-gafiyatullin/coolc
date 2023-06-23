@@ -31,6 +31,10 @@ enum OperandType
     UINT64,
 
     POINTER,
+
+    // primitives
+    INTEGER,
+
     STRUCTURE,
     VOID,
 
@@ -55,14 +59,13 @@ class Operand : public IRObject
     inline void defined_by(Instruction *inst) { _defs.push_back(inst); }
 
     Operand(const std::string &name, OperandType type)
-        : _name(name ALLOCCOMMA), _type(type), _id(INCORRECT_ID), _uses(ALLOC), _defs(ALLOC)
+        : _name(name ALLOCCOMMA), _type(type), _id(ID++), _uses(ALLOC), _defs(ALLOC)
     {
     }
 
   private:
     static constexpr std::string_view PREFIX = "tmp";
     static int ID;
-    static constexpr int INCORRECT_ID = -1;
 
   public:
     // constructors
@@ -85,10 +88,7 @@ class Operand : public IRObject
 
     // debugging
     virtual std::string dump() const;
-    virtual std::string name() const
-    {
-        return _id != INCORRECT_ID ? std::string(_name) + std::to_string(_id) : std::string(_name);
-    }
+    virtual std::string name() const { return std::string(_name) + std::to_string(_id); }
 };
 
 class Constant : public Operand
@@ -104,8 +104,8 @@ class Constant : public Operand
     inline uint64_t value() const { return _value; }
 
     // debugging
-    std::string dump() const override;
-    std::string name() const override { return dump(); }
+    std::string dump() const override { return name(); }
+    std::string name() const override;
 };
 
 class Variable : public Operand
@@ -142,7 +142,11 @@ class StructuredOperand : public Operand
     {
     }
 
+    // get field by offset
+    Operand *field(int offset) const;
+
     // debugging
+    std::string name() const override { return (std::string)_name; }
     std::string dump() const override;
 };
 
@@ -172,7 +176,7 @@ class GlobalVariable final : public StructuredOperand
 class Function final : public GlobalConstant
 {
   private:
-    const irvector<Variable *> _params;
+    irvector<Variable *> _params;
 
     CFG *_cfg;
 
@@ -189,6 +193,7 @@ class Function final : public GlobalConstant
 
     // params
     inline Variable *param(int i) const { return _params.at(i); }
+    inline void set_param(int i, Variable *var) { _params[i] = var; }
     inline int params_size() const { return _params.size(); }
 
     // return
