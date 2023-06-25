@@ -12,7 +12,7 @@ class Instruction : public IRObject
 {
   protected:
     irvector<Operand *> _uses;
-    irvector<Operand *> _defs;
+    Operand *_def;
 
     Block *_block;
 
@@ -22,22 +22,21 @@ class Instruction : public IRObject
 
   public:
     // construction
-    Instruction(const std::vector<Operand *> &defs, const std::vector<Operand *> &uses, Block *b);
+    Instruction(Operand *def, const std::vector<Operand *> &uses, Block *b);
 
     // ID
-    static void reset_id() { ID = 0; }
-    static int max_id() { return ID; }
+    inline static void set_id(int c = 0) { ID = c; }
+    inline static int max_id() { return ID; }
 
     // getters
-    inline irvector<Operand *> &defs() { return _defs; }
+    inline Operand *def() { return _def; }
     inline irvector<Operand *> &uses() { return _uses; }
     inline int id() const { return _id; }
+    inline Block *holder() const { return _block; }
 
     // setters
-    void update_def(int i, Operand *oper);
-    void update_use(int i, Operand *oper);
-
-    inline Block *holder() const { return _block; }
+    void update_def(Operand *oper);
+    virtual void update_use(Operand *old_use, Operand *new_use);
 
     // typecheck
     template <class T> static bool isa(Instruction *inst);
@@ -53,20 +52,18 @@ class Phi : public Instruction
     irunordered_map<Operand *, Block *> _def_from_block;
 
   public:
-    Phi(Operand *result, Block *b) : Instruction({result}, {}, b), _def_from_block(ALLOC) {}
+    Phi(Operand *result, Block *b) : Instruction(result, {}, b), _def_from_block(ALLOC) {}
 
     void add_path(Operand *use, Block *b);
+    void update_use(Operand *old_use, Operand *new_use) override;
 
-    std::string dump() const;
+    std::string dump() const override;
 };
 
 class MemoryInst : public Instruction
 {
   public:
-    MemoryInst(const std::vector<Operand *> &defs, const std::vector<Operand *> &uses, Block *b)
-        : Instruction(defs, uses, b)
-    {
-    }
+    MemoryInst(Operand *def, const std::vector<Operand *> &uses, Block *b) : Instruction(def, uses, b) {}
 };
 
 class Store : public MemoryInst
@@ -80,7 +77,7 @@ class Store : public MemoryInst
 class Load : public MemoryInst
 {
   public:
-    Load(Operand *result, Operand *base, Operand *offset, Block *b) : MemoryInst({result}, {base, offset}, b) {}
+    Load(Operand *result, Operand *base, Operand *offset, Block *b) : MemoryInst(result, {base, offset}, b) {}
 
     std::string dump() const override;
 };
@@ -117,7 +114,7 @@ class BinaryInst : public Instruction
     std::string print(const std::string &op) const;
 
   public:
-    BinaryInst(Operand *result, Operand *lhs, Operand *rhs, Block *b) : Instruction({result}, {lhs, rhs}, b) {}
+    BinaryInst(Operand *result, Operand *lhs, Operand *rhs, Block *b) : Instruction(result, {lhs, rhs}, b) {}
 };
 
 class BinaryArithInst : public BinaryInst
@@ -226,7 +223,7 @@ class UnaryInst : public Instruction
     std::string print(const std::string &op) const;
 
   public:
-    UnaryInst(Operand *result, Operand *value, Block *b) : Instruction({result}, {value}, b) {}
+    UnaryInst(Operand *result, Operand *value, Block *b) : Instruction(result, {value}, b) {}
 };
 
 class UnaryLogicInst : public UnaryInst
@@ -257,6 +254,14 @@ class Neg : public UnaryArithInst
     std::string dump() const override;
 };
 
+class Move : public UnaryInst
+{
+  public:
+    Move(Operand *result, Operand *value, Block *b) : UnaryInst(result, value, b) {}
+
+    std::string dump() const override;
+};
+
 class Call : public Instruction
 {
   private:
@@ -264,9 +269,11 @@ class Call : public Instruction
 
   public:
     Call(Function *f, Operand *result, const std::vector<Operand *> &args, Block *b)
-        : Instruction({result}, args, b), _callee(f)
+        : Instruction(result, args, b), _callee(f)
     {
     }
+
+    Function *callee() const { return _callee; }
 
     std::string dump() const override;
 };

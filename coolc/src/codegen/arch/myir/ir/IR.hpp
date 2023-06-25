@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Inst.hpp"
-#include <list>
+#include <unordered_map>
 
 namespace myir
 {
@@ -12,15 +12,14 @@ class Block : public IRObject
 
   private:
     const irstring _name;
-
     const int _id;
-    int _postorder_num;
 
     Function *_func;
 
+    int _postorder_num;
+
     irvector<Block *> _preds;
     irvector<Block *> _succs;
-
     irlist<Instruction *> _insts;
 
     static int ID;
@@ -33,12 +32,18 @@ class Block : public IRObject
     }
 
     // ID
-    static void reset_id() { ID = 0; }
-    static int max_id() { return ID; }
+    inline static void set_id(int c = 0) { ID = c; }
+    inline static int max_id() { return ID; }
 
     // add instruction
     inline void append(Instruction *inst) { _insts.push_back(inst); }
     inline void append_front(Instruction *inst) { _insts.push_front(inst); }
+    void append_before(Instruction *inst, Instruction *newinst);
+    void append_instead(Instruction *inst, Instruction *newinst);
+
+    // delete instruction
+    void erase(Instruction *inst);
+    static void erase(const std::vector<Instruction *> &insts);
 
     // create edges in CFG
     static void connect(Block *pred, Block *succ);
@@ -47,9 +52,9 @@ class Block : public IRObject
     inline int postorder() const { return _postorder_num; }
 
     // getters
-    inline irlist<Instruction *> &insts() { return _insts; }
-    inline Function *holder() const { return _func; }
+    inline const irlist<Instruction *> &insts() const { return _insts; }
     inline const irvector<Block *> &succs() const { return _succs; }
+    inline Function *holder() const { return _func; }
     inline int id() const { return _id; }
 
     // debugging
@@ -91,7 +96,6 @@ class IRBuilder : public allocator::StackObject
     Module &_module;
 
     Block *_curr_block;
-
     Function *_curr_func;
 
     // convinience methods for bnary and unary instructions
@@ -100,20 +104,20 @@ class IRBuilder : public allocator::StackObject
 
   public:
     // construction
-    IRBuilder(Module &module) : _module(module), _curr_block(nullptr) {}
-
-    // reset
-    static void reset();
+    IRBuilder(Module &module) : _module(module), _curr_block(nullptr), _curr_func(nullptr) {}
 
     // create a new block
     inline Block *new_block(const std::string &name) { return new Block(name, _curr_func); }
 
-    // set a state
-    inline void set_current_function(Function *func) { _curr_func = func; }
+    // setters
+    void set_current_function(Function *func);
     inline void set_current_block(Block *block) { _curr_block = block; }
 
-    // get a state
+    // getters
     inline Block *curr_block() const { return _curr_block; }
+
+    // helpers
+    inline myir::Operand *field_offset(uint64_t offset) { return new myir::Constant(offset, myir::UINT64); }
 
     // create instructions
     static void phi(Operand *var, Block *b);

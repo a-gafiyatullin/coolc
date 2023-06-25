@@ -5,6 +5,27 @@
 
 using namespace codegen;
 
+myir::OperandType DataMyIR::ast_to_ir_type(const std::shared_ptr<ast::Type> &type)
+{
+    if (semant::Semant::is_trivial_type(type))
+    {
+        if (semant::Semant::is_int(type))
+        {
+            return myir::INTEGER;
+        }
+        if (semant::Semant::is_bool(type))
+        {
+            return myir::BOOLEAN;
+        }
+        if (semant::Semant::is_string(type))
+        {
+            return myir::STRING;
+        }
+    }
+
+    return myir::POINTER;
+}
+
 DataMyIR::DataMyIR(const std::shared_ptr<KlassBuilder> &builder, myir::Module &module, const RuntimeMyIR &runtime)
     : Data(builder), _module(module), _runtime(runtime)
 {
@@ -54,8 +75,8 @@ void DataMyIR::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
             {
                 const auto &formal_type = formal->_type->_string;
                 CODEGEN_VERBOSE_ONLY(LOG("Formal of type \"" + formal_type + "\""));
-                // all arguments are pointer
-                args.push_back(new myir::Variable(formal->_object->_object, myir::OperandType::POINTER));
+
+                args.push_back(new myir::Variable(formal->_object->_object, ast_to_ir_type(formal->_type)));
             }
 
             CODEGEN_VERBOSE_ONLY(LOG("Return type: \"" + return_type->_string + "\""));

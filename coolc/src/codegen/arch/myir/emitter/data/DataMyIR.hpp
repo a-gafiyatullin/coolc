@@ -38,6 +38,8 @@ class DataMyIR : public Data<myir::Operand *>
      * @param runtime Runtime methods
      */
     DataMyIR(const std::shared_ptr<KlassBuilder> &builder, myir::Module &module, const RuntimeMyIR &runtime);
+
+    myir::OperandType ast_to_ir_type(const std::shared_ptr<ast::Type> &type);
 };
 
 }; // namespace codegen

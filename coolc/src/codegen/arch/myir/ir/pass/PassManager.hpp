@@ -11,6 +11,9 @@ class Pass
     Function *_func; // currently processing function
     CFG *_cfg;       // corresponding CFG
 
+    // return false if function isn't defined
+    bool setup(Function *func);
+
   public:
     virtual void run(Function *func) = 0;
 

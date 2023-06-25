@@ -2,6 +2,7 @@
 
 #include "codegen/arch/myir/ir/cfg/CFG.hpp"
 #include "codegen/arch/myir/ir/pass/PassManager.hpp"
+#include <stack>
 
 namespace myir
 {

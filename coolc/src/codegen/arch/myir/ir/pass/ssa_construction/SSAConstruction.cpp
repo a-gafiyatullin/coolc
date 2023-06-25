@@ -1,7 +1,6 @@
 #include "SSAConstruction.hpp"
 #include "codegen/arch/myir/ir/IR.inline.hpp"
 #include "codegen/arch/myir/ir/Oper.hpp"
-#include "codegen/arch/myir/ir/cfg/CFG.hpp"
 #include "codegen/arch/myir/ir/cfg/CFG.inline.hpp"
 #include "utils/Utils.h"
 
@@ -9,12 +8,9 @@ using namespace myir;
 
 void SSAConstruction::run(Function *func)
 {
-    _func = func;
-    _cfg = _func->cfg();
-
-    if (_cfg->empty())
+    if (!setup(func))
     {
-        return; // function was declared but not defined
+        return;
     }
 
 #ifdef DEBUG
@@ -35,7 +31,9 @@ void SSAConstruction::run(Function *func)
     for (int i = 0; i < _func->params_size(); i++)
     {
         // replace formals with tmp, because they have correct id
-        varstacks[_func->param(i)].push(_func->param(i));
+        auto *newvar = new Variable(*_func->param(i));
+        varstacks[_func->param(i)].push(newvar);
+        _func->set_param(i, newvar);
     }
     rename_phis(dominfo, _cfg->root(), varstacks);
 
@@ -58,12 +56,9 @@ std::unordered_map<Operand *, std::set<Block *>> SSAConstruction::defs_in_blocks
     {
         for (auto *inst : b->insts())
         {
-            for (auto *def : inst->defs())
+            if (Operand::isa<Variable>(inst->def()))
             {
-                if (Operand::isa<Variable>(def))
-                {
-                    var_to_blocks[def].insert(b);
-                }
+                var_to_blocks[inst->def()].insert(b);
             }
         }
     }
@@ -123,19 +118,16 @@ void SSAConstruction::rename_phis(const CFG::DominanceInfo &info, Block *b,
         // generate unique name for each phi-function
         if (Instruction::isa<Phi>(i))
         {
-            auto *def = i->defs().at(0);
-
-            auto *var = Operand::as<Variable>(def);
+            auto *var = Operand::as<Variable>(i->def());
             auto *newvar = new Variable(*var);
 
-            i->update_def(0, newvar);
+            i->update_def(newvar);
             varstacks[var].push(newvar);
             popcount[var]++;
         }
         else
         {
             // Rewrite uses of global names with the current version
-            int num = 0;
             for (auto *use : i->uses())
             {
                 if (Operand::isa<Variable>(use))
@@ -145,26 +137,20 @@ void SSAConstruction::rename_phis(const CFG::DominanceInfo &info, Block *b,
                     auto *var = Operand::as<Variable>(use);
                     if (!varstacks[var].empty())
                     {
-                        i->update_use(num, varstacks[var].top());
+                        i->update_use(use, varstacks[var].top());
                     }
                 }
-                num++;
             }
 
             // Rewrite definition by inventing & pushing new name
-            num = 0;
-            for (auto *def : i->defs())
+            if (Operand::isa<Variable>(i->def()))
             {
-                if (Operand::isa<Variable>(def))
-                {
-                    auto *var = Operand::as<Variable>(def);
-                    auto *newvar = new Variable(*var);
+                auto *var = Operand::as<Variable>(i->def());
+                auto *newvar = new Variable(*var);
 
-                    i->update_def(num, newvar);
-                    varstacks[var].push(newvar);
-                    popcount[var]++;
-                }
-                num++;
+                i->update_def(newvar);
+                varstacks[var].push(newvar);
+                popcount[var]++;
             }
         }
     }
@@ -175,7 +161,7 @@ void SSAConstruction::rename_phis(const CFG::DominanceInfo &info, Block *b,
         auto i = succ->insts().begin();
         while (Instruction::isa<Phi>(*i))
         {
-            auto *def = Operand::as<Variable>((*i)->defs().at(0))->original_var();
+            auto *def = Operand::as<Variable>((*i)->def())->original_var();
             if (varstacks.contains(def))
             {
                 assert(!varstacks[def].empty());
@@ -227,11 +213,8 @@ void SSAConstruction::prune_ssa_initialize(const CFG::DominanceInfo &info, Block
                 // only variables bother us
                 if (Operand::isa<Variable>(use))
                 {
-                    // dominance property and function formal case
-                    assert(use->defs().size() <= 1);
-
                     // use defined by phi function
-                    if (!use->defs().empty() && Instruction::isa<Phi>(use->defs().at(0)))
+                    if (use->has_def() && Instruction::isa<Phi>(use->def()))
                     {
                         alivevars[use->id()] = true; // mark as useful
                         varstack.push(use);
@@ -260,12 +243,12 @@ void SSAConstruction::prune_ssa_propagate(std::vector<bool> &alivevars, std::sta
         varstack.pop();
 
         // no defs - function formal
-        if (var->defs().empty())
+        if (!var->has_def())
         {
             continue;
         }
 
-        auto *inst = var->defs().at(0);
+        auto *inst = var->def();
         if (Instruction::isa<Phi>(inst))
         {
             for (auto *use : inst->uses())
@@ -282,29 +265,25 @@ void SSAConstruction::prune_ssa_propagate(std::vector<bool> &alivevars, std::sta
 
 void SSAConstruction::prune_ssa_delete_dead_phis(const std::vector<bool> &alivevars)
 {
+    std::vector<Instruction *> for_delete;
     for (auto *bb : _cfg->traversal<CFG::PREORDER>())
     {
-        for (auto inst_iter = bb->insts().begin(); inst_iter != bb->insts().end();)
+        for (auto *inst : bb->insts())
         {
-            auto *inst = *inst_iter;
             // destination operand of I marked as useless
-            if (Instruction::isa<Phi>(inst))
-            {
-                if (!alivevars[inst->defs().at(0)->id()])
-                {
-                    inst_iter = bb->insts().erase(inst_iter);
-                }
-                else
-                {
-                    inst_iter++;
-                }
-            }
-            else
+            if (!Instruction::isa<Phi>(inst))
             {
                 break;
             }
+
+            if (!alivevars[inst->def()->id()])
+            {
+                for_delete.push_back(inst);
+            }
         }
     }
+
+    Block::erase(for_delete);
 }
 
 #ifdef DEBUG

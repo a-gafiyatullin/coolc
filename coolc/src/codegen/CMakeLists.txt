@@ -33,6 +33,7 @@ if(ARCH STREQUAL "MYIR")
     arch/myir/ir/pass/PassManager.cpp
 
     arch/myir/ir/pass/ssa_construction/SSAConstruction.cpp
+    arch/myir/ir/DumpIR.cpp
   )
 endif()
 

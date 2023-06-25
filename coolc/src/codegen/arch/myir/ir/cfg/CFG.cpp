@@ -1,5 +1,6 @@
 #include "CFG.hpp"
 #include "utils/Utils.h"
+#include <stack>
 
 using namespace myir;
 

@@ -1,16 +1,9 @@
 #pragma once
 
 #include "allocator/Allocator.hpp"
-#include <set>
-#include <stack>
-#include <string>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
 
 namespace myir
 {
-
 class Instruction;
 class Block;
 class Constant;
@@ -34,6 +27,8 @@ enum OperandType
 
     // primitives
     INTEGER,
+    BOOLEAN,
+    STRING,
 
     STRUCTURE,
     VOID,
@@ -45,6 +40,7 @@ enum OperandType
 class Operand : public IRObject
 {
     friend class Instruction;
+    friend class Phi;
 
   protected:
     const irstring _name;
@@ -54,14 +50,17 @@ class Operand : public IRObject
     irvector<Instruction *> _uses;
     irvector<Instruction *> _defs;
 
-    // record use-def and def-use chains during instruction construction
-    inline void used_by(Instruction *inst) { _uses.push_back(inst); }
-    inline void defined_by(Instruction *inst) { _defs.push_back(inst); }
-
     Operand(const std::string &name, OperandType type)
         : _name(name ALLOCCOMMA), _type(type), _id(ID++), _uses(ALLOC), _defs(ALLOC)
     {
     }
+
+    // operand can have more than one def before SSA construction
+    inline irvector<Instruction *> &defs() { return _defs; }
+
+    // record use-def and def-use chains during instruction construction
+    inline void used_by(Instruction *inst) { _uses.push_back(inst); }
+    inline void defined_by(Instruction *inst) { _defs.push_back(inst); }
 
   private:
     static constexpr std::string_view PREFIX = "tmp";
@@ -69,18 +68,25 @@ class Operand : public IRObject
 
   public:
     // constructors
-    Operand(OperandType type) : _name(PREFIX ALLOCCOMMA), _id(ID++), _type(type), _uses(ALLOC), _defs(ALLOC) {}
+    Operand(OperandType type) : Operand((std::string)PREFIX, type) {}
 
-    Operand(const Operand &other) : _type(other._type), _name(other._name), _id(ID++), _uses(ALLOC), _defs(ALLOC) {}
+    Operand(const Operand &other) : Operand((std::string)other._name, other._type) {}
 
-    // ID
-    static void reset_id() { ID = 0; }
-    static int max_id() { return ID; }
+    // id
+    inline static void set_id(int c = 0) { ID = c; }
+    inline static int max_id() { return ID; }
 
     // getters
     inline OperandType type() const { return _type; }
-    inline irvector<Instruction *> &defs() { return _defs; }
     inline int id() const { return _id; }
+
+    // uses and def
+    inline const irvector<Instruction *> &uses() const { return _uses; }
+    inline void erase_use(Instruction *use) { _uses.erase(std::find(_uses.begin(), _uses.end(), use)); }
+
+    inline bool has_def() const { return !_defs.empty(); }
+    inline Instruction *def() const { return _defs.at(0); }
+    void erase_def(Instruction *def);
 
     // typecheck
     template <class T> static bool isa(Operand *o);
@@ -177,11 +183,21 @@ class Function final : public GlobalConstant
 {
   private:
     irvector<Variable *> _params;
+    const OperandType _return_type;
 
     CFG *_cfg;
 
-    const OperandType _return_type;
-    bool _is_leaf;
+    // kind of method
+    union Kind {
+        int _is_leaf : 1;
+        int _is_init : 1;
+        int _is_runtime : 1;
+    } _kind;
+
+    // IDs
+    int _max_operand_id;
+    int _max_instruction_id;
+    int _max_block_id;
 
   public:
     // constructors
@@ -195,15 +211,26 @@ class Function final : public GlobalConstant
     inline Variable *param(int i) const { return _params.at(i); }
     inline void set_param(int i, Variable *var) { _params[i] = var; }
     inline int params_size() const { return _params.size(); }
+    const irvector<Variable *> &params() const { return _params; }
 
     // return
     inline OperandType return_type() const { return _return_type; }
     inline bool has_return() const { return return_type() != VOID; }
 
     // type
-    inline void set_is_leaf() { _is_leaf = true; }
+    inline void set_is_leaf() { _kind._is_leaf = true; }
+    inline void set_is_init() { _kind._is_init = true; }
+    inline void set_is_runtime() { _kind._is_runtime = true; }
+    inline bool is_leaf() const { return _kind._is_leaf; }
+    inline bool is_init() const { return _kind._is_init; }
+    inline bool is_runtime() const { return _kind._is_runtime; }
 
     // debugging
+    void set_max_ids(int max_opnd_id, int max_inst_id, int max_block_id);
+    inline int max_opnd_id() const { return _max_operand_id; }
+    inline int max_instruction_id() const { return _max_instruction_id; }
+    inline int max_block_id() const { return _max_block_id; }
+
     std::string name() const override;
     std::string short_name() const;
     std::string dump() const override;

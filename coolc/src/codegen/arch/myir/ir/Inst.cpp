@@ -1,12 +1,14 @@
 #include "cfg/CFG.hpp"
+#include "codegen/arch/myir/ir/Oper.hpp"
+#include "utils/Utils.h"
 #include <cassert>
 
 using namespace myir;
 
 int Instruction::ID = 0;
 
-Instruction::Instruction(const std::vector<Operand *> &defs, const std::vector<Operand *> &uses, Block *b)
-    : _block(b), _defs(ALLOC), _uses(ALLOC), _id(ID++)
+Instruction::Instruction(Operand *def, const std::vector<Operand *> &uses, Block *b)
+    : _block(b), _def(def), _uses(ALLOC), _id(ID++)
 {
     for (auto *use : uses)
     {
@@ -17,142 +19,59 @@ Instruction::Instruction(const std::vector<Operand *> &defs, const std::vector<O
         }
     }
 
-    for (auto *def : defs)
+    if (_def)
     {
-        if (def)
+        _def->defined_by(this);
+    }
+}
+
+void Instruction::update_use(Operand *old_use, Operand *new_use)
+{
+    if (old_use == new_use)
+    {
+        return;
+    }
+
+    for (auto *&use : _uses)
+    {
+        if (use == old_use)
         {
-            def->defined_by(this);
-            _defs.push_back(def);
+            use = new_use;
+            new_use->used_by(this);
+            return;
         }
     }
+
+    SHOULD_NOT_REACH_HERE();
 }
 
-void Instruction::update_def(int i, Operand *oper)
+void Instruction::update_def(Operand *oper)
 {
-    assert(i < _defs.size());
-    assert(oper);
-
-    oper->defined_by(this);
-    _defs[i] = oper;
-}
-
-void Instruction::update_use(int i, Operand *oper)
-{
-    assert(i < _uses.size());
-    assert(oper);
-
-    oper->used_by(this);
-    _uses[i] = oper;
-}
-
-std::string Phi::dump() const
-{
-    assert(_defs.size() >= 1);
-    auto *result = _defs.at(0);
-
-    std::string s = "phi " + result->name() + " <- [";
-    for (auto &[def, block] : _def_from_block)
+    if (_def)
     {
-        s += "(" + def->name() + ": " + block->name() + "), ";
+        _def->erase_def(this);
     }
 
-    trim(s, ", ");
-
-    return s + "]";
+    oper->defined_by(this);
+    _def = oper;
 }
 
 void Phi::add_path(Operand *use, Block *b)
 {
     _uses.push_back(use);
+    use->used_by(this);
     _def_from_block[use] = b;
 }
 
-std::string Store::dump() const
+void Phi::update_use(Operand *old_use, Operand *new_use)
 {
-    assert(_uses.size() >= 3);
+    Instruction::update_use(old_use, new_use);
 
-    auto *base = _uses.at(0);
-    auto *offset = _uses.at(1);
-    auto *result = _uses.at(2);
-
-    return "store " + result->name() + " -> [" + base->name() + " + " + offset->name() + "]";
-}
-
-std::string Load::dump() const
-{
-    assert(_uses.size() >= 2);
-    assert(_defs.size() >= 1);
-
-    auto *base = _uses.at(0);
-    auto *offset = _uses.at(1);
-    auto *result = _defs.at(0);
-
-    return "load " + result->name() + " <- [" + base->name() + " + " + offset->name() + "]";
-}
-
-std::string Branch::dump() const { return "br " + _dest->name(); }
-
-std::string CondBranch::dump() const
-{
-    assert(_uses.size() >= 1);
-    return "br_cond " + _uses.at(0)->name() + "? " + _taken->name() + " : " + _not_taken->name();
-}
-
-std::string BinaryInst::print(const std::string &op) const
-{
-    assert(_uses.size() >= 2);
-    assert(_defs.size() >= 1);
-    return _defs.at(0)->name() + " <- " + _uses.at(0)->name() + " " + op + " " + _uses.at(1)->name();
-}
-
-std::string Sub::dump() const { return print("-"); }
-
-std::string Add::dump() const { return print("+"); }
-
-std::string Div::dump() const { return print("/"); }
-
-std::string Mul::dump() const { return print("*"); }
-
-std::string Xor::dump() const { return print("^"); }
-
-std::string Or::dump() const { return print("|"); }
-
-std::string Shl::dump() const { return print("<<"); }
-
-std::string LT::dump() const { return print("<"); }
-
-std::string LE::dump() const { return print("<="); }
-
-std::string EQ::dump() const { return print("=="); }
-
-std::string GT::dump() const { return print(">"); }
-
-std::string UnaryInst::print(const std::string &op) const
-{
-    assert(_uses.size() >= 1);
-    assert(_defs.size() >= 1);
-    return _defs.at(0)->name() + " <- " + op + _uses.at(0)->name();
-}
-
-std::string Not::dump() const { return print("!"); }
-
-std::string Neg::dump() const { return print("-"); }
-
-std::string Call::dump() const
-{
-    std::string s = "call " + (_defs.size() > 0 ? _defs.at(0)->name() + " <- [" : "[");
-
-    assert(_uses.size() >= 1);
-    s += _uses.at(0)->name() + "](";
-
-    for (auto u = _uses.begin() + 1; u != _uses.end(); u++)
+    auto iter = _def_from_block.find(old_use);
+    if (iter != _def_from_block.end())
     {
-        s += (*u)->name() + ", ";
+        auto *block = iter->second;
+        _def_from_block.erase(iter);
+        _def_from_block[new_use] = block;
     }
-
-    trim(s, ", ");
-
-    return s + ")";
 }
-
-std::string Ret::dump() const { return "ret " + (!_uses.empty() ? _uses.at(0)->name() : ""); }

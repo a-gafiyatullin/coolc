@@ -21,6 +21,12 @@ CodeGenMyIR::CodeGenMyIR(const std::shared_ptr<semant::ClassNode> &root)
     }));
 }
 
+myir::Operand *CodeGenMyIR::pointer_offset(myir::Operand *val)
+{
+    static const int POINTER_SIZE_LOG = 3;
+    return _ir_builder.shl(val, new myir::Constant(POINTER_SIZE_LOG, myir::UINT32));
+}
+
 void CodeGenMyIR::add_fields()
 {
     auto &this_klass = _builder->klass(_current_class->_type->_string);
@@ -40,8 +46,6 @@ void CodeGenMyIR::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
     {
         return;
     }
-
-    __ reset();
 
     auto *func = _module.get<myir::Function>(
         _builder->klass(_current_class->_type->_string)->method_full_name(method->_object->_object));
@@ -89,12 +93,11 @@ void CodeGenMyIR::verify_oop(myir::Operand *object)
 
 void CodeGenMyIR::emit_class_init_method_inner()
 {
-    __ reset();
-
     auto &klass = _builder->klass(_current_class->_type->_string);
 
     // Note, that init method don't init header
     auto *func = _module.get<myir::Function>(klass->init_method());
+    func->set_is_init();
 
     assert(func);
 
@@ -148,7 +151,7 @@ void CodeGenMyIR::emit_class_init_method_inner()
             }
 
             // it's ok to use param(0) here, because safepoint is impossible
-            __ st(func->param(0), field_offset(this_field._offset), initial_val);
+            __ st(func->param(0), __ field_offset(this_field._offset), initial_val);
         }
     }
 
@@ -173,7 +176,7 @@ void CodeGenMyIR::emit_class_init_method_inner()
                 auto *value = emit_expr(feature->_expr);
                 auto *self = func->param(0);
 
-                __ st(self, field_offset(this_field._offset), value);
+                __ st(self, __ field_offset(this_field._offset), value);
             }
         }
     }
@@ -198,7 +201,7 @@ void CodeGenMyIR::make_control_flow(myir::Operand *pred, myir::Block *&true_bloc
 myir::Operand *CodeGenMyIR::emit_ternary_operator(myir::Operand *pred, myir::Operand *true_val,
                                                   myir::Operand *false_val)
 {
-    auto *result = new myir::Variable(true_val->type());
+    auto *result = new myir::Variable(myir::BOOLEAN);
 
     myir::Block *true_block = nullptr, *false_block = nullptr, *merge_block = nullptr;
     make_control_flow(pred, true_block, false_block, merge_block);
@@ -254,7 +257,7 @@ myir::Operand *CodeGenMyIR::emit_binary_expr_inner(const ast::BinaryExpression &
     {
         logical_result = true;
 
-        auto *result = new myir::Variable(_true_obj->type());
+        auto *result = new myir::Variable(myir::BOOLEAN);
 
         auto *is_same_ref = __ eq(lhs, rhs);
 
@@ -329,7 +332,7 @@ myir::Operand *CodeGenMyIR::emit_object_expr_inner(const ast::ObjectExpression &
 
     if (object._type == Symbol::FIELD)
     {
-        return __ ld<myir::POINTER>(emit_load_self(), field_offset(object._offset));
+        return __ ld<myir::POINTER>(emit_load_self(), __ field_offset(object._offset));
     }
 
     return object._variable;
@@ -413,17 +416,17 @@ myir::Operand *CodeGenMyIR::emit_new_expr_inner(const ast::NewExpression &expr,
 
 myir::Operand *CodeGenMyIR::emit_load_tag(myir::Operand *obj)
 {
-    return __ ld<myir::UINT32>(obj, field_offset(HeaderLayoutOffsets::TagOffset));
+    return __ ld<myir::UINT32>(obj, __ field_offset(HeaderLayoutOffsets::TagOffset));
 }
 
 myir::Operand *CodeGenMyIR::emit_load_size(myir::Operand *obj)
 {
-    return __ ld<myir::UINT64>(obj, field_offset(HeaderLayoutOffsets::SizeOffset));
+    return __ ld<myir::UINT64>(obj, __ field_offset(HeaderLayoutOffsets::SizeOffset));
 }
 
 myir::Operand *CodeGenMyIR::emit_load_dispatch_table(myir::Operand *obj)
 {
-    return __ ld<myir::POINTER>(obj, field_offset(HeaderLayoutOffsets::DispatchTableOffset));
+    return __ ld<myir::POINTER>(obj, __ field_offset(HeaderLayoutOffsets::DispatchTableOffset));
 }
 
 myir::Operand *CodeGenMyIR::emit_cases_expr_inner(const ast::CaseExpression &expr,
@@ -645,7 +648,7 @@ myir::Operand *CodeGenMyIR::emit_assign_expr_inner(const ast::AssignExpression &
     }
     else
     {
-        __ st(emit_load_self(), field_offset(symbol._offset), value);
+        __ st(emit_load_self(), __ field_offset(symbol._offset), value);
     }
 
     return value;
@@ -655,7 +658,7 @@ myir::Operand *CodeGenMyIR::emit_load_int(myir::Operand *int_obj) { return emit_
 
 myir::Operand *CodeGenMyIR::emit_load_primitive(myir::Operand *obj)
 {
-    return __ ld<myir::UINT64>(obj, field_offset(HeaderLayoutOffsets::FieldOffset));
+    return __ ld<myir::UINT64>(obj, __ field_offset(HeaderLayoutOffsets::FieldOffset));
 }
 
 myir::Operand *CodeGenMyIR::emit_allocate_primitive(myir::Operand *val, const std::shared_ptr<Klass> &klass)
@@ -664,7 +667,7 @@ myir::Operand *CodeGenMyIR::emit_allocate_primitive(myir::Operand *val, const st
     auto *obj = emit_new_inner_helper(klass->klass(), false /* don't preserve */);
 
     // record value
-    __ st(obj, field_offset(HeaderLayoutOffsets::FieldOffset), val);
+    __ st(obj, __ field_offset(HeaderLayoutOffsets::FieldOffset), val);
 
     return obj;
 }
@@ -690,7 +693,7 @@ myir::Operand *CodeGenMyIR::emit_in_scope(const std::shared_ptr<ast::ObjectExpre
         initializer = semant::Semant::is_trivial_type(object_type) ? _data.init_value(object_type) : _null_val;
     }
 
-    auto *variable = new myir::Variable(object->_object, myir::POINTER);
+    auto *variable = new myir::Variable(object->_object, _data.ast_to_ir_type(local_type));
 
     _table.add_symbol(object->_object, Symbol(variable, local_type));
 
@@ -704,8 +707,6 @@ myir::Operand *CodeGenMyIR::emit_in_scope(const std::shared_ptr<ast::ObjectExpre
 
 void CodeGenMyIR::emit_runtime_main()
 {
-    __ reset();
-
     auto *runtime_main = new myir::Function(
         static_cast<std::string>(RUNTIME_MAIN_FUNC),
         {new myir::Variable("argc", myir::INT32), new myir::Variable("argv", myir::POINTER)}, myir::INT32);
@@ -734,6 +735,8 @@ void CodeGenMyIR::emit_runtime_main()
     __ call(_runtime.symbol_by_id(RuntimeMyIR::FINISH_RUNTIME)->_func, {});
 
     __ ret(new myir::Constant(0, myir::INT32));
+
+    runtime_main->set_max_ids(myir::Operand::max_id(), myir::Instruction::max_id(), myir::Block::max_id());
 }
 
 void CodeGenMyIR::emit(const std::string &out_file)

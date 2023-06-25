@@ -1,59 +1,101 @@
 #include "IR.inline.hpp"
-#include "cfg/CFG.hpp"
 #include "cfg/CFG.inline.hpp"
 #include "codegen/arch/myir/runtime/RuntimeMyIR.hpp"
-#include "codegen/symnames/NameConstructor.h"
-#include <cassert>
 
 using namespace myir;
 
 int Operand::ID = 0;
 int Block::ID = 0;
 
-void IRBuilder::reset()
+void IRBuilder::set_current_function(Function *func)
 {
-    codegen::Names::reset();
-    Operand::reset_id();
-    Instruction::reset_id();
-    Block::reset_id();
+    if (_curr_func)
+    {
+        _curr_func->set_max_ids(Operand::max_id(), Instruction::max_id(), Block::max_id());
+    }
+
+    Operand::set_id();
+    Instruction::set_id();
+    Block::set_id();
+
+    _curr_func = func;
+}
+
+void Function::set_max_ids(int max_opnd_id, int max_inst_id, int max_block_id)
+{
+    _max_block_id = max_block_id;
+    _max_operand_id = max_opnd_id;
+    _max_instruction_id = max_inst_id;
 }
 
 Function::Function(const std::string &name, const std::vector<Variable *> &params, OperandType return_type)
     : GlobalConstant(name, {}, POINTER), _params(params.begin(), params.end() ALLOCCOMMA), _return_type(return_type),
-      _is_leaf(false), _cfg(new CFG())
+      _cfg(new CFG()), _max_operand_id(0), _max_instruction_id(0), _max_block_id(0)
 {
 }
 
-std::string Block::dump() const
+void Operand::erase_def(Instruction *def)
 {
-    std::string s = "  Block \"" + name() + "\", preds = [";
-
-    for (auto *p : _preds)
+    auto pos = std::find(_defs.begin(), _defs.end(), def);
+    if (pos != _defs.end())
     {
-        s += p->_name + ", ";
+        _defs.erase(pos);
+    }
+}
+
+void Block::erase(Instruction *inst)
+{
+    // delete this instruction from uses and defs
+    inst->def()->erase_def(inst);
+
+    for (auto *use : inst->uses())
+    {
+        use->erase_use(inst);
     }
 
-    trim(s, ", ");
+    _insts.erase(std::find(_insts.begin(), _insts.end(), inst));
+}
 
-    s += "], succs = [";
-
-    for (auto *p : _succs)
+void Block::erase(const std::vector<Instruction *> &insts)
+{
+    for (auto *inst : insts)
     {
-        s += p->_name + ", ";
+        inst->holder()->erase(inst);
+    }
+}
+
+void Block::append_before(Instruction *inst, Instruction *newinst)
+{
+    for (auto iter = _insts.begin(); iter != _insts.end(); iter++)
+    {
+        if (*iter == inst)
+        {
+            _insts.insert(iter, newinst);
+            return;
+        }
     }
 
-    trim(s, ", ");
+    SHOULD_NOT_REACH_HERE();
+}
 
-    s += "]:\n";
-
-    for (auto *i : _insts)
+void Block::append_instead(Instruction *inst, Instruction *newinst)
+{
+    if (_insts.empty())
     {
-        s += "    " + i->dump() + "\n";
+        return;
     }
 
-    trim(s, "\n");
+    for (auto iter = _insts.begin(); iter != _insts.end(); iter++)
+    {
+        if (*iter == inst)
+        {
+            auto next = _insts.erase(iter);
+            _insts.insert(next, newinst);
+            return;
+        }
+    }
 
-    return s;
+    SHOULD_NOT_REACH_HERE();
 }
 
 void Block::connect(Block *pred, Block *succ)
@@ -63,79 +105,6 @@ void Block::connect(Block *pred, Block *succ)
 
     assert(find(succ->_preds.begin(), succ->_preds.end(), pred) == succ->_preds.end());
     succ->_preds.push_back(pred);
-}
-
-std::string type_to_string(OperandType type)
-{
-    static std::string OPERAND_TYPE_NAME[] = {"int8",   "uint8", "int32",   "uint32",    "int64",
-                                              "uint64", "void*", "integer", "structure", "void"};
-    return OPERAND_TYPE_NAME[type];
-}
-
-std::string Function::name() const
-{
-    std::string s = type_to_string(_return_type) + " " + short_name() + "(";
-
-    for (auto *p : _params)
-    {
-        s += p->dump() + ", ";
-    }
-
-    trim(s, ", ");
-
-    return s + ")";
-}
-
-std::string Function::short_name() const { return std::string(_name); }
-
-std::string Function::dump() const
-{
-    if (_cfg->empty())
-    {
-        return name() + " {}";
-    }
-
-    std::string s = name() + " {\n";
-
-    for (auto *b : _cfg->traversal<CFG::REVERSE_POSTORDER>())
-    {
-        s += b->dump() + "\n\n";
-    }
-
-    trim(s, "\n\n");
-
-    return s + "\n}";
-}
-
-std::string Module::dump() const
-{
-    std::string s;
-
-    for (auto g : _constants)
-    {
-        s += g.second->dump() + "\n\n";
-    }
-
-    for (auto g : _variables)
-    {
-        s += g.second->dump() + "\n\n";
-    }
-
-    for (auto f : _funcs)
-    {
-        s += f.second->dump() + "\n\n";
-    }
-
-    return s;
-}
-
-std::string Operand::dump() const { return type_to_string(_type) + " " + name(); }
-
-std::string Constant::name() const { return std::to_string(_value); }
-
-std::string Variable::name() const
-{
-    return Operand::name() + (this != _original_var ? "[" + _original_var->name() + "]" : "");
 }
 
 Operand *StructuredOperand::field(int offset) const
@@ -157,22 +126,6 @@ Operand *StructuredOperand::field(int offset) const
     assert(4 + field_offset_from_header / WORD_SIZE < _fields.size());
 
     return _fields.at(4 + field_offset_from_header / WORD_SIZE);
-}
-
-std::string StructuredOperand::dump() const
-{
-    std::string s = "{";
-
-    for (auto *f : _fields)
-    {
-        s += f->name() + ", ";
-    }
-
-    trim(s, ", ");
-
-    s += "} " + name();
-
-    return s;
 }
 
 void IRBuilder::ret(Operand *value) { _curr_block->append(new Ret(value, _curr_block)); }
@@ -214,7 +167,6 @@ void IRBuilder::cond_br(Operand *pred, Block *taken, Block *fall_through)
 void IRBuilder::br(Block *taken)
 {
     _curr_block->append(new Branch(taken, _curr_block));
-
     Block::connect(_curr_block, taken);
 }
 
@@ -244,12 +196,12 @@ Operand *IRBuilder::neg(Operand *operand) { return unary<Neg>(operand); }
 
 Operand *IRBuilder::not1(Operand *operand) { return unary<Not>(operand); }
 
-Operand *IRBuilder::move(Operand *src) { return add(src, new Constant(0, src->type())); }
+Operand *IRBuilder::move(Operand *src) { return unary<Move>(src); }
 
 void IRBuilder::move(Operand *src, Operand *dst)
 {
     assert(src);
-    _curr_block->append(new Add(dst, src, new Constant(0, src->type()), _curr_block));
+    _curr_block->append(new Move(dst, src, _curr_block));
 }
 
 void Function::set_cfg(Block *cfg) { _cfg->set_cfg(cfg); }
