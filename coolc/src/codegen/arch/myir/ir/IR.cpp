@@ -46,7 +46,10 @@ void Operand::erase_def(Instruction *def)
 void Block::erase(Instruction *inst)
 {
     // delete this instruction from uses and defs
-    inst->def()->erase_def(inst);
+    if (inst->def())
+    {
+        inst->def()->erase_def(inst);
+    }
 
     for (auto *use : inst->uses())
     {

@@ -1,7 +1,9 @@
 #include "CodeGenMyIR.hpp"
 #include "codegen/arch/myir/ir/IR.inline.hpp"
+#include "codegen/arch/myir/ir/pass/DIE/DIE.hpp"
 #include "codegen/arch/myir/ir/pass/PassManager.hpp"
 #include "codegen/arch/myir/ir/pass/ssa_construction/SSAConstruction.hpp"
+#include "codegen/arch/myir/ir/pass/unboxing/Unboxing.hpp"
 #include "codegen/emitter/CodeGen.inline.h"
 #include "codegen/emitter/data/Data.inline.h"
 
@@ -751,6 +753,8 @@ void CodeGenMyIR::emit(const std::string &out_file)
     // prepare passes
     myir::PassManager passes(_module);
     passes.add(new myir::SSAConstruction());
+    passes.add(new myir::Unboxing());
+    passes.add(new myir::DIE());
 
     // apply passes
     passes.run();

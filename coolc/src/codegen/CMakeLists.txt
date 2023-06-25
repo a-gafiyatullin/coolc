@@ -31,9 +31,11 @@ if(ARCH STREQUAL "MYIR")
     arch/myir/ir/cfg/CFG.cpp
     arch/myir/ir/allocator/Allocator.cpp
     arch/myir/ir/pass/PassManager.cpp
+    arch/myir/ir/DumpIR.cpp
 
     arch/myir/ir/pass/ssa_construction/SSAConstruction.cpp
-    arch/myir/ir/DumpIR.cpp
+    arch/myir/ir/pass/unboxing/Unboxing.cpp
+    arch/myir/ir/pass/DIE/DIE.cpp
   )
 endif()
 
