@@ -37,6 +37,7 @@ void Instruction::update_use(Operand *old_use, Operand *new_use)
         if (use == old_use)
         {
             use = new_use;
+            old_use->erase_use(this);
             new_use->used_by(this);
             return;
         }

@@ -37,8 +37,9 @@ void Unboxing::replace_args(std::vector<bool> &processed)
             // update uses of this INTEGER or BOOLEAN
             for (auto *use : param->uses())
             {
-                if (use == load)
+                if (use == load || Instruction::isa<Call>(use))
                 {
+                    assert(use == load || !Instruction::as<Call>(use)->callee()->is_init());
                     continue;
                 }
 
@@ -57,6 +58,8 @@ void Unboxing::replace_lets(std::vector<bool> &processed)
 
     for (auto *b : _cfg->traversal<CFG::REVERSE_POSTORDER>())
     {
+        std::vector<Instruction *> for_append;
+
         // search for moves of Integer/Boolean constants
         for (auto *inst : b->insts())
         {
@@ -71,13 +74,30 @@ void Unboxing::replace_lets(std::vector<bool> &processed)
 
                 auto *initializer = Operand::as<GlobalConstant>(oper);
                 // found instruction : value <- global_const
-                // replace with move of primitive int field
                 auto *value = initializer->field(codegen::HeaderLayoutOffsets::FieldOffset);
-                inst->update_use(oper, value);
 
-                // users of the def already has corerct use
-                replace.push(inst);
+                // create a new move and use its def in all uses of the original move except calls
+                auto *move = new Move(new Operand(value->type()), value, b);
+
+                for (auto *use : inst->def()->uses())
+                {
+                    if (!Instruction::isa<Call>(use))
+                    {
+                        use->update_use(inst->def(), move->def());
+
+                        // users of the def already has corerct use
+                        replace.push(use);
+                    }
+                }
+
+                for_append.push_back(move);
             }
+        }
+
+        auto *terminator = b->insts().back();
+        for (auto *newinst : for_append)
+        {
+            b->append_before(terminator, newinst);
         }
     }
 

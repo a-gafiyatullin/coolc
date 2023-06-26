@@ -188,6 +188,11 @@ void SSAConstruction::rename_phis(const CFG::DominanceInfo &info, Block *b,
         {
             varstacks[var].pop();
         }
+
+        if (varstacks[var].empty())
+        {
+            varstacks.erase(var);
+        }
     }
 }
 
