@@ -1,6 +1,7 @@
 #include "CodeGenMyIR.hpp"
 #include "codegen/arch/myir/ir/IR.inline.hpp"
 #include "codegen/arch/myir/ir/pass/DIE/DIE.hpp"
+#include "codegen/arch/myir/ir/pass/NCE/NCE.hpp"
 #include "codegen/arch/myir/ir/pass/PassManager.hpp"
 #include "codegen/arch/myir/ir/pass/ssa_construction/SSAConstruction.hpp"
 #include "codegen/arch/myir/ir/pass/unboxing/Unboxing.hpp"
@@ -55,6 +56,7 @@ void CodeGenMyIR::emit_class_method_inner(const std::shared_ptr<ast::Feature> &m
     assert(func);
 
     __ set_current_function(func);
+    Names::reset();
 
     // Create a new basic block to start insertion into it
     auto *cfg = __ new_block(Names::name(Names::ENTRY_BLOCK));
@@ -104,6 +106,7 @@ void CodeGenMyIR::emit_class_init_method_inner()
     assert(func);
 
     __ set_current_function(func);
+    Names::reset();
 
     // Create a new basic block to start insertion into
     auto *cfg = __ new_block(Names::name(Names::ENTRY_BLOCK));
@@ -591,32 +594,47 @@ myir::Operand *CodeGenMyIR::emit_dispatch_expr_inner(const ast::DispatchExpressi
     auto &method_name = expr._object->_object;
 
     auto *call = std::visit(
-        ast::overloaded{[&](const ast::VirtualDispatchExpression &disp) {
-                            auto &klass = _builder->klass(
-                                semant::Semant::exact_type(expr._expr->_type, _current_class->_type)->_string);
+        ast::overloaded{
+            [&](const ast::VirtualDispatchExpression &disp) {
+                auto &klass =
+                    _builder->klass(semant::Semant::exact_type(expr._expr->_type, _current_class->_type)->_string);
 
-                            // load dispatch table
-                            auto *dispatch_table_ptr = emit_load_dispatch_table(receiver);
+                auto *offset = pointer_offset(new myir::Constant(klass->method_index(method_name), myir::UINT32));
 
-                            // method has the same type as in this klass
-                            auto *base_method = _module.get<myir::Function>(klass->method_full_name(method_name));
+                // optimize accesses to virtual methods of the base classes
+                if ((klass->tag() == _builder->tag(BaseClassesNames[BaseClasses::INT]) ||
+                     klass->tag() == _builder->tag(BaseClassesNames[BaseClasses::BOOL])) &&
+                    myir::Operand::isa<myir::Constant>(offset))
+                {
+                    int offsetv = myir::Operand::as<myir::Constant>(offset)->value();
+                    auto *disptab = myir::Operand::as<myir::GlobalConstant>(_data.class_disp_tab(klass));
 
-                            // load method
-                            auto *method = __ ld<myir::POINTER>(
-                                dispatch_table_ptr,
-                                pointer_offset(new myir::Constant(klass->method_index(method_name), myir::UINT32)));
+                    auto *callee = myir::Operand::as<myir::Function>(disptab->word(offsetv));
 
-                            // call
-                            return __ call(base_method, method, args);
-                        },
-                        [&](const ast::StaticDispatchExpression &disp) {
-                            auto *method = _module.get<myir::Function>(
-                                _builder->klass(disp._type->_string)->method_full_name(method_name));
+                    // call
+                    return __ call(callee, args);
+                }
 
-                            assert(method);
+                // load dispatch table
+                auto *dispatch_table_ptr = emit_load_dispatch_table(receiver);
 
-                            return __ call(method, args);
-                        }},
+                // method has the same type as in this klass
+                auto *base_method = _module.get<myir::Function>(klass->method_full_name(method_name));
+
+                // load method
+                auto *method = __ ld<myir::POINTER>(dispatch_table_ptr, offset);
+
+                // call
+                return __ call(base_method, method, args);
+            },
+            [&](const ast::StaticDispatchExpression &disp) {
+                auto *method =
+                    _module.get<myir::Function>(_builder->klass(disp._type->_string)->method_full_name(method_name));
+
+                assert(method);
+
+                return __ call(method, args);
+            }},
         expr._base);
 
     __ move(call, result);
@@ -715,6 +733,7 @@ void CodeGenMyIR::emit_runtime_main()
 
     _module.add(runtime_main);
     __ set_current_function(runtime_main);
+    Names::reset();
 
     auto *entry = __ new_block(Names::name(Names::ENTRY_BLOCK));
     runtime_main->set_cfg(entry);
@@ -738,7 +757,7 @@ void CodeGenMyIR::emit_runtime_main()
 
     __ ret(new myir::Constant(0, myir::INT32));
 
-    runtime_main->set_max_ids(myir::Operand::max_id(), myir::Instruction::max_id(), myir::Block::max_id());
+    runtime_main->record_max_ids();
 }
 
 void CodeGenMyIR::emit(const std::string &out_file)
@@ -753,6 +772,7 @@ void CodeGenMyIR::emit(const std::string &out_file)
     // prepare passes
     myir::PassManager passes(_module);
     passes.add(new myir::SSAConstruction());
+    passes.add(new myir::NCE(_runtime));
     passes.add(new myir::Unboxing());
     passes.add(new myir::DIE());
 

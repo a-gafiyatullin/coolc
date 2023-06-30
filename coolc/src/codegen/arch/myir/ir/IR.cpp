@@ -11,21 +11,29 @@ void IRBuilder::set_current_function(Function *func)
 {
     if (_curr_func)
     {
-        _curr_func->set_max_ids(Operand::max_id(), Instruction::max_id(), Block::max_id());
+        _curr_func->record_max_ids();
     }
+
+    func->reset_max_ids();
+    _curr_func = func;
+}
+
+void Function::record_max_ids()
+{
+    _max_block_id = Block::max_id();
+    _max_operand_id = Operand::max_id();
+    _max_instruction_id = Instruction::max_id();
 
     Operand::set_id();
     Instruction::set_id();
     Block::set_id();
-
-    _curr_func = func;
 }
 
-void Function::set_max_ids(int max_opnd_id, int max_inst_id, int max_block_id)
+void Function::reset_max_ids()
 {
-    _max_block_id = max_block_id;
-    _max_operand_id = max_opnd_id;
-    _max_instruction_id = max_inst_id;
+    Operand::set_id(_max_operand_id);
+    Instruction::set_id(_max_instruction_id);
+    Block::set_id(_max_block_id);
 }
 
 Function::Function(const std::string &name, const std::vector<Variable *> &params, OperandType return_type)
@@ -109,6 +117,46 @@ void Block::connect(Block *pred, Block *succ)
     assert(find(succ->_preds.begin(), succ->_preds.end(), pred) == succ->_preds.end());
     succ->_preds.push_back(pred);
 }
+
+void Block::disconnect(Block *pred, Block *succ)
+{
+    {
+        auto iter = find(pred->_succs.begin(), pred->_succs.end(), succ);
+        assert(iter != pred->_succs.end());
+        pred->_succs.erase(iter);
+    }
+    {
+        auto iter = find(succ->_preds.begin(), succ->_preds.end(), pred);
+        assert(iter != succ->_preds.end());
+        succ->_preds.erase(iter);
+    }
+}
+
+void Block::disconnect()
+{
+    std::vector<Block *> succs(_succs.begin(), _succs.end());
+    std::vector<Block *> preds(_preds.begin(), _preds.end());
+
+    for (auto *successor : succs)
+    {
+        Block::disconnect(this, successor);
+    }
+
+    for (auto *predecessor : preds)
+    {
+        Block::disconnect(predecessor, this);
+    }
+
+    for (auto *p : preds)
+    {
+        for (auto *s : succs)
+        {
+            Block::connect(p, s);
+        }
+    }
+}
+
+Operand *StructuredOperand::word(int offset) const { return _fields.at(offset / WORD_SIZE); }
 
 Operand *StructuredOperand::field(int offset) const
 {

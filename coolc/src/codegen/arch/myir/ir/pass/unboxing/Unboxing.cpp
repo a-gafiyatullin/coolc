@@ -7,11 +7,6 @@ using namespace myir;
 
 void Unboxing::run(Function *func)
 {
-    if (!setup(func))
-    {
-        return;
-    }
-
     std::vector<bool> processed(Instruction::max_id() * 2); // can create new instructions
     replace_args(processed);
     replace_lets(processed);
@@ -27,14 +22,16 @@ void Unboxing::replace_args(std::vector<bool> &processed)
     {
         if (param->type() == INTEGER || param->type() == BOOLEAN)
         {
+            // prepare an operand instead of the object for primitive
             auto *value = new Operand(INT64);
             auto *offset = new Constant(codegen::HeaderLayoutOffsets::FieldOffset, UINT64);
             auto *load = new Load(value, param, offset, entry);
 
-            // instert before unconditional branch
-            _cfg->root()->append_before(entry->insts().back(), load);
+            _cfg->root()->append_front(load);
 
-            // update uses of this INTEGER or BOOLEAN
+            std::vector<Instruction *> for_uses_update;
+
+            // update uses of this INTEGER or BOOLEAN with a new operand
             for (auto *use : param->uses())
             {
                 if (use == load || Instruction::isa<Call>(use))
@@ -43,8 +40,13 @@ void Unboxing::replace_args(std::vector<bool> &processed)
                     continue;
                 }
 
-                use->update_use(param, value);
-                replace.push(use);
+                for_uses_update.push_back(use);
+            }
+
+            for (auto *inst : for_uses_update)
+            {
+                inst->update_use(param, value);
+                replace.push(inst);
             }
         }
     }
@@ -65,7 +67,7 @@ void Unboxing::replace_lets(std::vector<bool> &processed)
         {
             if (Instruction::isa<Move>(inst))
             {
-                auto *oper = inst->uses().at(0);
+                auto *oper = inst->use(0);
                 if ((inst->def()->type() != INTEGER && inst->def()->type() != BOOLEAN) ||
                     !Operand::isa<GlobalConstant>(oper))
                 {
@@ -79,25 +81,31 @@ void Unboxing::replace_lets(std::vector<bool> &processed)
                 // create a new move and use its def in all uses of the original move except calls
                 auto *move = new Move(new Operand(value->type()), value, b);
 
+                std::vector<Instruction *> for_uses_update;
+
                 for (auto *use : inst->def()->uses())
                 {
                     if (!Instruction::isa<Call>(use))
                     {
-                        use->update_use(inst->def(), move->def());
-
-                        // users of the def already has corerct use
-                        replace.push(use);
+                        for_uses_update.push_back(use);
                     }
+                }
+
+                for (auto *use : for_uses_update)
+                {
+                    use->update_use(inst->def(), move->def());
+
+                    // users of the def already has corerct use
+                    replace.push(use);
                 }
 
                 for_append.push_back(move);
             }
         }
 
-        auto *terminator = b->insts().back();
         for (auto *newinst : for_append)
         {
-            b->append_before(terminator, newinst);
+            b->append_front(newinst);
         }
     }
 
@@ -150,8 +158,8 @@ void Unboxing::replace_load(Load *load, std::stack<Instruction *> &s)
 {
     // load from Integer object. Have to be replaced by moves
     auto *result = load->def();
-    auto *object = load->uses().at(0); // former object and now it's an INT64
-    auto *offset = load->uses().at(1);
+    auto *object = load->use(0); // former object and now it's an INT64
+    auto *offset = load->use(1);
     auto offset_val = Operand::as<Constant>(offset)->value();
 
     auto *block = load->holder();
@@ -179,9 +187,9 @@ void Unboxing::replace_load(Load *load, std::stack<Instruction *> &s)
 void Unboxing::replace_store(Store *store, std::stack<Instruction *> &s)
 {
     // store to Integer object. Replace use of newly allocated object with a new def
-    auto *object = store->uses().at(0);
-    auto *offset = store->uses().at(1);
-    auto *value = store->uses().at(2);
+    auto *object = store->use(0);
+    auto *offset = store->use(1);
+    auto *value = store->use(2);
 
     // access can be only to value field
     auto offset_val = Operand::as<Constant>(offset)->value();
@@ -191,6 +199,8 @@ void Unboxing::replace_store(Store *store, std::stack<Instruction *> &s)
 
     std::vector<Instruction *> for_delete;
     for_delete.push_back(store);
+
+    std::vector<Instruction *> for_uses_update;
 
     for (auto *use : object->uses())
     {
@@ -221,7 +231,7 @@ void Unboxing::replace_store(Store *store, std::stack<Instruction *> &s)
 
             // In SSA form store of the object can be used only for fields:
             // it means that we have to leave this object and it's allocation
-            if (use->uses().at(2) != object)
+            if (use->use(2) != object)
             {
                 SHOULD_NOT_REACH_HERE();
             }
@@ -233,9 +243,14 @@ void Unboxing::replace_store(Store *store, std::stack<Instruction *> &s)
         else
         {
             // next load/move from/of newly allocated object. Replace it with INT64 value
-            use->update_use(object, value);
-            s.push(use);
+            for_uses_update.push_back(use);
         }
+    }
+
+    for (auto *inst : for_uses_update)
+    {
+        inst->update_use(object, value);
+        s.push(inst);
     }
 
     // We can delete object allocaion and initialization

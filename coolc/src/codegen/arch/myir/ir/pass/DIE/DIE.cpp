@@ -5,11 +5,6 @@ using namespace myir;
 
 void DIE::run(Function *func)
 {
-    if (!setup(func))
-    {
-        return;
-    }
-
     std::vector<Instruction *> for_delete;
 
     for (auto *b : _cfg->traversal<CFG::REVERSE_POSTORDER>())

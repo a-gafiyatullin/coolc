@@ -45,15 +45,20 @@ class Block : public IRObject
     void erase(Instruction *inst);
     static void erase(const std::vector<Instruction *> &insts);
 
-    // create edges in CFG
+    // manage edges in CFG
     static void connect(Block *pred, Block *succ);
+    static void disconnect(Block *pred, Block *succ);
+    void disconnect();
 
     // number that was set by postorder traversal
     inline int postorder() const { return _postorder_num; }
 
     // getters
     inline const irlist<Instruction *> &insts() const { return _insts; }
+    inline void clear() { _insts.clear(); }
     inline const irvector<Block *> &succs() const { return _succs; }
+    inline Block *succ(int i) const { return _succs.at(i); }
+    inline const irvector<Block *> &preds() const { return _preds; }
     inline Function *holder() const { return _func; }
     inline int id() const { return _id; }
 
@@ -86,7 +91,7 @@ class Module : public allocator::StackObject
     template <class T> const std::unordered_map<std::string, T *> &get() const;
 
     // debugging
-    std::string dump() const;
+    std::string dump();
 };
 
 // track the current state of the CFG construction

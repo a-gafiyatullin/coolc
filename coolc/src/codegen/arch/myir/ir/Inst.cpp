@@ -76,3 +76,12 @@ void Phi::update_use(Operand *old_use, Operand *new_use)
         _def_from_block[new_use] = block;
     }
 }
+
+Operand *Phi::oper_path(Block *b)
+{
+    auto iter =
+        std::find_if(_def_from_block.begin(), _def_from_block.end(), [b](const auto &kv) { return kv.second == b; });
+
+    assert(iter != _def_from_block.end());
+    return iter->first;
+}

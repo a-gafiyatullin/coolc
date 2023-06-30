@@ -36,6 +36,7 @@ if(ARCH STREQUAL "MYIR")
     arch/myir/ir/pass/ssa_construction/SSAConstruction.cpp
     arch/myir/ir/pass/unboxing/Unboxing.cpp
     arch/myir/ir/pass/DIE/DIE.cpp
+    arch/myir/ir/pass/NCE/NCE.cpp
   )
 endif()
 

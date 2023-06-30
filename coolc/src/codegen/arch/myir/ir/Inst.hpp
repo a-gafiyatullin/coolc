@@ -31,6 +31,7 @@ class Instruction : public IRObject
     // getters
     inline Operand *def() { return _def; }
     inline irvector<Operand *> &uses() { return _uses; }
+    inline Operand *use(int i) const { return _uses.at(i); }
     inline int id() const { return _id; }
     inline Block *holder() const { return _block; }
 
@@ -56,6 +57,7 @@ class Phi : public Instruction
 
     void add_path(Operand *use, Block *b);
     void update_use(Operand *old_use, Operand *new_use) override;
+    Operand *oper_path(Block *b);
 
     std::string dump() const override;
 };
@@ -104,6 +106,9 @@ class CondBranch : public Instruction
         : Instruction({}, {cond}, b), _taken(taken), _not_taken(not_taken)
     {
     }
+
+    inline Block *taken() const { return _taken; }
+    inline Block *not_taken() const { return _not_taken; }
 
     std::string dump() const override;
 };

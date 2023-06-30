@@ -8,11 +8,6 @@ using namespace myir;
 
 void SSAConstruction::run(Function *func)
 {
-    if (!setup(func))
-    {
-        return;
-    }
-
 #ifdef DEBUG
     if (TraceSSAConstruction)
     {

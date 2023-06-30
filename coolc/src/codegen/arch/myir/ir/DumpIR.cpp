@@ -94,23 +94,24 @@ std::string Function::dump() const
     return s + "\n}";
 }
 
-std::string Module::dump() const
+std::string Module::dump()
 {
     std::string s;
 
-    for (auto g : _constants)
+    for (auto &[name, g] : _constants)
     {
-        s += g.second->dump() + "\n\n";
+        s += g->dump() + "\n\n";
     }
 
-    for (auto g : _variables)
+    for (auto &[name, g] : _variables)
     {
-        s += g.second->dump() + "\n\n";
+        s += g->dump() + "\n\n";
     }
 
-    for (auto f : _funcs)
+    for (auto &[name, f] : _funcs)
     {
-        s += f.second->dump() + "\n\n";
+        f->reset_max_ids();
+        s += f->dump() + "\n\n";
     }
 
     return s;

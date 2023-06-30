@@ -1,18 +1,29 @@
 #pragma once
 
 #include "codegen/arch/myir/ir/IR.hpp"
+#include <functional>
+#include <stack>
 
 namespace myir
 {
 
+class PassManager;
+
 class Pass
 {
+    friend class PassManager;
+
   protected:
     Function *_func; // currently processing function
     CFG *_cfg;       // corresponding CFG
 
-    // return false if function isn't defined
-    bool setup(Function *func);
+    // Uses Algorithm 8.1 from the SSA-based Compiler Design book
+    void sparse_data_flow_propagation(
+        const std::function<void(Instruction *, std::stack<Instruction *> &ssa_worklist,
+                                 std::stack<Block *> &cfg_worklist, std::vector<bool> &bvisited)> &visitor);
+
+    // usefull post passes
+    void merge_blocks();
 
   public:
     virtual void run(Function *func) = 0;

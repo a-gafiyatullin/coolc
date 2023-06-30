@@ -44,8 +44,11 @@ void DataMyIR::make_init_method(const std::shared_ptr<Klass> &klass)
     const auto init_method_name = klass->init_method();
     CODEGEN_VERBOSE_ONLY(LOG("Declare init method \"" + init_method_name + "\""));
 
-    _module.add(
-        new myir::Function(init_method_name, {new myir::Variable(SelfObject, myir::OperandType::POINTER)}, myir::VOID));
+    auto *init =
+        new myir::Function(init_method_name, {new myir::Variable(SelfObject, myir::OperandType::POINTER)}, myir::VOID);
+    _module.add(init);
+
+    init->record_max_ids();
 }
 
 void DataMyIR::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
@@ -85,10 +88,12 @@ void DataMyIR::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
             func = new myir::Function(method_full_name, args, myir::OperandType::POINTER);
             _module.add(func);
 
-            CODEGEN_VERBOSE_ONLY(LOG_EXIT("DECLARE METHOD \"" + method_full_name + "\""));
+            func->record_max_ids();
 
-            methods.push_back(func);
+            CODEGEN_VERBOSE_ONLY(LOG_EXIT("DECLARE METHOD \"" + method_full_name + "\""));
         }
+
+        methods.push_back(func);
     });
 
     const auto &disp_tab_name = klass->disp_tab();

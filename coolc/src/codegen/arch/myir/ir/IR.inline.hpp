@@ -19,8 +19,66 @@ template <class T> T *myir::Instruction::as(Instruction *inst)
 
 template <class T> myir::Operand *myir::IRBuilder::binary(Operand *lhs, Operand *rhs)
 {
-    auto *res = new Operand(lhs->type());
-    _curr_block->append(new T(res, lhs, rhs, _curr_block));
+    Operand *res = nullptr;
+
+    if (Operand::isa<Constant>(lhs) && Operand::isa<Constant>(rhs))
+    {
+        auto lhsv = Operand::as<Constant>(lhs)->value();
+        auto rhsv = Operand::as<Constant>(rhs)->value();
+
+        uint64_t value = 0;
+        if (std::is_same_v<T, Add>)
+        {
+            value = lhsv + rhsv;
+        }
+        else if (std::is_same_v<T, Sub>)
+        {
+            value = lhsv - rhsv;
+        }
+        else if (std::is_same_v<T, Div>)
+        {
+            value = lhsv / rhsv;
+        }
+        else if (std::is_same_v<T, Mul>)
+        {
+            value = lhsv * rhsv;
+        }
+        else if (std::is_same_v<T, Shl>)
+        {
+            value = lhsv << rhsv;
+        }
+        else if (std::is_same_v<T, LT>)
+        {
+            value = lhsv < rhsv;
+        }
+        else if (std::is_same_v<T, LE>)
+        {
+            value = lhsv <= rhsv;
+        }
+        else if (std::is_same_v<T, EQ>)
+        {
+            value = lhsv == rhsv;
+        }
+        else if (std::is_same_v<T, Or>)
+        {
+            value = lhsv | rhsv;
+        }
+        else if (std::is_same_v<T, Xor>)
+        {
+            value = lhsv ^ rhsv;
+        }
+        else if (std::is_same_v<T, GT>)
+        {
+            value = lhsv > rhsv;
+        }
+
+        res = new Constant(value, lhs->type());
+    }
+    else
+    {
+        res = new Operand(lhs->type());
+        _curr_block->append(new T(res, lhs, rhs, _curr_block));
+    }
 
     return res;
 }

@@ -50,8 +50,10 @@ class Operand : public IRObject
     irvector<Instruction *> _uses;
     irvector<Instruction *> _defs;
 
-    Operand(const std::string &name, OperandType type)
-        : _name(name ALLOCCOMMA), _type(type), _id(ID++), _uses(ALLOC), _defs(ALLOC)
+    Operand(const std::string &name, OperandType type) : Operand(name, type, ID++) {}
+
+    Operand(const std::string &name, OperandType type, int id)
+        : _name(name ALLOCCOMMA), _type(type), _id(id), _uses(ALLOC), _defs(ALLOC)
     {
     }
 
@@ -82,6 +84,7 @@ class Operand : public IRObject
 
     // uses and def
     inline const irvector<Instruction *> &uses() const { return _uses; }
+    inline Instruction *use(int i) const { return _uses.at(i); }
     inline void erase_use(Instruction *use) { _uses.erase(std::find(_uses.begin(), _uses.end(), use)); }
 
     inline bool has_def() const { return !_defs.empty(); }
@@ -144,12 +147,13 @@ class StructuredOperand : public Operand
 
     // if type is STRUCTURE, then use internal structure in _fields
     StructuredOperand(const std::string &name, const std::vector<Operand *> &fields, OperandType type)
-        : Operand(name, type), _fields(fields.begin(), fields.end() ALLOCCOMMA)
+        : Operand(name, type, -1), _fields(fields.begin(), fields.end() ALLOCCOMMA)
     {
     }
 
     // get field by offset
     Operand *field(int offset) const;
+    Operand *word(int offset) const;
 
     // debugging
     std::string name() const override { return (std::string)_name; }
@@ -226,10 +230,8 @@ class Function final : public GlobalConstant
     inline bool is_runtime() const { return _kind._is_runtime; }
 
     // debugging
-    void set_max_ids(int max_opnd_id, int max_inst_id, int max_block_id);
-    inline int max_opnd_id() const { return _max_operand_id; }
-    inline int max_instruction_id() const { return _max_instruction_id; }
-    inline int max_block_id() const { return _max_block_id; }
+    void record_max_ids();
+    void reset_max_ids();
 
     std::string name() const override;
     std::string short_name() const;
