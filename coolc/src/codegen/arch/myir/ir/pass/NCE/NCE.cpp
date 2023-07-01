@@ -37,19 +37,44 @@ void NCE::run(Function *func)
         {
             // use the best estimaton for this branch
             auto *br = Instruction::as<CondBranch>(inst);
-            auto *compare = inst->use(0)->def();
-
-            // this instruction is nullcheck and it's known that object (use 0) is not null
-            if (is_null_check(compare) && not_null[compare->use(0)->id()])
+            if (!br->use(0)->has_def())
             {
-                // only taken is executable
-                cfg_worklist.push(br->taken());
+                // know path exactly
+                if (Operand::isa<Constant>(br->use(0)))
+                {
+                    if (Operand::as<Constant>(br->use(0))->value() != 0)
+                    {
+                        // only taken is executable
+                        cfg_worklist.push(br->taken());
+                    }
+                    else
+                    {
+                        // only not taken is executable
+                        cfg_worklist.push(br->not_taken());
+                    }
+                }
+                else
+                {
+                    SHOULD_NOT_REACH_HERE();
+                }
             }
             else
             {
-                // both can be executable
-                cfg_worklist.push(br->taken());
-                cfg_worklist.push(br->not_taken());
+
+                auto *compare = inst->use(0)->def();
+
+                // this instruction is nullcheck and it's known that object (use 0) is not null
+                if (is_null_check(compare) && not_null[compare->use(0)->id()])
+                {
+                    // only taken is executable
+                    cfg_worklist.push(br->taken());
+                }
+                else
+                {
+                    // both can be executable
+                    cfg_worklist.push(br->taken());
+                    cfg_worklist.push(br->not_taken());
+                }
             }
         }
         else if (Instruction::isa<Move>(inst))
@@ -107,7 +132,9 @@ void NCE::eliminate_null_checks(std::vector<bool> &not_null)
         {
             if (is_null_check(inst))
             {
-                if (not_null[inst->use(0)->id()])
+                auto *use = inst->use(0);
+                // check if constant was compared with 0
+                if (Operand::isa<GlobalConstant>(use) || not_null[use->id()])
                 {
                     for_elimination.push_back(inst);
                 }

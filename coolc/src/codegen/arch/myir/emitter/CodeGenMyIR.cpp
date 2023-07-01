@@ -399,7 +399,7 @@ myir::Operand *CodeGenMyIR::emit_new_inner(const std::shared_ptr<ast::Type> &kla
     auto *object = __ call(func, {tag, size, disp_tab});
 
     // lookup init method
-    auto *class_obj_tab = _module.get<myir::Function>(_runtime.symbol_name(RuntimeMyIR::CLASS_OBJ_TAB));
+    auto *class_obj_tab = _module.get<myir::GlobalConstant>(_runtime.symbol_name(RuntimeMyIR::CLASS_OBJ_TAB));
 
     // load init method and call
     // init method has the same type as for Object class
@@ -603,7 +603,8 @@ myir::Operand *CodeGenMyIR::emit_dispatch_expr_inner(const ast::DispatchExpressi
 
                 // optimize accesses to virtual methods of the base classes
                 if ((klass->tag() == _builder->tag(BaseClassesNames[BaseClasses::INT]) ||
-                     klass->tag() == _builder->tag(BaseClassesNames[BaseClasses::BOOL])) &&
+                     klass->tag() == _builder->tag(BaseClassesNames[BaseClasses::BOOL]) ||
+                     klass->tag() == _builder->tag(BaseClassesNames[BaseClasses::STRING])) &&
                     myir::Operand::isa<myir::Constant>(offset))
                 {
                     int offsetv = myir::Operand::as<myir::Constant>(offset)->value();

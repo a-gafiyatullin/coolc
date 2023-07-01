@@ -186,7 +186,7 @@ void Unboxing::replace_load(Load *load, std::stack<Instruction *> &s)
 
 void Unboxing::replace_store(Store *store, std::stack<Instruction *> &s)
 {
-    // store to Integer object. Replace use of newly allocated object with a new def
+    // store to Integer/Boolean object. Replace use of newly allocated object with a new def
     auto *object = store->use(0);
     auto *offset = store->use(1);
     auto *value = store->use(2);
@@ -222,7 +222,8 @@ void Unboxing::replace_store(Store *store, std::stack<Instruction *> &s)
             }
             else
             {
-                SHOULD_NOT_REACH_HERE();
+                // object escapes to call that is not init. We can't delete allocation
+                for_delete.clear();
             }
         }
         else if (Instruction::isa<Store>(use))
