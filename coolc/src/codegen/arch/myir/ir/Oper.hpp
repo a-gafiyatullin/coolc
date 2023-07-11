@@ -25,7 +25,7 @@ enum OperandType
 
     POINTER,
 
-    // primitives
+    // language primitives
     INTEGER,
     BOOLEAN,
     STRING,
@@ -44,7 +44,7 @@ class Operand : public IRObject
 
   protected:
     const irstring _name;
-    const OperandType _type;
+    OperandType _type;
     const int _id;
 
     irvector<Instruction *> _uses;
@@ -80,6 +80,7 @@ class Operand : public IRObject
 
     // getters
     inline OperandType type() const { return _type; }
+    inline void set_type(OperandType type) { _type = type; }
     inline int id() const { return _id; }
 
     // uses and def

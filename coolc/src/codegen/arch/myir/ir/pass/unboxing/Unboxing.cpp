@@ -12,9 +12,53 @@ void Unboxing::run(Function *func)
     replace_lets(processed);
 }
 
+std::shared_ptr<codegen::Klass> Unboxing::operand_to_klass(OperandType type)
+{
+    switch (type)
+    {
+    case INTEGER:
+        return _builder->klass(BaseClassesNames[BaseClasses::INT]);
+    case BOOLEAN:
+        return _builder->klass(BaseClassesNames[BaseClasses::BOOL]);
+    }
+
+    SHOULD_NOT_REACH_HERE();
+}
+
+Operand *Unboxing::allocate_primitive(Instruction *before, Operand *value, const std::shared_ptr<ast::Type> &klass_type)
+{
+    auto &klass = _builder->klass(klass_type->_string);
+
+    auto *func_alloca = _runtime.symbol_by_id(codegen::RuntimeMyIR::RuntimeMyIRSymbols::GC_ALLOC)->_func;
+    auto *func_init = _module.get<myir::Function>(klass->init_method());
+
+    // prepare tag, size and dispatch table
+    auto *tag = new myir::Constant(klass->tag(), _runtime.header_elem_type(codegen::HeaderLayout::Tag));
+    auto *size = new myir::Constant(klass->size(), _runtime.header_elem_type(codegen::HeaderLayout::Size));
+    auto *disp_tab = _data.class_disp_tab(klass);
+
+    auto *block = before->holder();
+
+    // call allocation
+    auto *object = new Operand(_data.ast_to_ir_type(klass_type));
+    auto *alloca = new Call(func_alloca, object, {func_alloca, tag, size, disp_tab}, block);
+    block->append_before(before, alloca);
+
+    // call init
+    auto *init = new Call(func_init, NULL, {func_init, object}, block);
+    block->append_after(alloca, init);
+
+    // store value to object
+    auto *store = new Store(object, new Constant(codegen::HeaderLayoutOffsets::FieldOffset, UINT64), value, block);
+    block->append_after(init, store);
+
+    // object is ready
+    return object;
+}
+
 void Unboxing::replace_args(std::vector<bool> &processed)
 {
-    std::stack<Instruction *> replace;
+    std::stack<TypeLink> replace;
 
     auto *entry = _cfg->root();
 
@@ -46,7 +90,7 @@ void Unboxing::replace_args(std::vector<bool> &processed)
             for (auto *inst : for_uses_update)
             {
                 inst->update_use(param, value);
-                replace.push(inst);
+                replace.push({inst, param->type()});
             }
         }
     }
@@ -56,7 +100,7 @@ void Unboxing::replace_args(std::vector<bool> &processed)
 
 void Unboxing::replace_lets(std::vector<bool> &processed)
 {
-    std::stack<Instruction *> replace;
+    std::stack<TypeLink> replace;
 
     for (auto *b : _cfg->traversal<CFG::REVERSE_POSTORDER>())
     {
@@ -96,7 +140,7 @@ void Unboxing::replace_lets(std::vector<bool> &processed)
                     use->update_use(inst->def(), move->def());
 
                     // users of the def already has corerct use
-                    replace.push(use);
+                    replace.push({use, inst->def()->type()});
                 }
 
                 for_append.push_back(move);
@@ -112,12 +156,13 @@ void Unboxing::replace_lets(std::vector<bool> &processed)
     replace_uses(replace, processed);
 }
 
-void Unboxing::replace_uses(std::stack<Instruction *> &s, std::vector<bool> &processed)
+void Unboxing::replace_uses(std::stack<TypeLink> &s, std::vector<bool> &processed)
 {
     std::vector<Instruction *> for_delete;
     while (!s.empty())
     {
-        auto *inst = s.top();
+        auto link = s.top();
+        auto *inst = link._inst;
         s.pop();
 
         if (processed[inst->id()])
@@ -129,15 +174,15 @@ void Unboxing::replace_uses(std::stack<Instruction *> &s, std::vector<bool> &pro
 
         if (Instruction::isa<Load>(inst))
         {
-            replace_load(Instruction::as<Load>(inst), s);
+            replace_load(Instruction::as<Load>(inst), link._type, s);
         }
         else if (Instruction::isa<Store>(inst))
         {
-            replace_store(Instruction::as<Store>(inst), s);
+            replace_store(Instruction::as<Store>(inst), link._type, s);
         }
-        else if (Instruction::isa<Call>(inst))
+        else if (Instruction::isa<Call>(inst) || Instruction::isa<Ret>(inst))
         {
-            SHOULD_NOT_REACH_HERE();
+            wrapp_primitives(inst, link._type);
         }
         else
         {
@@ -146,15 +191,18 @@ void Unboxing::replace_uses(std::stack<Instruction *> &s, std::vector<bool> &pro
                 continue;
             }
 
+            // TODO: INT64 for now. FIXME!
+            inst->def()->set_type(INT64);
+
             for (auto *use : inst->def()->uses())
             {
-                s.push(use);
+                s.push({use, link._type});
             }
         }
     }
 }
 
-void Unboxing::replace_load(Load *load, std::stack<Instruction *> &s)
+void Unboxing::replace_load(Load *load, OperandType type, std::stack<TypeLink> &s)
 {
     // load from Integer object. Have to be replaced by moves
     auto *result = load->def();
@@ -163,28 +211,63 @@ void Unboxing::replace_load(Load *load, std::stack<Instruction *> &s)
     auto offset_val = Operand::as<Constant>(offset)->value();
 
     auto *block = load->holder();
+    bool is_value_access = false; // propagate value of this load only for field accesses
+
+    // don't change def. Will be eliminated by copy propagation
+    result->erase_def(load);
+    Instruction *move = nullptr;
 
     // all acceses to Integer objects by constant offsets
     switch (offset_val)
     {
     case codegen::HeaderLayoutOffsets::FieldOffset: {
-        // don't change def. Will be eliminated by copy propagation
-        result->erase_def(load);
-        auto *move = new Move(result, object, block);
-        block->append_instead(load, move);
+        move = new Move(result, object, block);
+        is_value_access = true;
+        break;
+    }
+    case codegen::HeaderLayoutOffsets::DispatchTableOffset: {
+        // load of the dispatch table. We know exactyly the type
+        move = new Move(result, _data.class_disp_tab(operand_to_klass(type)), block);
         break;
     }
     default:
         SHOULD_NOT_REACH_HERE();
     }
 
-    for (auto *use : result->uses())
+    block->append_instead(load, move);
+
+    if (is_value_access)
     {
-        s.push(use);
+        for (auto *use : result->uses())
+        {
+            s.push({use, type});
+        }
     }
 }
 
-void Unboxing::replace_store(Store *store, std::stack<Instruction *> &s)
+void Unboxing::wrapp_primitives(Instruction *inst, OperandType type)
+{
+    std::vector<Operand *> for_replace;
+
+    for (auto *use : inst->uses())
+    {
+        // integer and boolean constants were replaced with INT64 values
+        // TODO: INT64 for now. FIXME!
+        if (use->type() == INT64)
+        {
+            for_replace.push_back(use);
+        }
+    }
+
+    // noew create allocations and replace uses
+    for (auto *value : for_replace)
+    {
+        auto *object = allocate_primitive(inst, value, operand_to_klass(type)->klass());
+        inst->update_use(value, object);
+    }
+}
+
+void Unboxing::replace_store(Store *store, OperandType type, std::stack<TypeLink> &s)
 {
     // store to Integer/Boolean object. Replace use of newly allocated object with a new def
     auto *object = store->use(0);
@@ -251,7 +334,7 @@ void Unboxing::replace_store(Store *store, std::stack<Instruction *> &s)
     for (auto *inst : for_uses_update)
     {
         inst->update_use(object, value);
-        s.push(inst);
+        s.push({inst, type});
     }
 
     // We can delete object allocaion and initialization

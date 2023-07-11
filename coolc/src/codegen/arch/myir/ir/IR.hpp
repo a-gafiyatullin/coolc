@@ -39,6 +39,7 @@ class Block : public IRObject
     inline void append(Instruction *inst) { _insts.push_back(inst); }
     inline void append_front(Instruction *inst) { _insts.push_front(inst); }
     void append_before(Instruction *inst, Instruction *newinst);
+    void append_after(Instruction *inst, Instruction *newinst);
     void append_instead(Instruction *inst, Instruction *newinst);
 
     // delete instruction

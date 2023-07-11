@@ -89,6 +89,21 @@ void Block::append_before(Instruction *inst, Instruction *newinst)
     SHOULD_NOT_REACH_HERE();
 }
 
+void Block::append_after(Instruction *inst, Instruction *newinst)
+{
+    for (auto iter = _insts.begin(); iter != _insts.end(); iter++)
+    {
+        if (*iter == inst)
+        {
+            iter++;
+            _insts.insert(iter, newinst);
+            return;
+        }
+    }
+
+    SHOULD_NOT_REACH_HERE();
+}
+
 void Block::append_instead(Instruction *inst, Instruction *newinst)
 {
     if (_insts.empty())

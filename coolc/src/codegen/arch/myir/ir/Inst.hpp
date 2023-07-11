@@ -37,6 +37,7 @@ class Instruction : public IRObject
 
     // setters
     void update_def(Operand *oper);
+    inline void update_holder(Block *block) { _block = block; }
     virtual void update_use(Operand *old_use, Operand *new_use);
 
     // typecheck

@@ -365,7 +365,7 @@ myir::Operand *CodeGenMyIR::emit_new_inner_helper(const std::shared_ptr<ast::Typ
     auto *size = new myir::Constant(klass->size(), _runtime.header_elem_type(HeaderLayout::Size));
     auto *disp_tab = _data.class_disp_tab(klass);
 
-    // call allocation and cast to this klass pointer
+    // call allocation
     auto *object = __ call(func, {tag, size, disp_tab});
 
     // call init
@@ -774,7 +774,7 @@ void CodeGenMyIR::emit(const std::string &out_file)
     myir::PassManager passes(_module);
     passes.add(new myir::SSAConstruction());
     passes.add(new myir::NCE(_runtime));
-    passes.add(new myir::Unboxing());
+    passes.add(new myir::Unboxing(_runtime, _data, _builder, _module));
     passes.add(new myir::DIE());
 
     // apply passes

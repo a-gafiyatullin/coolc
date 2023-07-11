@@ -133,6 +133,7 @@ void Pass::merge_blocks()
             for (auto *inst : successor->insts())
             {
                 bb->append(inst);
+                inst->update_holder(bb);
             }
 
             successor->clear();
