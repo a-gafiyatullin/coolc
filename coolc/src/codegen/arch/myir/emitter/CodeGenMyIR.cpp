@@ -143,7 +143,7 @@ void CodeGenMyIR::emit_class_init_method_inner()
                 if (semant::Semant::is_native_int(this_field._value_type) ||
                     semant::Semant::is_native_bool(this_field._value_type))
                 {
-                    initial_val = new myir::Constant(0, myir::UINT64);
+                    initial_val = new myir::Constant(0, myir::INT64);
                 }
                 else if (semant::Semant::is_native_string(this_field._value_type))
                 {
@@ -262,32 +262,61 @@ myir::Operand *CodeGenMyIR::emit_binary_expr_inner(const ast::BinaryExpression &
     {
         logical_result = true;
 
-        auto *result = new myir::Variable(myir::BOOLEAN);
+        // optimize comparison of the integers and booleans here
+        if (semant::Semant::is_bool(expr._lhs->_type) || semant::Semant::is_int(expr._lhs->_type))
+        {
+            auto *lv = emit_load_int(lhs); // load real values
+            auto *rv = emit_load_int(rhs);
 
-        auto *is_same_ref = __ eq(lhs, rhs);
+            auto *result = new myir::Variable(myir::BOOLEAN);
+            auto *is_same_ref = __ eq(lhs, rhs);
 
-        myir::Block *true_block = nullptr, *false_block = nullptr, *merge_block = nullptr;
-        make_control_flow(is_same_ref, true_block, false_block, merge_block);
+            myir::Block *true_block = nullptr, *false_block = nullptr, *merge_block = nullptr;
+            make_control_flow(is_same_ref, true_block, false_block, merge_block);
 
-        // true branch
-        __ set_current_block(true_block);
-        __ move(_true_obj, result);
-        __ br(merge_block);
+            // true branch
+            __ set_current_block(true_block);
+            __ move(_true_obj, result);
+            __ br(merge_block);
 
-        // false branch - runtime call to equals
-        __ set_current_block(false_block);
+            // false branch
+            __ set_current_block(false_block);
+            __ move(_false_obj, result);
+            __ br(merge_block);
 
-        auto *equals_func = _runtime.symbol_by_id(RuntimeMyIR::RuntimeMyIRSymbols::EQUALS)->_func;
-        auto *eq_call_res = __ call(equals_func, {lhs, rhs});
+            // merge results
+            __ set_current_block(merge_block);
+            op_result = result;
+        }
+        else
+        {
+            auto *result = new myir::Variable(myir::BOOLEAN);
 
-        auto *false_branch_res = emit_ternary_operator(__ eq(eq_call_res, _true_val), _true_obj, _false_obj);
+            auto *is_same_ref = __ eq(lhs, rhs);
 
-        __ move(false_branch_res, result);
-        __ br(merge_block);
+            myir::Block *true_block = nullptr, *false_block = nullptr, *merge_block = nullptr;
+            make_control_flow(is_same_ref, true_block, false_block, merge_block);
 
-        // merge results
-        __ set_current_block(merge_block);
-        op_result = result;
+            // true branch
+            __ set_current_block(true_block);
+            __ move(_true_obj, result);
+            __ br(merge_block);
+
+            // false branch - runtime call to equals
+            __ set_current_block(false_block);
+
+            auto *equals_func = _runtime.symbol_by_id(RuntimeMyIR::RuntimeMyIRSymbols::EQUALS)->_func;
+            auto *eq_call_res = __ call(equals_func, {lhs, rhs});
+
+            auto *false_branch_res = emit_ternary_operator(__ eq(eq_call_res, _true_val), _true_obj, _false_obj);
+
+            __ move(false_branch_res, result);
+            __ br(merge_block);
+
+            // merge results
+            __ set_current_block(merge_block);
+            op_result = result;
+        }
     }
 
     return logical_result ? op_result : emit_allocate_int(op_result);
@@ -370,6 +399,8 @@ myir::Operand *CodeGenMyIR::emit_new_inner_helper(const std::shared_ptr<ast::Typ
 
     // call init
     __ call(_module.get<myir::Function>(klass->init_method()), {object});
+
+    object->set_type(_data.ast_to_ir_type(klass_type));
 
     // object is ready
     return object;
@@ -679,7 +710,7 @@ myir::Operand *CodeGenMyIR::emit_load_int(myir::Operand *int_obj) { return emit_
 
 myir::Operand *CodeGenMyIR::emit_load_primitive(myir::Operand *obj)
 {
-    return __ ld<myir::UINT64>(obj, __ field_offset(HeaderLayoutOffsets::FieldOffset));
+    return __ ld<myir::INT64>(obj, __ field_offset(HeaderLayoutOffsets::FieldOffset));
 }
 
 myir::Operand *CodeGenMyIR::emit_allocate_primitive(myir::Operand *val, const std::shared_ptr<Klass> &klass)

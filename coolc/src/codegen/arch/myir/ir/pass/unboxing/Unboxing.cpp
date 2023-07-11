@@ -78,10 +78,9 @@ void Unboxing::replace_args(std::vector<bool> &processed)
             // update uses of this INTEGER or BOOLEAN with a new operand
             for (auto *use : param->uses())
             {
-                if (use == load || Instruction::isa<Call>(use))
+                if (use == load)
                 {
-                    assert(use == load || !Instruction::as<Call>(use)->callee()->is_init());
-                    continue;
+                    continue; // already processed
                 }
 
                 for_uses_update.push_back(use);
@@ -180,9 +179,13 @@ void Unboxing::replace_uses(std::stack<TypeLink> &s, std::vector<bool> &processe
         {
             replace_store(Instruction::as<Store>(inst), link._type, s);
         }
-        else if (Instruction::isa<Call>(inst) || Instruction::isa<Ret>(inst))
+        else if (Instruction::isa<Call>(inst))
         {
-            wrapp_primitives(inst, link._type);
+            wrap_primitives(inst, link._type);
+        }
+        else if (Instruction::isa<Ret>(inst))
+        {
+            wrap_primitives(inst, link._type);
         }
         else
         {
@@ -245,7 +248,7 @@ void Unboxing::replace_load(Load *load, OperandType type, std::stack<TypeLink> &
     }
 }
 
-void Unboxing::wrapp_primitives(Instruction *inst, OperandType type)
+void Unboxing::wrap_primitives(Instruction *inst, OperandType type)
 {
     std::vector<Operand *> for_replace;
 
@@ -269,12 +272,21 @@ void Unboxing::wrapp_primitives(Instruction *inst, OperandType type)
 
 void Unboxing::replace_store(Store *store, OperandType type, std::stack<TypeLink> &s)
 {
-    // store to Integer/Boolean object. Replace use of newly allocated object with a new def
+    // store to/of Integer/Boolean object
     auto *object = store->use(0);
     auto *offset = store->use(1);
     auto *value = store->use(2);
 
-    // access can be only to value field
+    // Store of the recently unboxed value as a field.
+    // TODO: INT64 for now. FIXME!
+    if (object->type() != INTEGER && object->type() != BOOLEAN)
+    {
+        wrap_primitives(store, type);
+        return;
+    }
+
+    // Replace use of newly allocated object with a new def
+    // Access can be only to value field
     auto offset_val = Operand::as<Constant>(offset)->value();
     assert(offset_val == codegen::HeaderLayoutOffsets::FieldOffset);
 

@@ -60,6 +60,7 @@ class Block : public IRObject
     inline const irvector<Block *> &succs() const { return _succs; }
     inline Block *succ(int i) const { return _succs.at(i); }
     inline const irvector<Block *> &preds() const { return _preds; }
+    inline Block *pred(int i) const { return _preds.at(i); }
     inline Function *holder() const { return _func; }
     inline int id() const { return _id; }
 

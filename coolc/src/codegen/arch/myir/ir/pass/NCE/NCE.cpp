@@ -177,7 +177,12 @@ void NCE::eliminate_null_check(Instruction *nullcheck)
     auto *assert_block = condbr->not_taken();
 
     auto *merge_block = call_block->succ(0);
-    assert(merge_block == assert_block->succ(0));
+
+    if (merge_block != assert_block->succ(0))
+    {
+        // TODO: optimize it for CASE
+        return;
+    }
 
     // check if call has return value
     auto *maybe_phi = merge_block->insts().front();

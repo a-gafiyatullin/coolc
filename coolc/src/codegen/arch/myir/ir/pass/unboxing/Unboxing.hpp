@@ -31,7 +31,7 @@ class Unboxing : public Pass
     void replace_uses(std::stack<TypeLink> &s, std::vector<bool> &processed);
     void replace_load(Load *load, OperandType type, std::stack<TypeLink> &s);
     void replace_store(Store *store, OperandType type, std::stack<TypeLink> &s);
-    void wrapp_primitives(Instruction *inst, OperandType type);
+    void wrap_primitives(Instruction *inst, OperandType type);
 
     // this function mostly copies logic of the CodeGenMyIR::emit_allocate_primitive but inserts a new code after
     // specific instruction
