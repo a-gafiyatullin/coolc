@@ -11,6 +11,10 @@ void NCE::run(Function *func)
     gather_not_nulls(not_null);
     sparse_data_flow_propagation([this, &not_null](Instruction *inst, std::stack<Instruction *> &ssa_worklist,
                                                    std::stack<Block *> &cfg_worklist, std::vector<bool> &bvisited) {
+        auto is_not_null = [&not_null](Operand *oper) {
+            return Operand::isa<GlobalConstant>(oper) || not_null[oper->id()];
+        };
+
         if (Instruction::isa<Phi>(inst))
         {
             auto executable = operands_from_executable_paths(inst, bvisited);
@@ -19,9 +23,15 @@ void NCE::run(Function *func)
             bool not_null_state = true;
             for (auto *o : executable)
             {
-                not_null_state &= not_null[o->id()];
+                not_null_state &= is_not_null(o);
             }
-            not_null[inst->def()->id()] = not_null_state;
+
+            auto *def = inst->def();
+            if (not_null[def->id()] != not_null_state)
+            {
+                not_null[def->id()] = not_null_state;
+                append_uses_to_worklist(def, ssa_worklist);
+            }
         }
         else if (Instruction::isa<CondBranch>(inst))
         {
@@ -35,12 +45,18 @@ void NCE::run(Function *func)
                     if (Operand::as<Constant>(br->use(0))->value() != 0)
                     {
                         // only taken is executable
-                        cfg_worklist.push(br->taken());
+                        if (!bvisited[br->taken()->id()])
+                        {
+                            cfg_worklist.push(br->taken());
+                        }
                     }
                     else
                     {
                         // only not taken is executable
-                        cfg_worklist.push(br->not_taken());
+                        if (!bvisited[br->not_taken()->id()])
+                        {
+                            cfg_worklist.push(br->not_taken());
+                        }
                     }
                 }
                 else
@@ -53,25 +69,41 @@ void NCE::run(Function *func)
                 auto *compare = inst->use(0)->def();
 
                 // this instruction is nullcheck and it's known that object (use 0) is not null
-                if (is_null_check(compare) && not_null[compare->use(0)->id()])
+                if (is_null_check(compare) && is_not_null(compare->use(0)))
                 {
                     // only taken is executable
-                    cfg_worklist.push(br->taken());
+                    if (!bvisited[br->taken()->id()])
+                    {
+                        cfg_worklist.push(br->taken());
+                    }
                 }
                 else
                 {
                     // both can be executable
-                    cfg_worklist.push(br->taken());
-                    cfg_worklist.push(br->not_taken());
+                    if (!bvisited[br->taken()->id()])
+                    {
+                        cfg_worklist.push(br->taken());
+                    }
+
+                    if (!bvisited[br->not_taken()->id()])
+                    {
+                        cfg_worklist.push(br->not_taken());
+                    }
                 }
             }
         }
         else if (Instruction::isa<Move>(inst))
         {
+            auto *def = inst->def();
+            auto *use = inst->use(0);
+
             // propagate data flow info through moves
-            if (!not_null[inst->def()->id()])
+            bool flag = is_not_null(use);
+
+            if (not_null[def->id()] != flag)
             {
-                not_null[inst->def()->id()] = not_null[inst->use(0)->id()];
+                not_null[def->id()] = flag;
+                append_uses_to_worklist(def, ssa_worklist);
             }
         }
     });
@@ -136,7 +168,7 @@ void NCE::eliminate_null_checks(std::vector<bool> &not_null)
         eliminate_null_check(inst);
     }
 
-    merge_blocks();
+    // merge_blocks();
 }
 
 void NCE::eliminate_null_check(Instruction *nullcheck)

@@ -5,7 +5,7 @@
 namespace myir
 {
 
-// pass deletes obviously dead instruction
+// Pass deletes obviously dead instruction
 class DIE : public Pass
 {
   public:

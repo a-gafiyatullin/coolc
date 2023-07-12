@@ -40,6 +40,12 @@ std::vector<Operand *> Pass::operands_from_executable_paths(Instruction *inst, s
     return executable;
 }
 
+void Pass::append_uses_to_worklist(Operand *operand, std::stack<Instruction *> &ssa_worklist)
+{
+    std::for_each(operand->uses().begin(), operand->uses().end(),
+                  [&ssa_worklist](Instruction *inst) { ssa_worklist.push(inst); });
+}
+
 void Pass::sparse_data_flow_propagation(
     const std::function<void(Instruction *, std::stack<Instruction *> &ssa_worklist, std::stack<Block *> &cfg_worklist,
                              std::vector<bool> &bvisited)> &visitor)

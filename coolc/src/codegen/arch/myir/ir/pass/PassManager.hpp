@@ -24,6 +24,7 @@ class Pass
 
     // helpers
     std::vector<Operand *> operands_from_executable_paths(Instruction *inst, std::vector<bool> &bvisited);
+    void append_uses_to_worklist(Operand *operand, std::stack<Instruction *> &ssa_worklist);
 
     // usefull post passes
     void merge_blocks();
