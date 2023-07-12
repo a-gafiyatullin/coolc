@@ -12,7 +12,7 @@ void Unboxing::run(Function *func)
     replace_lets(processed);
 }
 
-std::shared_ptr<codegen::Klass> Unboxing::operand_to_klass(OperandType type)
+std::shared_ptr<codegen::Klass> Unboxing::operand_to_klass(OperandType type) const
 {
     switch (type)
     {
@@ -25,7 +25,22 @@ std::shared_ptr<codegen::Klass> Unboxing::operand_to_klass(OperandType type)
     SHOULD_NOT_REACH_HERE();
 }
 
-Operand *Unboxing::allocate_primitive(Instruction *before, Operand *value, const std::shared_ptr<ast::Type> &klass_type)
+bool Unboxing::need_unboxing(Operand *value) const
+{
+    // We don't need unboxing if value was used by calls only (aka call argument)
+    for (auto *use : value->uses())
+    {
+        if (!Instruction::isa<Call>(use))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+Operand *Unboxing::allocate_primitive(Instruction *before, Operand *value,
+                                      const std::shared_ptr<ast::Type> &klass_type) const
 {
     auto &klass = _builder->klass(klass_type->_string);
 
@@ -56,7 +71,7 @@ Operand *Unboxing::allocate_primitive(Instruction *before, Operand *value, const
     return object;
 }
 
-void Unboxing::replace_args(std::vector<bool> &processed)
+void Unboxing::replace_args(std::vector<bool> &processed) const
 {
     std::stack<TypeLink> replace;
 
@@ -66,6 +81,11 @@ void Unboxing::replace_args(std::vector<bool> &processed)
     {
         if (param->type() == INTEGER || param->type() == BOOLEAN)
         {
+            if (!need_unboxing(param))
+            {
+                continue;
+            }
+
             // prepare an operand instead of the object for primitive
             auto *value = new Operand(INT64);
             auto *offset = new Constant(codegen::HeaderLayoutOffsets::FieldOffset, UINT64);
@@ -97,7 +117,7 @@ void Unboxing::replace_args(std::vector<bool> &processed)
     replace_uses(replace, processed);
 }
 
-void Unboxing::replace_lets(std::vector<bool> &processed)
+void Unboxing::replace_lets(std::vector<bool> &processed) const
 {
     std::stack<TypeLink> replace;
 
@@ -112,7 +132,7 @@ void Unboxing::replace_lets(std::vector<bool> &processed)
             {
                 auto *oper = inst->use(0);
                 if ((inst->def()->type() != INTEGER && inst->def()->type() != BOOLEAN) ||
-                    !Operand::isa<GlobalConstant>(oper))
+                    !Operand::isa<GlobalConstant>(oper) || !need_unboxing(oper))
                 {
                     continue;
                 }
@@ -155,7 +175,7 @@ void Unboxing::replace_lets(std::vector<bool> &processed)
     replace_uses(replace, processed);
 }
 
-void Unboxing::replace_uses(std::stack<TypeLink> &s, std::vector<bool> &processed)
+void Unboxing::replace_uses(std::stack<TypeLink> &s, std::vector<bool> &processed) const
 {
     std::vector<Instruction *> for_delete;
     while (!s.empty())
@@ -205,7 +225,7 @@ void Unboxing::replace_uses(std::stack<TypeLink> &s, std::vector<bool> &processe
     }
 }
 
-void Unboxing::replace_load(Load *load, OperandType type, std::stack<TypeLink> &s)
+void Unboxing::replace_load(Load *load, OperandType type, std::stack<TypeLink> &s) const
 {
     // load from Integer object. Have to be replaced by moves
     auto *result = load->def();
@@ -248,7 +268,7 @@ void Unboxing::replace_load(Load *load, OperandType type, std::stack<TypeLink> &
     }
 }
 
-void Unboxing::wrap_primitives(Instruction *inst, OperandType type)
+void Unboxing::wrap_primitives(Instruction *inst, OperandType type) const
 {
     std::vector<Operand *> for_replace;
 
@@ -270,7 +290,7 @@ void Unboxing::wrap_primitives(Instruction *inst, OperandType type)
     }
 }
 
-void Unboxing::replace_store(Store *store, OperandType type, std::stack<TypeLink> &s)
+void Unboxing::replace_store(Store *store, OperandType type, std::stack<TypeLink> &s) const
 {
     // store to/of Integer/Boolean object
     auto *object = store->use(0);

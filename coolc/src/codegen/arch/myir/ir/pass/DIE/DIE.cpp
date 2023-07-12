@@ -11,14 +11,11 @@ void DIE::run(Function *func)
     {
         for (auto *inst : b->insts())
         {
-            if (!Instruction::isa<MemoryInst>(inst))
+            if (!Instruction::isa<Store>(inst) && !Instruction::isa<Call>(inst))
             {
                 if (inst->def() && inst->def()->uses().empty())
                 {
-                    if (!Instruction::isa<Call>(inst))
-                    {
-                        for_delete.push_back(inst);
-                    }
+                    for_delete.push_back(inst);
                 }
             }
         }

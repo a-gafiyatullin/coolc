@@ -13,17 +13,7 @@ void NCE::run(Function *func)
                                                    std::stack<Block *> &cfg_worklist, std::vector<bool> &bvisited) {
         if (Instruction::isa<Phi>(inst))
         {
-            // use data flow info only from executed paths
-            auto *phi = Instruction::as<Phi>(inst);
-            std::vector<Operand *> executable;
-
-            for (auto *b : inst->holder()->preds())
-            {
-                if (bvisited[b->id()])
-                {
-                    executable.push_back(phi->oper_path(b));
-                }
-            }
+            auto executable = operands_from_executable_paths(inst, bvisited);
 
             // get optimisitic prediction
             bool not_null_state = true;
@@ -31,7 +21,7 @@ void NCE::run(Function *func)
             {
                 not_null_state &= not_null[o->id()];
             }
-            not_null[phi->def()->id()] = not_null_state;
+            not_null[inst->def()->id()] = not_null_state;
         }
         else if (Instruction::isa<CondBranch>(inst))
         {
@@ -60,7 +50,6 @@ void NCE::run(Function *func)
             }
             else
             {
-
                 auto *compare = inst->use(0)->def();
 
                 // this instruction is nullcheck and it's known that object (use 0) is not null

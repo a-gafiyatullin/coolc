@@ -22,6 +22,9 @@ class Pass
         const std::function<void(Instruction *, std::stack<Instruction *> &ssa_worklist,
                                  std::stack<Block *> &cfg_worklist, std::vector<bool> &bvisited)> &visitor);
 
+    // helpers
+    std::vector<Operand *> operands_from_executable_paths(Instruction *inst, std::vector<bool> &bvisited);
+
     // usefull post passes
     void merge_blocks();
 

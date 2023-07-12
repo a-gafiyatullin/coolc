@@ -23,6 +23,23 @@ void PassManager::PassManager::run()
     }
 }
 
+std::vector<Operand *> Pass::operands_from_executable_paths(Instruction *inst, std::vector<bool> &bvisited)
+{
+    // use data flow info only from executed paths
+    auto *phi = Instruction::as<Phi>(inst);
+    std::vector<Operand *> executable;
+
+    for (auto *b : inst->holder()->preds())
+    {
+        if (bvisited[b->id()])
+        {
+            executable.push_back(phi->oper_path(b));
+        }
+    }
+
+    return executable;
+}
+
 void Pass::sparse_data_flow_propagation(
     const std::function<void(Instruction *, std::stack<Instruction *> &ssa_worklist, std::stack<Block *> &cfg_worklist,
                              std::vector<bool> &bvisited)> &visitor)

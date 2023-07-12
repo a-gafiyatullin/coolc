@@ -1,5 +1,6 @@
 #include "CodeGenMyIR.hpp"
 #include "codegen/arch/myir/ir/IR.inline.hpp"
+#include "codegen/arch/myir/ir/pass/CP/CP.hpp"
 #include "codegen/arch/myir/ir/pass/DIE/DIE.hpp"
 #include "codegen/arch/myir/ir/pass/NCE/NCE.hpp"
 #include "codegen/arch/myir/ir/pass/PassManager.hpp"
@@ -269,13 +270,12 @@ myir::Operand *CodeGenMyIR::emit_binary_expr_inner(const ast::BinaryExpression &
             auto *rv = emit_load_int(rhs);
 
             auto *result = new myir::Variable(myir::BOOLEAN);
-            auto *is_same_ref = __ eq(lhs, rhs);
+            auto *is_same_ref = __ eq(lv, rv);
 
             myir::Block *true_block = nullptr, *false_block = nullptr, *merge_block = nullptr;
             make_control_flow(is_same_ref, true_block, false_block, merge_block);
 
             // true branch
-            __ set_current_block(true_block);
             __ move(_true_obj, result);
             __ br(merge_block);
 
@@ -806,6 +806,7 @@ void CodeGenMyIR::emit(const std::string &out_file)
     passes.add(new myir::SSAConstruction());
     passes.add(new myir::NCE(_runtime));
     passes.add(new myir::Unboxing(_runtime, _data, _builder, _module));
+    passes.add(new myir::CP());
     passes.add(new myir::DIE());
 
     // apply passes

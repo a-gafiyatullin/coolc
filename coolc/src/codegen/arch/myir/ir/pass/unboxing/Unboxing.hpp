@@ -24,19 +24,21 @@ class Unboxing : public Pass
     codegen::DataMyIR &_data;
     Module &_module;
 
-    void replace_args(std::vector<bool> &processed);
-    void replace_lets(std::vector<bool> &processed);
+    void replace_args(std::vector<bool> &processed) const;
+    void replace_lets(std::vector<bool> &processed) const;
+    bool need_unboxing(Operand *value) const;
 
     // replace all uses with a new def and fix instructions
-    void replace_uses(std::stack<TypeLink> &s, std::vector<bool> &processed);
-    void replace_load(Load *load, OperandType type, std::stack<TypeLink> &s);
-    void replace_store(Store *store, OperandType type, std::stack<TypeLink> &s);
-    void wrap_primitives(Instruction *inst, OperandType type);
+    void replace_uses(std::stack<TypeLink> &s, std::vector<bool> &processed) const;
+    void replace_load(Load *load, OperandType type, std::stack<TypeLink> &s) const;
+    void replace_store(Store *store, OperandType type, std::stack<TypeLink> &s) const;
+    void wrap_primitives(Instruction *inst, OperandType type) const;
 
     // this function mostly copies logic of the CodeGenMyIR::emit_allocate_primitive but inserts a new code after
     // specific instruction
-    Operand *allocate_primitive(Instruction *before, Operand *value, const std::shared_ptr<ast::Type> &klass_type);
-    std::shared_ptr<codegen::Klass> operand_to_klass(OperandType type);
+    Operand *allocate_primitive(Instruction *before, Operand *value,
+                                const std::shared_ptr<ast::Type> &klass_type) const;
+    std::shared_ptr<codegen::Klass> operand_to_klass(OperandType type) const;
 
   public:
     Unboxing(const codegen::RuntimeMyIR &runtime, codegen::DataMyIR &data,
