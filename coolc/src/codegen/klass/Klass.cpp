@@ -3,7 +3,7 @@
 using namespace codegen;
 
 Klass::Klass(const std::shared_ptr<ast::Class> &klass, const KlassBuilder *builder)
-    : _klass(klass->_type), _parent_klass(builder->_klasses.at(klass->_parent->_string))
+    : _klass(klass->_type), _parent_klass(builder->_klasses.at(klass->_parent->_string)), _is_leaf(false)
 {
     _fields.insert(_fields.end(), _parent_klass->fields_begin(), _parent_klass->fields_end());
     _methods.insert(_methods.end(), _parent_klass->methods_begin(), _parent_klass->methods_end());
@@ -14,9 +14,7 @@ Klass::Klass(const std::shared_ptr<ast::Class> &klass, const KlassBuilder *build
     CODEGEN_VERBOSE_ONLY(dump_methods());
 }
 
-Klass::Klass() : _klass(nullptr), _parent_klass(nullptr)
-{
-}
+Klass::Klass() : _klass(nullptr), _parent_klass(nullptr), _is_leaf(false) {}
 
 void Klass::divide_features(const std::vector<std::shared_ptr<ast::Feature>> &features)
 {
@@ -106,6 +104,7 @@ int KlassBuilder::build_klass(const std::shared_ptr<semant::ClassNode> &node, co
     }
 
     _klasses[klass->_type->_string]->set_tags(tag, child_max_tag);
+    _klasses[klass->_type->_string]->_is_leaf = node->_children.size() == 0;
 
     CODEGEN_VERBOSE_ONLY(LOG("Set tags: (" + std::to_string(tag) + ", " + std::to_string(child_max_tag) + ")"););
 
@@ -120,9 +119,7 @@ size_t Klass::method_index(const std::string &method_name) const
            _methods.begin();
 }
 
-KlassBuilder::KlassBuilder(const std::shared_ptr<semant::ClassNode> &root) : _root(root)
-{
-}
+KlassBuilder::KlassBuilder(const std::shared_ptr<semant::ClassNode> &root) : _root(root) {}
 
 void KlassBuilder::init()
 {

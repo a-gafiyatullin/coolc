@@ -162,11 +162,28 @@ void Block::disconnect()
         Block::disconnect(predecessor, this);
     }
 
+    // TODO: not a common case!
+    assert(preds.size() <= 1);
+
     for (auto *p : preds)
     {
         for (auto *s : succs)
         {
             Block::connect(p, s);
+
+            // Update paths in phi functions
+            for (auto *inst : s->insts())
+            {
+                if (Instruction::isa<Phi>(inst))
+                {
+                    auto *phi = Instruction::as<Phi>(inst);
+                    phi->update_path(phi->oper_path(this), p);
+                }
+                else
+                {
+                    break;
+                }
+            }
         }
     }
 }

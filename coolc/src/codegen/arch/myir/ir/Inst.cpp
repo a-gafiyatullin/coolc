@@ -64,6 +64,8 @@ void Phi::add_path(Operand *use, Block *b)
     _def_from_block[use] = b;
 }
 
+void Phi::update_path(Operand *use, Block *b) { _def_from_block[use] = b; }
+
 void Phi::update_use(Operand *old_use, Operand *new_use)
 {
     Instruction::update_use(old_use, new_use);

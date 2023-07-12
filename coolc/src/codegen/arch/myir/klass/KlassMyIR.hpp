@@ -13,18 +13,11 @@ class KlassMyIR : public Klass
     static constexpr std::string_view PROTOTYPE_NAME_SUFFIX = "-protObj";
     static constexpr std::string_view DISP_TAB_NAME_SUFFIX = "_dispTab";
 
-    KlassMyIR(const std::shared_ptr<ast::Class> &klass, const KlassBuilder *builder) : Klass(klass, builder)
-    {
-    }
+    KlassMyIR(const std::shared_ptr<ast::Class> &klass, const KlassBuilder *builder) : Klass(klass, builder) {}
 
-    KlassMyIR() : Klass()
-    {
-    }
+    KlassMyIR() : Klass() {}
 
-    size_t size() const override
-    {
-        return (_fields.size()) * WORD_SIZE + HeaderLayoutSizes::HeaderSize;
-    }
+    size_t size() const override { return (_fields.size()) * WORD_SIZE + HeaderLayoutSizes::HeaderSize; }
 
     std::string method_full_name(const std::string &method_name) const override;
 
@@ -46,20 +39,11 @@ class KlassMyIR : public Klass
         return _fields[field_idx - HeaderLayout::HeaderLayoutElemets]->_type;
     }
 
-    std::string init_method() const override
-    {
-        return name() + static_cast<std::string>(INIT_METHOD_SUFFIX);
-    }
+    std::string init_method() const override { return name() + static_cast<std::string>(INIT_METHOD_SUFFIX); }
 
-    std::string prototype() const override
-    {
-        return name() + static_cast<std::string>(PROTOTYPE_NAME_SUFFIX);
-    }
+    std::string prototype() const override { return name() + static_cast<std::string>(PROTOTYPE_NAME_SUFFIX); }
 
-    std::string disp_tab() const override
-    {
-        return name() + static_cast<std::string>(DISP_TAB_NAME_SUFFIX);
-    }
+    std::string disp_tab() const override { return name() + static_cast<std::string>(DISP_TAB_NAME_SUFFIX); }
 };
 
 class KlassBuilderMyIR : public KlassBuilder
@@ -68,9 +52,7 @@ class KlassBuilderMyIR : public KlassBuilder
     std::shared_ptr<Klass> make_klass(const std::shared_ptr<ast::Class> &klass) override;
 
   public:
-    explicit KlassBuilderMyIR(const std::shared_ptr<semant::ClassNode> &root) : KlassBuilder(root)
-    {
-    }
+    explicit KlassBuilderMyIR(const std::shared_ptr<semant::ClassNode> &root) : KlassBuilder(root) {}
 };
 
 }; // namespace codegen

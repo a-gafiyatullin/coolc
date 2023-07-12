@@ -57,6 +57,7 @@ class Phi : public Instruction
     Phi(Operand *result, Block *b) : Instruction(result, {}, b), _def_from_block(ALLOC) {}
 
     void add_path(Operand *use, Block *b);
+    void update_path(Operand *use, Block *b);
     void update_use(Operand *old_use, Operand *new_use) override;
     Operand *oper_path(Block *b);
 

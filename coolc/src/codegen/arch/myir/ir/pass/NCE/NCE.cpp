@@ -168,7 +168,7 @@ void NCE::eliminate_null_checks(std::vector<bool> &not_null)
         eliminate_null_check(inst);
     }
 
-    // merge_blocks();
+    merge_blocks();
 }
 
 void NCE::eliminate_null_check(Instruction *nullcheck)

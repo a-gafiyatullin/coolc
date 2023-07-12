@@ -632,11 +632,8 @@ myir::Operand *CodeGenMyIR::emit_dispatch_expr_inner(const ast::DispatchExpressi
 
                 auto *offset = pointer_offset(new myir::Constant(klass->method_index(method_name), myir::UINT32));
 
-                // optimize accesses to virtual methods of the base classes
-                if ((klass->tag() == _builder->tag(BaseClassesNames[BaseClasses::INT]) ||
-                     klass->tag() == _builder->tag(BaseClassesNames[BaseClasses::BOOL]) ||
-                     klass->tag() == _builder->tag(BaseClassesNames[BaseClasses::STRING])) &&
-                    myir::Operand::isa<myir::Constant>(offset))
+                // optimize accesses to virtual methods of the leaf classes
+                if (klass->is_leaf() && myir::Operand::isa<myir::Constant>(offset))
                 {
                     int offsetv = myir::Operand::as<myir::Constant>(offset)->value();
                     auto *disptab = myir::Operand::as<myir::GlobalConstant>(_data.class_disp_tab(klass));

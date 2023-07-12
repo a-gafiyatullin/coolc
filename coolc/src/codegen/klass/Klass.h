@@ -24,6 +24,9 @@ class Klass
     int _tag;
     int _child_max_tag;
 
+    // CHA
+    bool _is_leaf;
+
     // All fields and methods of this class
     std::vector<std::shared_ptr<ast::Feature>> _fields;
     std::vector<std::pair<std::shared_ptr<ast::Type>, std::shared_ptr<ast::Feature>>> _methods;
@@ -59,30 +62,21 @@ class Klass
      *
      * @return Class name
      */
-    inline const std::string &name() const
-    {
-        return _klass->_string;
-    }
+    inline const std::string &name() const { return _klass->_string; }
 
     /**
      * @brief Parent class
      *
      * @return Parent class Klass
      */
-    inline const std::shared_ptr<Klass> &parent() const
-    {
-        return _parent_klass;
-    }
+    inline const std::shared_ptr<Klass> &parent() const { return _parent_klass; }
 
     /**
      * @brief Class type
      *
      * @return Class type
      */
-    inline const std::shared_ptr<ast::Type> &klass() const
-    {
-        return _klass;
-    }
+    inline const std::shared_ptr<ast::Type> &klass() const { return _klass; }
 
     /**
      * @brief Size of the object of this class
@@ -98,20 +92,14 @@ class Klass
      *
      * @return Iterator to the first field
      */
-    inline std::vector<std::shared_ptr<ast::Feature>>::const_iterator fields_begin() const
-    {
-        return _fields.begin();
-    }
+    inline std::vector<std::shared_ptr<ast::Feature>>::const_iterator fields_begin() const { return _fields.begin(); }
 
     /**
      * @brief Iterator to the behind of the last field
      *
      * @return Iterator to the behind of the last field
      */
-    inline std::vector<std::shared_ptr<ast::Feature>>::const_iterator fields_end() const
-    {
-        return _fields.end();
-    }
+    inline std::vector<std::shared_ptr<ast::Feature>>::const_iterator fields_end() const { return _fields.end(); }
 
     /**
      * @brief Get field offset
@@ -126,10 +114,7 @@ class Klass
      *
      * @return Fields number
      */
-    int fields_num() const
-    {
-        return _fields.size();
-    }
+    int fields_num() const { return _fields.size(); }
     // ------------------------------------ METHODS ------------------------------------
 
     /**
@@ -199,24 +184,18 @@ class Klass
      * @brief Class tag
      * @return Class tag
      */
-    inline int tag() const
-    {
-        return _tag;
-    }
+    inline int tag() const { return _tag; }
 
     /**
      * @brief The biggest tag among all children of this class
      *
      * @return Class tag
      */
-    inline int child_max_tag() const
-    {
-        return _child_max_tag;
-    }
+    inline int child_max_tag() const { return _child_max_tag; }
 
-    virtual ~Klass()
-    {
-    }
+    inline bool is_leaf() const { return _is_leaf; }
+
+    virtual ~Klass() {}
 };
 
 /**
@@ -311,20 +290,14 @@ class KlassBuilder
      *
      * @return Vector of Klasses
      */
-    inline const std::vector<std::shared_ptr<Klass>> &klasses() const
-    {
-        return _klasses_by_tag;
-    }
+    inline const std::vector<std::shared_ptr<Klass>> &klasses() const { return _klasses_by_tag; }
 
     /**
      * @brief Get root of the Class hierarhy
      *
      * @return Root of the Class hierarhy
      */
-    inline const std::shared_ptr<semant::ClassNode> &root() const
-    {
-        return _root;
-    }
+    inline const std::shared_ptr<semant::ClassNode> &root() const { return _root; }
 };
 
 }; // namespace codegen
