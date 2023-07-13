@@ -10,6 +10,8 @@ class Function;
 
 class Instruction : public IRObject
 {
+    friend class Block;
+
   protected:
     irvector<Operand *> _uses;
     Operand *_def;
@@ -20,24 +22,25 @@ class Instruction : public IRObject
     static int ID;
     const int _id;
 
+    inline void update_holder(Block *block) { _block = block; }
+
   public:
     // construction
-    Instruction(Operand *def, const std::vector<Operand *> &uses, Block *b);
+    Instruction(Operand *def, const std::vector<Operand *> &uses);
 
     // ID
     inline static void set_id(int c = 0) { ID = c; }
     inline static int max_id() { return ID; }
 
     // getters
-    inline Operand *def() { return _def; }
-    inline irvector<Operand *> &uses() { return _uses; }
+    inline Operand *def() const { return _def; }
+    inline const irvector<Operand *> &uses() const { return _uses; }
     inline Operand *use(int i) const { return _uses.at(i); }
     inline int id() const { return _id; }
     inline Block *holder() const { return _block; }
 
     // setters
     void update_def(Operand *oper);
-    inline void update_holder(Block *block) { _block = block; }
     virtual void update_use(Operand *old_use, Operand *new_use);
 
     // typecheck
@@ -54,7 +57,7 @@ class Phi : public Instruction
     irunordered_map<Operand *, Block *> _def_from_block;
 
   public:
-    Phi(Operand *result, Block *b) : Instruction(result, {}, b), _def_from_block(ALLOC) {}
+    Phi(Operand *result) : Instruction(result, {}), _def_from_block(ALLOC) {}
 
     void add_path(Operand *use, Block *b);
     void update_path(Operand *use, Block *b);
@@ -67,13 +70,13 @@ class Phi : public Instruction
 class MemoryInst : public Instruction
 {
   public:
-    MemoryInst(Operand *def, const std::vector<Operand *> &uses, Block *b) : Instruction(def, uses, b) {}
+    MemoryInst(Operand *def, const std::vector<Operand *> &uses) : Instruction(def, uses) {}
 };
 
 class Store : public MemoryInst
 {
   public:
-    Store(Operand *base, Operand *offset, Operand *value, Block *b) : MemoryInst({}, {base, offset, value}, b) {}
+    Store(Operand *base, Operand *offset, Operand *value) : MemoryInst({}, {base, offset, value}) {}
 
     std::string dump() const override;
 };
@@ -81,7 +84,7 @@ class Store : public MemoryInst
 class Load : public MemoryInst
 {
   public:
-    Load(Operand *result, Operand *base, Operand *offset, Block *b) : MemoryInst(result, {base, offset}, b) {}
+    Load(Operand *result, Operand *base, Operand *offset) : MemoryInst(result, {base, offset}) {}
 
     std::string dump() const override;
 };
@@ -92,7 +95,7 @@ class Branch : public Instruction
     Block *_dest;
 
   public:
-    Branch(Block *dest, Block *b) : Instruction({}, {}, b), _dest(dest) {}
+    Branch(Block *dest) : Instruction({}, {}), _dest(dest) {}
 
     std::string dump() const override;
 };
@@ -104,8 +107,8 @@ class CondBranch : public Instruction
     Block *_not_taken;
 
   public:
-    CondBranch(Operand *cond, Block *taken, Block *not_taken, Block *b)
-        : Instruction({}, {cond}, b), _taken(taken), _not_taken(not_taken)
+    CondBranch(Operand *cond, Block *taken, Block *not_taken)
+        : Instruction({}, {cond}), _taken(taken), _not_taken(not_taken)
     {
     }
 
@@ -121,19 +124,19 @@ class BinaryInst : public Instruction
     std::string print(const std::string &op) const;
 
   public:
-    BinaryInst(Operand *result, Operand *lhs, Operand *rhs, Block *b) : Instruction(result, {lhs, rhs}, b) {}
+    BinaryInst(Operand *result, Operand *lhs, Operand *rhs) : Instruction(result, {lhs, rhs}) {}
 };
 
 class BinaryArithInst : public BinaryInst
 {
   public:
-    BinaryArithInst(Operand *result, Operand *lhs, Operand *rhs, Block *b) : BinaryInst(result, lhs, rhs, b) {}
+    BinaryArithInst(Operand *result, Operand *lhs, Operand *rhs) : BinaryInst(result, lhs, rhs) {}
 };
 
 class Sub : public BinaryArithInst
 {
   public:
-    Sub(Operand *result, Operand *lhs, Operand *rhs, Block *b) : BinaryArithInst(result, lhs, rhs, b) {}
+    Sub(Operand *result, Operand *lhs, Operand *rhs) : BinaryArithInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -141,7 +144,7 @@ class Sub : public BinaryArithInst
 class Add : public BinaryArithInst
 {
   public:
-    Add(Operand *result, Operand *lhs, Operand *rhs, Block *b) : BinaryArithInst(result, lhs, rhs, b) {}
+    Add(Operand *result, Operand *lhs, Operand *rhs) : BinaryArithInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -149,7 +152,7 @@ class Add : public BinaryArithInst
 class Div : public BinaryArithInst
 {
   public:
-    Div(Operand *result, Operand *lhs, Operand *rhs, Block *b) : BinaryArithInst(result, lhs, rhs, b) {}
+    Div(Operand *result, Operand *lhs, Operand *rhs) : BinaryArithInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -157,7 +160,7 @@ class Div : public BinaryArithInst
 class Mul : public BinaryArithInst
 {
   public:
-    Mul(Operand *result, Operand *lhs, Operand *rhs, Block *b) : BinaryArithInst(result, lhs, rhs, b) {}
+    Mul(Operand *result, Operand *lhs, Operand *rhs) : BinaryArithInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -165,7 +168,7 @@ class Mul : public BinaryArithInst
 class Xor : public BinaryArithInst
 {
   public:
-    Xor(Operand *result, Operand *lhs, Operand *rhs, Block *b) : BinaryArithInst(result, lhs, rhs, b) {}
+    Xor(Operand *result, Operand *lhs, Operand *rhs) : BinaryArithInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -173,7 +176,7 @@ class Xor : public BinaryArithInst
 class Or : public BinaryArithInst
 {
   public:
-    Or(Operand *result, Operand *lhs, Operand *rhs, Block *b) : BinaryArithInst(result, lhs, rhs, b) {}
+    Or(Operand *result, Operand *lhs, Operand *rhs) : BinaryArithInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -181,7 +184,7 @@ class Or : public BinaryArithInst
 class Shl : public BinaryArithInst
 {
   public:
-    Shl(Operand *result, Operand *lhs, Operand *rhs, Block *b) : BinaryArithInst(result, lhs, rhs, b) {}
+    Shl(Operand *result, Operand *lhs, Operand *rhs) : BinaryArithInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -189,13 +192,13 @@ class Shl : public BinaryArithInst
 class BinaryLogicInst : public BinaryInst
 {
   public:
-    BinaryLogicInst(Operand *result, Operand *lhs, Operand *rhs, Block *b) : BinaryInst(result, lhs, rhs, b) {}
+    BinaryLogicInst(Operand *result, Operand *lhs, Operand *rhs) : BinaryInst(result, lhs, rhs) {}
 };
 
 class LT : public BinaryLogicInst
 {
   public:
-    LT(Operand *result, Operand *lhs, Operand *rhs, Block *b) : BinaryLogicInst(result, lhs, rhs, b) {}
+    LT(Operand *result, Operand *lhs, Operand *rhs) : BinaryLogicInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -203,7 +206,7 @@ class LT : public BinaryLogicInst
 class LE : public BinaryLogicInst
 {
   public:
-    LE(Operand *result, Operand *lhs, Operand *rhs, Block *b) : BinaryLogicInst(result, lhs, rhs, b) {}
+    LE(Operand *result, Operand *lhs, Operand *rhs) : BinaryLogicInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -211,7 +214,7 @@ class LE : public BinaryLogicInst
 class EQ : public BinaryLogicInst
 {
   public:
-    EQ(Operand *result, Operand *lhs, Operand *rhs, Block *b) : BinaryLogicInst(result, lhs, rhs, b) {}
+    EQ(Operand *result, Operand *lhs, Operand *rhs) : BinaryLogicInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -219,7 +222,7 @@ class EQ : public BinaryLogicInst
 class GT : public BinaryLogicInst
 {
   public:
-    GT(Operand *result, Operand *lhs, Operand *rhs, Block *b) : BinaryLogicInst(result, lhs, rhs, b) {}
+    GT(Operand *result, Operand *lhs, Operand *rhs) : BinaryLogicInst(result, lhs, rhs) {}
 
     std::string dump() const override;
 };
@@ -230,19 +233,19 @@ class UnaryInst : public Instruction
     std::string print(const std::string &op) const;
 
   public:
-    UnaryInst(Operand *result, Operand *value, Block *b) : Instruction(result, {value}, b) {}
+    UnaryInst(Operand *result, Operand *value) : Instruction(result, {value}) {}
 };
 
 class UnaryLogicInst : public UnaryInst
 {
   public:
-    UnaryLogicInst(Operand *result, Operand *value, Block *b) : UnaryInst(result, value, b) {}
+    UnaryLogicInst(Operand *result, Operand *value) : UnaryInst(result, value) {}
 };
 
 class Not : public UnaryLogicInst
 {
   public:
-    Not(Operand *result, Operand *value, Block *b) : UnaryLogicInst(result, value, b) {}
+    Not(Operand *result, Operand *value) : UnaryLogicInst(result, value) {}
 
     std::string dump() const override;
 };
@@ -250,13 +253,13 @@ class Not : public UnaryLogicInst
 class UnaryArithInst : public UnaryInst
 {
   public:
-    UnaryArithInst(Operand *result, Operand *value, Block *b) : UnaryInst(result, value, b) {}
+    UnaryArithInst(Operand *result, Operand *value) : UnaryInst(result, value) {}
 };
 
 class Neg : public UnaryArithInst
 {
   public:
-    Neg(Operand *result, Operand *value, Block *b) : UnaryArithInst(result, value, b) {}
+    Neg(Operand *result, Operand *value) : UnaryArithInst(result, value) {}
 
     std::string dump() const override;
 };
@@ -264,7 +267,7 @@ class Neg : public UnaryArithInst
 class Move : public UnaryInst
 {
   public:
-    Move(Operand *result, Operand *value, Block *b) : UnaryInst(result, value, b) {}
+    Move(Operand *result, Operand *value) : UnaryInst(result, value) {}
 
     std::string dump() const override;
 };
@@ -275,10 +278,7 @@ class Call : public Instruction
     Function *_callee;
 
   public:
-    Call(Function *f, Operand *result, const std::vector<Operand *> &args, Block *b)
-        : Instruction(result, args, b), _callee(f)
-    {
-    }
+    Call(Function *f, Operand *result, const std::vector<Operand *> &args) : Instruction(result, args), _callee(f) {}
 
     Function *callee() const { return _callee; }
 
@@ -288,7 +288,7 @@ class Call : public Instruction
 class Ret : public Instruction
 {
   public:
-    Ret(Operand *value, Block *b) : Instruction({}, {value}, b) {}
+    Ret(Operand *value) : Instruction({}, {value}) {}
 
     std::string dump() const override;
 };

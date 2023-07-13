@@ -5,6 +5,7 @@
 
 using namespace myir;
 
+// TODO: fix incorrect phis in fact.cl
 void Unboxing::run(Function *func)
 {
     std::vector<bool> processed(Instruction::max_id() * 2); // can create new instructions
@@ -56,15 +57,15 @@ Operand *Unboxing::allocate_primitive(Instruction *before, Operand *value,
 
     // call allocation
     auto *object = new Operand(_data.ast_to_ir_type(klass_type));
-    auto *alloca = new Call(func_alloca, object, {func_alloca, tag, size, disp_tab}, block);
+    auto *alloca = new Call(func_alloca, object, {func_alloca, tag, size, disp_tab});
     block->append_before(before, alloca);
 
     // call init
-    auto *init = new Call(func_init, NULL, {func_init, object}, block);
+    auto *init = new Call(func_init, NULL, {func_init, object});
     block->append_after(alloca, init);
 
     // store value to object
-    auto *store = new Store(object, new Constant(codegen::HeaderLayoutOffsets::FieldOffset, UINT64), value, block);
+    auto *store = new Store(object, new Constant(codegen::HeaderLayoutOffsets::FieldOffset, UINT64), value);
     block->append_after(init, store);
 
     // object is ready
@@ -89,9 +90,9 @@ void Unboxing::replace_args(std::vector<bool> &processed) const
             // prepare an operand instead of the object for primitive
             auto *value = new Operand(INT64);
             auto *offset = new Constant(codegen::HeaderLayoutOffsets::FieldOffset, UINT64);
-            auto *load = new Load(value, param, offset, entry);
+            auto *load = new Load(value, param, offset);
 
-            _cfg->root()->append_front(load);
+            entry->append_front(load);
 
             std::vector<Instruction *> for_uses_update;
 
@@ -142,7 +143,7 @@ void Unboxing::replace_lets(std::vector<bool> &processed) const
                 auto *value = initializer->field(codegen::HeaderLayoutOffsets::FieldOffset);
 
                 // create a new move and use its def in all uses of the original move except calls
-                auto *move = new Move(new Operand(value->type()), value, b);
+                auto *move = new Move(new Operand(value->type()), value);
 
                 std::vector<Instruction *> for_uses_update;
 
@@ -244,13 +245,13 @@ void Unboxing::replace_load(Load *load, OperandType type, std::stack<TypeLink> &
     switch (offset_val)
     {
     case codegen::HeaderLayoutOffsets::FieldOffset: {
-        move = new Move(result, object, block);
+        move = new Move(result, object);
         is_value_access = true;
         break;
     }
     case codegen::HeaderLayoutOffsets::DispatchTableOffset: {
         // load of the dispatch table. We know exactyly the type
-        move = new Move(result, _data.class_disp_tab(operand_to_klass(type)), block);
+        move = new Move(result, _data.class_disp_tab(operand_to_klass(type)));
         break;
     }
     default:

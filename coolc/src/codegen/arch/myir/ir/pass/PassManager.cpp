@@ -157,8 +157,6 @@ void Pass::merge_blocks()
             for (auto *inst : successor->insts())
             {
                 bb->append(inst);
-                // TODO: bad coding style
-                inst->update_holder(bb);
             }
 
             successor->clear();

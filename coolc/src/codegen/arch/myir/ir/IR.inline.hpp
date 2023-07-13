@@ -1,4 +1,5 @@
 #include "IR.hpp"
+#include "utils/Utils.h"
 #include <cassert>
 
 template <class T> bool myir::Operand::isa(Operand *o) { return dynamic_cast<T *>(o); }
@@ -77,7 +78,7 @@ template <class T> myir::Operand *myir::IRBuilder::binary(Operand *lhs, Operand 
     else
     {
         res = new Operand(lhs->type());
-        _curr_block->append(new T(res, lhs, rhs, _curr_block));
+        _curr_block->append(new T(res, lhs, rhs));
     }
 
     return res;
@@ -86,7 +87,7 @@ template <class T> myir::Operand *myir::IRBuilder::binary(Operand *lhs, Operand 
 template <class T> myir::Operand *myir::IRBuilder::unary(Operand *operand)
 {
     auto *res = new Operand(operand->type());
-    _curr_block->append(new T(res, operand, _curr_block));
+    _curr_block->append(new T(res, operand));
 
     return res;
 }
@@ -103,7 +104,7 @@ template <myir::OperandType type> myir::Operand *myir::IRBuilder::ld(Operand *ba
     }
 
     myir::Operand *res = new Operand(type);
-    _curr_block->append(new Load(res, base, offset, _curr_block));
+    _curr_block->append(new Load(res, base, offset));
 
     return res;
 }
@@ -177,5 +178,41 @@ template <class T> const std::unordered_map<std::string, T *> &myir::Module::get
     else
     {
         assert(false && "Unexpected type");
+    }
+}
+
+template <myir::Block::AppendType type> void myir::Block::append(Instruction *inst, Instruction *newinst)
+{
+    if constexpr (type == FRONT)
+    {
+        _insts.push_front(newinst);
+        newinst->update_holder(this);
+    }
+    else if constexpr (type == BACK)
+    {
+        _insts.push_back(newinst);
+        newinst->update_holder(this);
+    }
+    else
+    {
+        for (auto iter = _insts.begin(); iter != _insts.end(); iter++)
+        {
+            if (*iter == inst)
+            {
+                if constexpr (type == AFTER)
+                {
+                    iter++;
+                }
+                else if constexpr (type == INSTEAD)
+                {
+                    iter = _insts.erase(iter);
+                }
+                _insts.insert(iter, newinst);
+                newinst->update_holder(this);
+                return;
+            }
+        }
+
+        SHOULD_NOT_REACH_HERE();
     }
 }

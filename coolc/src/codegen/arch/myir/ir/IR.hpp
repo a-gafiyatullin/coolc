@@ -24,6 +24,18 @@ class Block : public IRObject
 
     static int ID;
 
+    // helpers
+    enum AppendType
+    {
+        BEFORE,
+        INSTEAD,
+        AFTER,
+        FRONT,
+        BACK
+    };
+
+    template <AppendType type> void append(Instruction *inst, Instruction *newinst);
+
   public:
     // construction
     Block(const std::string &name, Function *f)
@@ -36,8 +48,8 @@ class Block : public IRObject
     inline static int max_id() { return ID; }
 
     // add instruction
-    inline void append(Instruction *inst) { _insts.push_back(inst); }
-    inline void append_front(Instruction *inst) { _insts.push_front(inst); }
+    void append(Instruction *inst);
+    void append_front(Instruction *inst);
     void append_before(Instruction *inst, Instruction *newinst);
     void append_after(Instruction *inst, Instruction *newinst);
     void append_instead(Instruction *inst, Instruction *newinst);

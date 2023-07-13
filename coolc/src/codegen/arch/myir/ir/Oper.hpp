@@ -36,7 +36,7 @@ enum OperandType
     OperandTypeSize
 };
 
-// class represents temporary result
+// Class represents a temporary result
 class Operand : public IRObject
 {
     friend class Instruction;
@@ -104,7 +104,7 @@ class Operand : public IRObject
 class Constant : public Operand
 {
   private:
-    uint64_t _value;
+    const uint64_t _value;
 
   public:
     // constructors
@@ -121,7 +121,7 @@ class Constant : public Operand
 class Variable : public Operand
 {
   private:
-    Variable *_original_var; // original variable for all renamed vars
+    Variable *const _original_var; // original variable for all renamed vars
 
   public:
     // constructors
@@ -141,7 +141,7 @@ class Variable : public Operand
 class StructuredOperand : public Operand
 {
   private:
-    irvector<Operand *> _fields;
+    const irvector<Operand *> _fields;
 
   public:
     // constructors
@@ -161,7 +161,7 @@ class StructuredOperand : public Operand
     std::string dump() const override;
 };
 
-// global constant has address
+// Global constant has address
 class GlobalConstant : public StructuredOperand
 {
   public:
@@ -172,7 +172,7 @@ class GlobalConstant : public StructuredOperand
     }
 };
 
-// global variable has address
+// Global variable has address
 class GlobalVariable final : public StructuredOperand
 {
   public:

@@ -45,10 +45,9 @@ Function::Function(const std::string &name, const std::vector<Variable *> &param
 void Operand::erase_def(Instruction *def)
 {
     auto pos = std::find(_defs.begin(), _defs.end(), def);
-    if (pos != _defs.end())
-    {
-        _defs.erase(pos);
-    }
+
+    assert(pos != _defs.end());
+    _defs.erase(pos);
 }
 
 void Block::erase(Instruction *inst)
@@ -64,7 +63,10 @@ void Block::erase(Instruction *inst)
         use->erase_use(inst);
     }
 
-    _insts.erase(std::find(_insts.begin(), _insts.end(), inst));
+    auto pos = std::find(_insts.begin(), _insts.end(), inst);
+
+    assert(pos != _insts.end());
+    _insts.erase(pos);
 }
 
 void Block::erase(const std::vector<Instruction *> &insts)
@@ -75,54 +77,15 @@ void Block::erase(const std::vector<Instruction *> &insts)
     }
 }
 
-void Block::append_before(Instruction *inst, Instruction *newinst)
-{
-    for (auto iter = _insts.begin(); iter != _insts.end(); iter++)
-    {
-        if (*iter == inst)
-        {
-            _insts.insert(iter, newinst);
-            return;
-        }
-    }
+void Block::append(Instruction *inst) { append<BACK>(nullptr, inst); }
 
-    SHOULD_NOT_REACH_HERE();
-}
+void Block::append_front(Instruction *inst) { append<FRONT>(nullptr, inst); }
 
-void Block::append_after(Instruction *inst, Instruction *newinst)
-{
-    for (auto iter = _insts.begin(); iter != _insts.end(); iter++)
-    {
-        if (*iter == inst)
-        {
-            iter++;
-            _insts.insert(iter, newinst);
-            return;
-        }
-    }
+void Block::append_before(Instruction *inst, Instruction *newinst) { append<BEFORE>(inst, newinst); }
 
-    SHOULD_NOT_REACH_HERE();
-}
+void Block::append_after(Instruction *inst, Instruction *newinst) { append<AFTER>(inst, newinst); }
 
-void Block::append_instead(Instruction *inst, Instruction *newinst)
-{
-    if (_insts.empty())
-    {
-        return;
-    }
-
-    for (auto iter = _insts.begin(); iter != _insts.end(); iter++)
-    {
-        if (*iter == inst)
-        {
-            auto next = _insts.erase(iter);
-            _insts.insert(next, newinst);
-            return;
-        }
-    }
-
-    SHOULD_NOT_REACH_HERE();
-}
+void Block::append_instead(Instruction *inst, Instruction *newinst) { append<INSTEAD>(inst, newinst); }
 
 void Block::connect(Block *pred, Block *succ)
 {
@@ -211,13 +174,13 @@ Operand *StructuredOperand::field(int offset) const
     return _fields.at(4 + field_offset_from_header / WORD_SIZE);
 }
 
-void IRBuilder::ret(Operand *value) { _curr_block->append(new Ret(value, _curr_block)); }
+void IRBuilder::ret(Operand *value) { _curr_block->append(new Ret(value)); }
 
-void IRBuilder::phi(Operand *var, Block *b) { b->append_front(new Phi(var, b)); }
+void IRBuilder::phi(Operand *var, Block *b) { b->append_front(new Phi(var)); }
 
 void IRBuilder::st(Operand *base, Operand *offset, Operand *value)
 {
-    _curr_block->append(new Store(base, offset, value, _curr_block));
+    _curr_block->append(new Store(base, offset, value));
 }
 
 Operand *IRBuilder::call(Function *f, const std::vector<Operand *> &args) { return call(f, f, args); }
@@ -235,13 +198,13 @@ Operand *IRBuilder::call(Function *f, Operand *dst, const std::vector<Operand *>
         retval = new Operand(f->return_type());
     }
 
-    _curr_block->append(new Call(f, retval, uses, _curr_block));
+    _curr_block->append(new Call(f, retval, uses));
     return retval;
 }
 
 void IRBuilder::cond_br(Operand *pred, Block *taken, Block *fall_through)
 {
-    _curr_block->append(new CondBranch(pred, taken, fall_through, _curr_block));
+    _curr_block->append(new CondBranch(pred, taken, fall_through));
 
     Block::connect(_curr_block, taken);
     Block::connect(_curr_block, fall_through);
@@ -249,7 +212,7 @@ void IRBuilder::cond_br(Operand *pred, Block *taken, Block *fall_through)
 
 void IRBuilder::br(Block *taken)
 {
-    _curr_block->append(new Branch(taken, _curr_block));
+    _curr_block->append(new Branch(taken));
     Block::connect(_curr_block, taken);
 }
 
@@ -284,7 +247,7 @@ Operand *IRBuilder::move(Operand *src) { return unary<Move>(src); }
 void IRBuilder::move(Operand *src, Operand *dst)
 {
     assert(src);
-    _curr_block->append(new Move(dst, src, _curr_block));
+    _curr_block->append(new Move(dst, src));
 }
 
 void Function::set_cfg(Block *cfg) { _cfg->set_cfg(cfg); }

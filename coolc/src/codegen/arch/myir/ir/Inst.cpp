@@ -7,8 +7,8 @@ using namespace myir;
 
 int Instruction::ID = 0;
 
-Instruction::Instruction(Operand *def, const std::vector<Operand *> &uses, Block *b)
-    : _block(b), _def(def), _uses(ALLOC), _id(ID++)
+Instruction::Instruction(Operand *def, const std::vector<Operand *> &uses)
+    : _def(def), _uses(ALLOC), _id(ID++), _block(nullptr)
 {
     for (auto *use : uses)
     {

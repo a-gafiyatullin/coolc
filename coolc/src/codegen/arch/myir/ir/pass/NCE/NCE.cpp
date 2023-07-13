@@ -216,7 +216,7 @@ void NCE::eliminate_null_check(Instruction *nullcheck)
 
         // replace phi with move
         merge_block->erase(phi);
-        merge_block->append_front(new Move(def, retval, merge_block));
+        merge_block->append_front(new Move(def, retval));
     }
 
     Block::disconnect(check_block, assert_block);
@@ -229,5 +229,5 @@ void NCE::eliminate_null_check(Instruction *nullcheck)
     check_block->erase(not_inst); // delete not
     check_block->erase(compare);  // delete compare
 
-    check_block->append(new Branch(call_block, check_block)); // branch to call
+    check_block->append(new Branch(call_block)); // branch to call
 }
