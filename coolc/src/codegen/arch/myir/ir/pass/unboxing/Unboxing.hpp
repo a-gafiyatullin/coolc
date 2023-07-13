@@ -7,7 +7,7 @@
 namespace myir
 {
 
-// this pass:
+// This pass:
 // 1. eliminates unnecessary loads from primitives
 // 2. creates object wrappers if object escapes to call / return
 class Unboxing : public Pass
@@ -24,8 +24,9 @@ class Unboxing : public Pass
     codegen::DataMyIR &_data;
     Module &_module;
 
-    void replace_args(std::vector<bool> &processed) const;
-    void replace_lets(std::vector<bool> &processed) const;
+    // gather initial places in the method that can be unboxed
+    void prepare_args(std::vector<bool> &processed) const;
+    void prepare_lets_and_calls(std::vector<bool> &processed) const;
     bool need_unboxing(Operand *value) const;
 
     // replace all uses with a new def and fix instructions
@@ -34,11 +35,18 @@ class Unboxing : public Pass
     void replace_store(Store *store, OperandType type, std::stack<TypeLink> &s) const;
     void wrap_primitives(Instruction *inst, OperandType type) const;
 
-    // this function mostly copies logic of the CodeGenMyIR::emit_allocate_primitive but inserts a new code after
-    // specific instruction
+    // this function mostly copies logic of the CodeGenMyIR::emit_allocate_primitive,
+    // but inserts a new code after specific instruction
     Operand *allocate_primitive(Instruction *before, Operand *value,
                                 const std::shared_ptr<ast::Type> &klass_type) const;
+
+    // other helpers
     std::shared_ptr<codegen::Klass> operand_to_klass(OperandType type) const;
+    Instruction *load_primitive(Operand *base) const;
+
+    // src - what to replace
+    // dst_inst - instruction that defs destination of a replacement
+    void replace_uses(Operand *src, Instruction *dts_inst, std::stack<TypeLink> &replace) const;
 
   public:
     Unboxing(const codegen::RuntimeMyIR &runtime, codegen::DataMyIR &data,

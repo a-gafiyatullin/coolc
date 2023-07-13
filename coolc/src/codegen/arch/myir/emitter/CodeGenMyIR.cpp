@@ -478,7 +478,7 @@ myir::Operand *CodeGenMyIR::emit_cases_expr_inner(const ast::CaseExpression &exp
         return _builder->tag(case_b->_type->_string) < _builder->tag(case_a->_type->_string);
     });
 
-    auto *result = new myir::Variable(_null_val->type());
+    auto *result = new myir::Variable(_data.ast_to_ir_type(expr_type));
 
     auto *is_not_null = __ not1(__ eq(pred, _null_val));
 
@@ -569,7 +569,7 @@ myir::Operand *CodeGenMyIR::emit_loop_expr_inner(const ast::WhileExpression &exp
 myir::Operand *CodeGenMyIR::emit_if_expr_inner(const ast::IfExpression &expr,
                                                const std::shared_ptr<ast::Type> &expr_type)
 {
-    auto *result = new myir::Variable(_null_val->type());
+    auto *result = new myir::Variable(_data.ast_to_ir_type(expr_type));
 
     // do control flow
     auto *pred = __ eq(emit_load_bool(emit_expr(expr._predicate)), _true_val);
@@ -614,7 +614,7 @@ myir::Operand *CodeGenMyIR::emit_dispatch_expr_inner(const ast::DispatchExpressi
 
     DEBUG_ONLY(verify_oop(receiver));
 
-    auto *result = new myir::Variable(_null_val->type());
+    auto *result = new myir::Variable(_data.ast_to_ir_type(expr_type));
 
     // check if receiver is null
     auto *is_not_null = __ not1(__ eq(receiver, _null_val));

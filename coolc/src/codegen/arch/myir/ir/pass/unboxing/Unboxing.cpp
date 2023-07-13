@@ -5,12 +5,11 @@
 
 using namespace myir;
 
-// TODO: fix incorrect phis in fact.cl
 void Unboxing::run(Function *func)
 {
     std::vector<bool> processed(Instruction::max_id() * 2); // can create new instructions
-    replace_args(processed);
-    replace_lets(processed);
+    prepare_args(processed);
+    prepare_lets_and_calls(processed);
 }
 
 std::shared_ptr<codegen::Klass> Unboxing::operand_to_klass(OperandType type) const
@@ -72,7 +71,40 @@ Operand *Unboxing::allocate_primitive(Instruction *before, Operand *value,
     return object;
 }
 
-void Unboxing::replace_args(std::vector<bool> &processed) const
+Instruction *Unboxing::load_primitive(Operand *base) const
+{
+    // prepare an operand instead of the object for primitive
+    auto *value = new Operand(INT64);
+    auto *offset = new Constant(codegen::HeaderLayoutOffsets::FieldOffset, UINT64);
+    return new Load(value, base, offset);
+}
+
+void Unboxing::replace_uses(Operand *src, Instruction *dst_inst, std::stack<TypeLink> &replace) const
+{
+    std::vector<Instruction *> for_uses_update;
+
+    // update uses of this INTEGER or BOOLEAN with a new operand
+    for (auto *use : src->uses())
+    {
+        if (use == dst_inst)
+        {
+            continue; // already processed
+        }
+
+        if (!Instruction::isa<Call>(use))
+        {
+            for_uses_update.push_back(use);
+        }
+    }
+
+    for (auto *inst : for_uses_update)
+    {
+        inst->update_use(src, dst_inst->def());
+        replace.push({inst, src->type()});
+    }
+}
+
+void Unboxing::prepare_args(std::vector<bool> &processed) const
 {
     std::stack<TypeLink> replace;
 
@@ -87,53 +119,46 @@ void Unboxing::replace_args(std::vector<bool> &processed) const
                 continue;
             }
 
-            // prepare an operand instead of the object for primitive
-            auto *value = new Operand(INT64);
-            auto *offset = new Constant(codegen::HeaderLayoutOffsets::FieldOffset, UINT64);
-            auto *load = new Load(value, param, offset);
-
+            auto *load = load_primitive(param);
             entry->append_front(load);
 
-            std::vector<Instruction *> for_uses_update;
-
-            // update uses of this INTEGER or BOOLEAN with a new operand
-            for (auto *use : param->uses())
-            {
-                if (use == load)
-                {
-                    continue; // already processed
-                }
-
-                for_uses_update.push_back(use);
-            }
-
-            for (auto *inst : for_uses_update)
-            {
-                inst->update_use(param, value);
-                replace.push({inst, param->type()});
-            }
+            replace_uses(param, load, replace);
         }
     }
 
     replace_uses(replace, processed);
 }
 
-void Unboxing::replace_lets(std::vector<bool> &processed) const
+void Unboxing::prepare_lets_and_calls(std::vector<bool> &processed) const
 {
     std::stack<TypeLink> replace;
 
     for (auto *b : _cfg->traversal<CFG::REVERSE_POSTORDER>())
     {
-        std::vector<Instruction *> for_append;
+        // cannot append instructions during pass over them in block
+        std::vector<std::pair<Instruction *, Instruction *>> for_append;
 
-        // search for moves of Integer/Boolean constants
+        // 1. search for moves of INTEGER/BOOLEAN constants (initial moves);
         for (auto *inst : b->insts())
         {
+            // check if we can and need unboxing of this def
+            auto *def = inst->def();
+            if (!def || def->type() != INTEGER && def->type() != BOOLEAN)
+            {
+                continue;
+            }
+
+            if (!need_unboxing(def))
+            {
+                continue;
+            }
+
             if (Instruction::isa<Move>(inst))
             {
                 auto *oper = inst->use(0);
-                if ((inst->def()->type() != INTEGER && inst->def()->type() != BOOLEAN) ||
-                    !Operand::isa<GlobalConstant>(oper) || !need_unboxing(oper))
+
+                // search for initial moves
+                if (!Operand::isa<GlobalConstant>(oper))
                 {
                     continue;
                 }
@@ -141,35 +166,34 @@ void Unboxing::replace_lets(std::vector<bool> &processed) const
                 auto *initializer = Operand::as<GlobalConstant>(oper);
                 // found instruction : value <- global_const
                 auto *value = initializer->field(codegen::HeaderLayoutOffsets::FieldOffset);
-
                 // create a new move and use its def in all uses of the original move except calls
                 auto *move = new Move(new Operand(value->type()), value);
 
-                std::vector<Instruction *> for_uses_update;
+                replace_uses(def, move, replace);
+                for_append.push_back({inst, move});
+            }
+            // 2. search for calls with INTEGER/BOOLEAN return value
+            else if (Instruction::isa<Call>(inst))
+            {
+                auto *call = Instruction::as<Call>(inst);
+                assert(call->callee()->has_return());
 
-                for (auto *use : inst->def()->uses())
+                if (call->callee()->is_runtime())
                 {
-                    if (!Instruction::isa<Call>(use))
-                    {
-                        for_uses_update.push_back(use);
-                    }
+                    continue;
                 }
 
-                for (auto *use : for_uses_update)
-                {
-                    use->update_use(inst->def(), move->def());
+                auto *def = call->def();
+                auto *load = load_primitive(def);
 
-                    // users of the def already has corerct use
-                    replace.push({use, inst->def()->type()});
-                }
-
-                for_append.push_back(move);
+                replace_uses(def, load, replace);
+                for_append.push_back({inst, load});
             }
         }
 
-        for (auto *newinst : for_append)
+        for (auto &[where, what] : for_append)
         {
-            b->append_front(newinst);
+            b->append_after(where, what);
         }
     }
 
@@ -178,7 +202,6 @@ void Unboxing::replace_lets(std::vector<bool> &processed) const
 
 void Unboxing::replace_uses(std::stack<TypeLink> &s, std::vector<bool> &processed) const
 {
-    std::vector<Instruction *> for_delete;
     while (!s.empty())
     {
         auto link = s.top();
@@ -238,7 +261,6 @@ void Unboxing::replace_load(Load *load, OperandType type, std::stack<TypeLink> &
     bool is_value_access = false; // propagate value of this load only for field accesses
 
     // don't change def. Will be eliminated by copy propagation
-    result->erase_def(load);
     Instruction *move = nullptr;
 
     // all acceses to Integer objects by constant offsets

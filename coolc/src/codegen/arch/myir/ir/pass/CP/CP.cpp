@@ -54,7 +54,7 @@ void CP::run(Function *func)
         }
         else if (Instruction::isa<CondBranch>(inst))
         {
-            // TODO: opportunity for optimization here, but requires computation of a condition in compile time
+            // TODO: opportunity for optimization here, but requires computation of conditions in compile time
             auto *br = Instruction::as<CondBranch>(inst);
 
             // append the CFG edges that were non-executable to the cfg_worklist

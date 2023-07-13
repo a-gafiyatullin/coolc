@@ -50,8 +50,10 @@ void Operand::erase_def(Instruction *def)
     _defs.erase(pos);
 }
 
-void Block::erase(Instruction *inst)
+irlist<Instruction *>::iterator Block::erase_common(irlist<Instruction *>::iterator iter)
 {
+    auto *inst = *iter;
+
     // delete this instruction from uses and defs
     if (inst->def())
     {
@@ -63,11 +65,10 @@ void Block::erase(Instruction *inst)
         use->erase_use(inst);
     }
 
-    auto pos = std::find(_insts.begin(), _insts.end(), inst);
-
-    assert(pos != _insts.end());
-    _insts.erase(pos);
+    return _insts.erase(iter);
 }
+
+void Block::erase(Instruction *inst) { erase_common(std::find(_insts.begin(), _insts.end(), inst)); }
 
 void Block::erase(const std::vector<Instruction *> &insts)
 {

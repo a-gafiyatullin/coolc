@@ -70,7 +70,7 @@ void DataMyIR::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
         if (!func)
         {
             std::vector<myir::Variable *> args;
-            args.push_back(new myir::Variable(SelfObject, myir::OperandType::POINTER)); // this
+            args.push_back(new myir::Variable(SelfObject, ast_to_ir_type(klass->klass()))); // this
 
             // formals
             const auto &method_formals = std::get<ast::MethodFeature>(method.second->_base);
@@ -85,7 +85,7 @@ void DataMyIR::class_disp_tab_inner(const std::shared_ptr<Klass> &klass)
             CODEGEN_VERBOSE_ONLY(LOG("Return type: \"" + return_type->_string + "\""));
 
             // cool methods always return pointer
-            func = new myir::Function(method_full_name, args, myir::OperandType::POINTER);
+            func = new myir::Function(method_full_name, args, ast_to_ir_type(return_type));
             _module.add(func);
 
             func->record_max_ids();
@@ -116,7 +116,7 @@ void DataMyIR::int_const_inner(const int64_t &value)
                                   new myir::Constant(klass->tag(), _runtime.header_elem_type(HeaderLayout::Tag)),
                                   new myir::Constant(klass->size(), _runtime.header_elem_type(HeaderLayout::Size)),
                                   _dispatch_tables.at(klass_name), new myir::Constant(value, myir::OperandType::INT64)},
-                                 myir::STRUCTURE));
+                                 myir::INTEGER));
 
     _int_constants.insert({value, _module.get<myir::GlobalConstant>(const_name)});
 }
@@ -145,7 +145,7 @@ void DataMyIR::string_const_inner(const std::string &str)
     elements.push_back(new myir::Constant(0, myir::INT8));
 
     auto string_name = Names::string_constant();
-    _module.add(new myir::GlobalConstant(string_name, elements, myir::STRUCTURE));
+    _module.add(new myir::GlobalConstant(string_name, elements, myir::STRING));
 
     _string_constants.insert({str, _module.get<myir::GlobalConstant>(string_name)});
 }
@@ -164,7 +164,7 @@ void DataMyIR::bool_const_inner(const bool &value)
                                   new myir::Constant(klass->tag(), _runtime.header_elem_type(HeaderLayout::Tag)),
                                   new myir::Constant(klass->size(), _runtime.header_elem_type(HeaderLayout::Size)),
                                   _dispatch_tables.at(klass_name), new myir::Constant(value, myir::OperandType::INT64)},
-                                 myir::STRUCTURE));
+                                 myir::BOOLEAN));
 
     _bool_constants.insert({value, _module.get<myir::GlobalConstant>(const_name)});
 }

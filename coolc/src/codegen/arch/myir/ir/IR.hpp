@@ -36,6 +36,8 @@ class Block : public IRObject
 
     template <AppendType type> void append(Instruction *inst, Instruction *newinst);
 
+    irlist<Instruction *>::iterator erase_common(irlist<Instruction *>::iterator inst);
+
   public:
     // construction
     Block(const std::string &name, Function *f)

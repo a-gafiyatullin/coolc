@@ -205,7 +205,7 @@ template <myir::Block::AppendType type> void myir::Block::append(Instruction *in
                 }
                 else if constexpr (type == INSTEAD)
                 {
-                    iter = _insts.erase(iter);
+                    iter = erase_common(iter);
                 }
                 _insts.insert(iter, newinst);
                 newinst->update_holder(this);

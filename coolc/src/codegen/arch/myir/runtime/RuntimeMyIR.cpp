@@ -16,7 +16,7 @@ RuntimeMethod::RuntimeMethod(myir::Module &module, const std::string &name, myir
     {
         _func->set_is_leaf();
     }
-
+    _func->set_is_runtime();
     _func->record_max_ids();
 }
 
