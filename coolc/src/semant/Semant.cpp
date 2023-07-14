@@ -21,9 +21,7 @@ std::shared_ptr<ast::Program> Semant::merge_to_one_program(const std::vector<std
     return program;
 }
 
-Semant::Semant(std::vector<std::shared_ptr<ast::Program>> programs) : _program(merge_to_one_program(programs))
-{
-}
+Semant::Semant(std::vector<std::shared_ptr<ast::Program>> programs) : _program(merge_to_one_program(programs)) {}
 
 // ---------------------------------------- CLASS CHECK ----------------------------------------
 
@@ -968,8 +966,8 @@ std::shared_ptr<ast::Type> Semant::infer_cases_type(const ast::CaseExpression &c
                                           "'" + var_name + "' bound in 'case'.", kase->_line_number, nullptr);
 
         // check if we already seen such a branch
-        bool seen = (std::find_if(meet_types.begin(), meet_types.end(),
-                                  [&](const auto &t) { return same_type(t, var_type); }) == meet_types.end());
+        const bool seen = (std::find_if(meet_types.begin(), meet_types.end(),
+                                        [&](const auto &t) { return same_type(t, var_type); }) == meet_types.end());
         SEMANT_RETURN_IF_FALSE_WITH_ERROR(seen, "Duplicate branch " + var_type->_string + " in case statement.", -1,
                                           nullptr);
         meet_types.push_back(var_type);

@@ -98,7 +98,7 @@ void NCE::run(Function *func)
             auto *use = inst->use(0);
 
             // propagate data flow info through moves
-            bool flag = is_not_null(use);
+            const bool flag = is_not_null(use);
 
             if (not_null[def->id()] != flag)
             {

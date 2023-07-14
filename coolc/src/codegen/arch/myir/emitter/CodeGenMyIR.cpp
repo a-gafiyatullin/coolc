@@ -596,7 +596,7 @@ myir::Operand *CodeGenMyIR::emit_if_expr_inner(const ast::IfExpression &expr,
 myir::Operand *CodeGenMyIR::emit_dispatch_expr_inner(const ast::DispatchExpression &expr,
                                                      const std::shared_ptr<ast::Type> &expr_type)
 {
-    int expr_args_size = expr._args.size();
+    const int expr_args_size = expr._args.size();
 
     // prepare args
     std::vector<myir::Operand *> args;
@@ -635,7 +635,7 @@ myir::Operand *CodeGenMyIR::emit_dispatch_expr_inner(const ast::DispatchExpressi
                 // optimize accesses to virtual methods of the leaf classes
                 if (klass->is_leaf() && myir::Operand::isa<myir::Constant>(offset))
                 {
-                    int offsetv = myir::Operand::as<myir::Constant>(offset)->value();
+                    const int offsetv = myir::Operand::as<myir::Constant>(offset)->value();
                     auto *disptab = myir::Operand::as<myir::GlobalConstant>(_data.class_disp_tab(klass));
 
                     auto *callee = myir::Operand::as<myir::Function>(disptab->word(offsetv));
@@ -791,7 +791,7 @@ void CodeGenMyIR::emit_runtime_main()
 
 void CodeGenMyIR::emit(const std::string &out_file)
 {
-    std::string obj_file = out_file + static_cast<std::string>(EXT);
+    const std::string obj_file = out_file + static_cast<std::string>(EXT);
 
     emit_class_code(_builder->root()); // emit
     emit_runtime_main();

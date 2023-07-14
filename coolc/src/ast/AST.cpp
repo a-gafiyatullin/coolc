@@ -7,7 +7,7 @@ void dump_expression(const int &offset, const std::shared_ptr<Expression> &expr)
 
 void dump_line_and_name(const int &offset, const int &line_number, const std::string &name)
 {
-    std::string field(offset, ' ');
+    const std::string field(offset, ' ');
     std::cout << field << "#" << line_number << std::endl << field << name << std::endl;
 }
 
@@ -60,7 +60,7 @@ template <BinaryExpr T> std::string binary_op_name(const T &expr)
 
 void dump_binary_expr(const BinaryExpression &expr, const int &line, const int &offset)
 {
-    std::string field(offset, ' ');
+    const std::string field(offset, ' ');
     std::cout << field << "#" << line << std::endl;
 
     std::visit(overloaded{[&](const BinaryExpr auto &binary_expr) {
@@ -94,7 +94,7 @@ template <UnaryExpr T> std::string unary_op_name(const T &expr)
 
 void dump_unary_expr(const UnaryExpression &expr, const int &line, const int &offset)
 {
-    std::string field(offset, ' ');
+    const std::string field(offset, ' ');
     std::cout << field << "#" << line << std::endl;
 
     std::visit(overloaded{[&](const UnaryExpr auto &unary_expr) {
@@ -131,7 +131,7 @@ void dump_dispatch(const int &offset, const DispatchExpression &dispatch)
 
     dump_object(offset + 2, dispatch._object);
 
-    std::string field(offset + 2, ' ');
+    const std::string field(offset + 2, ' ');
     std::cout << field << "(" << std::endl;
     std::for_each(dispatch._args.begin(), dispatch._args.end(),
                   [&](const auto &expr) { dump_expression(offset + 2, expr); });
@@ -208,7 +208,7 @@ void dump_if_expression(const IfExpression &branch, const int &line, const int &
 
 void dump_dispatch_expression(const DispatchExpression &dispatch, const int &line, const int &offset)
 {
-    std::string field(offset, ' ');
+    const std::string field(offset, ' ');
     std::cout << field << "#" << line << std::endl;
     dump_dispatch(offset, dispatch);
 }
@@ -261,7 +261,7 @@ void dump_formal(const int &offset, const std::shared_ptr<Formal> &formal)
 
 void dump_feature(const int &offset, const std::shared_ptr<Feature> &feature)
 {
-    std::string field(offset, ' ');
+    const std::string field(offset, ' ');
     std::cout << field << "#" << feature->_line_number << std::endl;
 
     std::visit(overloaded{[&](const AttrFeature &attr) {
@@ -287,7 +287,7 @@ void dump_class(const int &offset, const std::shared_ptr<Class> &klass)
 
     dump_type(offset + 2, klass->_type);
     dump_type(offset + 2, klass->_parent);
-    std::string field(offset + 2, ' ');
+    const std::string field(offset + 2, ' ');
     std::cout << field << "\"" << klass->_file_name << "\"" << std::endl << field << "(" << std::endl;
 
     std::for_each(klass->_features.begin(), klass->_features.end(),

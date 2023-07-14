@@ -113,8 +113,8 @@ void Block::disconnect(Block *pred, Block *succ)
 
 void Block::disconnect()
 {
-    std::vector<Block *> succs(_succs.begin(), _succs.end());
-    std::vector<Block *> preds(_preds.begin(), _preds.end());
+    const std::vector<Block *> succs(_succs.begin(), _succs.end());
+    const std::vector<Block *> preds(_preds.begin(), _preds.end());
 
     for (auto *successor : succs)
     {
@@ -168,7 +168,7 @@ Operand *StructuredOperand::field(int offset) const
         return _fields.at(3);
     }
 
-    int field_offset_from_header = offset - codegen::HeaderLayoutSizes::HeaderSize;
+    const int field_offset_from_header = offset - codegen::HeaderLayoutSizes::HeaderSize;
     assert(field_offset_from_header % WORD_SIZE == 0);
     assert(4 + field_offset_from_header / WORD_SIZE < _fields.size());
 

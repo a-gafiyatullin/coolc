@@ -63,8 +63,8 @@ std::shared_ptr<ast::Program> Parser::parse_program()
     const auto program = std::make_shared<ast::Program>();
     program->_line_number = _next_token->line_number();
 
-    bool result = parse_list<std::shared_ptr<ast::Class>>(program->_classes, std::bind(&Parser::parse_class, this),
-                                                          lexer::Token::CLASS);
+    const bool result = parse_list<std::shared_ptr<ast::Class>>(
+        program->_classes, std::bind(&Parser::parse_class, this), lexer::Token::CLASS);
     PARSER_RETURN_IF_FALSE(result);
     if (_next_token)
     {
@@ -100,7 +100,7 @@ std::shared_ptr<ast::Class> Parser::parse_class()
     PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::LEFT_CURLY_BRACKET));
     if (!_next_token->same_token_type(lexer::Token::RIGHT_CURLY_BRACKET))
     {
-        bool result = parse_list<std::shared_ptr<ast::Feature>>(
+        const bool result = parse_list<std::shared_ptr<ast::Feature>>(
             klass->_features, std::bind(&Parser::parse_feature, this), lexer::Token::OBJECTID);
         PARSER_RETURN_IF_FALSE(result);
     }
@@ -131,7 +131,7 @@ std::shared_ptr<ast::Feature> Parser::parse_feature()
         // parse arguments
         if (!_next_token->same_token_type(lexer::Token::RIGHT_PAREN))
         {
-            bool result = parse_list<std::shared_ptr<ast::Formal>>(
+            const bool result = parse_list<std::shared_ptr<ast::Formal>>(
                 std::get<ast::MethodFeature>(feature->_base)._formals, std::bind(&Parser::parse_formal, this),
                 lexer::Token::OBJECTID);
             PARSER_RETURN_IF_FALSE(result);
@@ -308,8 +308,8 @@ std::shared_ptr<ast::Expression> Parser::parse_case()
     case_expr._expr = parse_expr();
 
     PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::OF));
-    bool result = parse_list<std::shared_ptr<ast::Case>>(case_expr._cases, std::bind(&Parser::parse_one_case, this),
-                                                         lexer::Token::SEMICOLON, true, lexer::Token::ESAC);
+    const bool result = parse_list<std::shared_ptr<ast::Case>>(
+        case_expr._cases, std::bind(&Parser::parse_one_case, this), lexer::Token::SEMICOLON, true, lexer::Token::ESAC);
     PARSER_RETURN_IF_FALSE(result);
     PARSER_ADVANCE_ELSE_RETURN(check_next_and_report_error(lexer::Token::ESAC));
 
@@ -450,7 +450,7 @@ std::shared_ptr<ast::Expression> Parser::parse_curly_brackets()
 
     PARSER_ADVANCE_AND_RETURN_IF_EOF();
 
-    bool result =
+    const bool result =
         parse_list<std::shared_ptr<ast::Expression>>(expr_list._exprs, std::bind(&Parser::parse_expr, this),
                                                      lexer::Token::SEMICOLON, true, lexer::Token::RIGHT_CURLY_BRACKET);
     PARSER_RETURN_IF_FALSE(result);

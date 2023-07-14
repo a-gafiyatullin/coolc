@@ -6,7 +6,7 @@ using namespace myir;
 
 void myir::trim(std::string &where, const std::string &what)
 {
-    int pos = where.length() - what.length();
+    const int pos = where.length() - what.length();
     if (pos >= 0 && where.substr(pos) == what)
     {
         where = where.substr(0, pos);

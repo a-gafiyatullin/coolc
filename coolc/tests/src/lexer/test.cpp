@@ -3,19 +3,16 @@
 class LexerParameterizedTest : public CompilerParameterizedTest
 {
   public:
-    static std::vector<TestParam> read_lexer_tests_from_disk()
-    {
-        return read_test_cases_from_disk("lexer/");
-    }
+    static std::vector<TestParam> read_lexer_tests_from_disk() { return read_test_cases_from_disk("lexer/"); }
 };
 
 TEST_P(LexerParameterizedTest, LexAsExpected)
 {
     std::ifstream result(GetParam().first);
-    std::string result_content((std::istreambuf_iterator<char>(result)), std::istreambuf_iterator<char>());
+    const std::string result_content((std::istreambuf_iterator<char>(result)), std::istreambuf_iterator<char>());
 
     std::ifstream etalon(GetParam().second);
-    std::string etalon_content((std::istreambuf_iterator<char>(etalon)), std::istreambuf_iterator<char>());
+    const std::string etalon_content((std::istreambuf_iterator<char>(etalon)), std::istreambuf_iterator<char>());
 
     ASSERT_EQ(result_content, etalon_content);
 }

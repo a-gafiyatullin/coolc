@@ -54,8 +54,8 @@ std::string Block::dump() const
 
 std::string type_to_string(OperandType type)
 {
-    static std::string OPERAND_TYPE_NAME[] = {"int8",  "uint8",   "int32",   "uint32", "int64",     "uint64",
-                                              "void*", "integer", "boolean", "string", "structure", "void"};
+    const static std::string OPERAND_TYPE_NAME[] = {"int8",  "uint8",   "int32",   "uint32", "int64",     "uint64",
+                                                    "void*", "integer", "boolean", "string", "structure", "void"};
     return OPERAND_TYPE_NAME[type];
 }
 
