@@ -113,8 +113,8 @@ void Block::disconnect(Block *pred, Block *succ)
 
 void Block::disconnect()
 {
-    const std::vector<Block *> succs(_succs.begin(), _succs.end());
-    const std::vector<Block *> preds(_preds.begin(), _preds.end());
+    const std::vector succs(_succs.begin(), _succs.end());
+    const std::vector preds(_preds.begin(), _preds.end());
 
     for (auto *successor : succs)
     {

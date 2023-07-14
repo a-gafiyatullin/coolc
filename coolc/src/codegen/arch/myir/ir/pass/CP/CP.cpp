@@ -133,7 +133,7 @@ void CP::eliminate_copies(std::unordered_map<Operand *, Operand *> &copies)
         if (dst != src)
         {
             // Instruction::update_use modifies iterators. Need to copy here
-            const std::vector<Instruction *> for_update(dst->uses().begin(), dst->uses().end());
+            const std::vector for_update(dst->uses().begin(), dst->uses().end());
 
             for (auto *inst : for_update)
             {
