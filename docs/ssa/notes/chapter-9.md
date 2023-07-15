@@ -42,3 +42,41 @@ For a CFG node *q*, representing an instruction or a basic block, a variable *v*
 For a *φ-function* ${a_0 = φ(a_1, . . . , a_n)}$ in block ${B_0}$, where ${a_i}$ comes from block ${B_i}$:
 * Its definition-operand is considered to be at the entry of ${B_0}$, in other words variable ${a_0}$ is live-in of ${B_0}$;
 * Its use operands are at the exit of the corresponding direct predecessor basic blocks, in other words, variable ${a_i}$ is live-out of basic block ${B_i}$.
+
+## 9.2 Data-Flow Approaches
+
+A use is **upward-exposed** in a block when there is no local definition preceding it, i.e., the live range “escapes” the block at the top:
+* sets of upward-exposed uses and definitions do not change during liveness analysis and can be pre-computed:
+  * *Defs(B)*: variables defined (φ excluded) in B;
+  * *Uses(B)*: variables used in B (φ excluded);
+  * *UpwardExposed(B)*: variables used in B without any preceding definition in B;
+  * *PhiDefs(B)*: variables defined by a φ at the entry of B;
+  * *PhiUses(B)*: variables used in a φ at the entry of a direct successor of B;
+    * *LiveIn(B) = PhiDefs(B) ∪ UpwardExposed(B) ∪ (LiveOut(B) \ Defs(B))*;
+    * *LiveOut(B) = ${∪_{S∈directsuccs(B)}}$(LiveIn(S) \ PhiDefs(S)) ∪ PhiUses(B)*.
+
+### 9.2.1 Liveness Sets on Reducible Graphs
+
+The key properties of live ranges under strict SSA form on a reducible CFG that we exploit for this purpose can be outlined as follow:
+* Let *q* be a CFG node that does not contain the definition *d* of a variable, and *h* be the header of the maximal loop containing q but not d. If such a maximal loop does not exist, then let h = q;
+* The variable is live-in at *q* if and only if there exists a forward path from *h* to a use of the variable without going through the definition *d*;
+* If a variable is live-in at the header of a loop then it is live at all nodes inside the loop.
+
+Two steps that make up our liveness set algorithm:
+1. A backward pass propagates partial liveness information upwards using a postorder traversal of the forward-CFG;
+2. The partial liveness sets are then refined by traversing the loop nesting forest, propagating liveness from loop-headers down to all basic blocks within loops.
+
+![Two-pass liveness analysis: reducible CFG](../pics/algorithm-9-1.png)
+
+![Partial liveness, with post-order traversal](../pics/algorithm-9-2.png)
+
+![Propagate live variables within loop bodies](../pics/algorithm-9-3.png)
+
+#### 9.2.1.1 Correctness
+
+The first pass correctly propagates liveness information to the loop-headers of the original CFG:
+* **Lemma 9.1.** Let *G* be a reducible CFG, *v* an SSA variable, and *d* its definition. If *L* is a maximal loop not containing *d*, then *v* is live-in at the loop-header *h* of *L* iff there is a path in ${G_{fwd}}$ (i.e., back edge free) from *h* to a use of *v* that does not go through *d*;
+* **Lemma 9.2** Let *G* be a reducible CFG, *v* an SSA variable, and *d* its definition. Let *p* be a node of *G* such that all loops containing *p* also contain *d*. Then *v* is live-in at *p* iff there is a path in  ${G_{fwd}}$, from *p* to a use of *v* that does not go through d.
+
+The second pass of the algorithm correctly adds variables to the live-in and live-out sets where they are missing:
+* **Lemma 9.3** Let *G* be a reducible CFG, *L* a loop, and *v* an SSA variable. If *v* is live-in at the loop-header of *L*, it is live-in and live-out at every CFG node in *L*.

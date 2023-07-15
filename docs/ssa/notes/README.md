@@ -15,6 +15,6 @@ Chapter 5. [SSA Reconstruction](./chapter-5.md)
 
 ### Part II. Analysis
 
-Chapter 7. [Introsuction](./chapter-7.md)
+Chapter 7. [Introduction](./chapter-7.md)
 
 Chapter 8. [Propagating Information Using SSA](./chapter-8.md)
