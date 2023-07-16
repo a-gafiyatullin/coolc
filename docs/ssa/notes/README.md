@@ -18,3 +18,5 @@ Chapter 5. [SSA Reconstruction](./chapter-5.md)
 Chapter 7. [Introduction](./chapter-7.md)
 
 Chapter 8. [Propagating Information Using SSA](./chapter-8.md)
+
+Chapter 9. [Liveness](./chapter-9.md)

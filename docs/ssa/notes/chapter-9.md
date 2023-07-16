@@ -80,3 +80,54 @@ The first pass correctly propagates liveness information to the loop-headers of 
 
 The second pass of the algorithm correctly adds variables to the live-in and live-out sets where they are missing:
 * **Lemma 9.3** Let *G* be a reducible CFG, *L* a loop, and *v* an SSA variable. If *v* is live-in at the loop-header of *L*, it is live-in and live-out at every CFG node in *L*.
+
+### 9.2.2 Liveness Sets on Irreducible Flow Graphs
+
+Transform the irreducible graph into a reducible graph, such that the liveness in both graphs is *equivalent* (not semantically, but isomorphism of liveness is required).
+1. Consider a representation where each loop has a unique entry node as header;
+2. Redirect any edge *s → t* arriving in the middle of a loop to the header of the outermost loop (if it exists) that contains *t* but not *s*.
+   1. the transformed code does not have the same semantics as the original one;
+   2. the dominance relationship is unchanged.
+
+Avoid building this transformed graph explicitly: whenever an entry-edge *s → t* is encountered during the traversal, instead of visiting *t*, we visit the header of the largest loop containing *t* and not *s* - the highest ancestor of *t* in the loop nesting forest that is not an ancestor of *s*.
+
+### 9.2.3 Computing the Outermost Excluding Loop (OLE)
+
+ * *n.LTindex* - a topological indexing of loop-headers (*n* - a loop headed);
+ * *i.node* - node by index;
+ * *n.ancestors* - bitset (indexed by loop-headers) of all *n*'s ancestor in the loop-tree (*n* is node);
+
+![Compute the loop nesting forest ancestors](../pics/algorithm-9-4.png)
+
+![Outermost excluding loop](../pics/algorithm-9-5.png)
+
+## 9.3 Liveness Check Using Loop Nesting Forest and Forward Reachability
+
+The live-in query of variable *a* at node *q*:
+* let *a* be defined in the CFG node *d = def(a)*;
+* let *u ∈ uses(a)* be a node where *a* is used;
+* *q* is strictly dominated by *d*.
+
+**Lemmas 9.1–9.3:**
+1. Let *h* be the header of the maximal loop containing *q* but not *d*. Let *h* be *q* if such maximal loop does not exist. Then *v* is live-in at *h* if and only if there exists a forward path that goes from *h* to *u*;
+2. If *v* is live-in at the header of a loop then it is live at any node inside the loop.
+
+Finding out if a variable is live at some program point can be done in two steps:
+1. if there exists a loop containing the program point *q* and not the definition, pick the header of the biggest such loop instead as the query point:
+2. check for reachability from q to any use of the variable in the forward CFG.
+
+![Live-in check](../pics/algorithm-9-6.png)
+
+![Live-out check](../pics/algorithm-9-7.png)
+
+### 9.3.1 Computing Modified-Forward Reachability
+
+![Computation of modified-forward reachability using a traversal along a reverse topological order](../pics/algorithm-9-8.png)
+
+## 9.4 Liveness Sets Using Path Exploration
+
+The live range of a variable can be computed using a backward traversal starting at its uses and stopping when its (unique) definition is reached.
+
+![Compute liveness sets by variable using def-use chains](../pics/algorithm-9-9.png)
+
+![Optimized path exploration using a stack-like data structure](../pics/algorithm-9-10.png)
