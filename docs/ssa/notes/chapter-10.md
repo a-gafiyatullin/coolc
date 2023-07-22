@@ -30,9 +30,7 @@ $\{\{0,+,1\}_x,+,2\}_y$ defines a multivariate chain of recurrences with a step 
 
 $\{3,+,\{8,+,5\}_x\}_x$ = $\{3,+,8,+,5\}_x$ represents a polynomial evolution of degree 2 in loop x.
 
-The semantics of a chain of recurrences is defined using the binomial coefficient $\binom{n}{k} = \frac{n!}{k!(n-k)!}$, by the equation:
-
-$\{c_0,+,c_1,+,c_2,+,...,+, c_n\}_x(l_x^{\rightarrow})=\sum_{p=0}^n\binom{l_x}{p}$
+The semantics of a chain of recurrences is defined using the binomial coefficient $\binom{n}{k} = \frac{n!}{k!(n-k)!}$, by the equation: $\{c_0,+,c_1,+,c_2,+,...,+, c_n\}_x(l_x^{\rightarrow})=\sum_{p=0}^n\binom{l_x}{p}$
 
 with $l_x^{\rightarrow}$ the iteration domain vector (the iteration loop counters of all the loops in which the chain of recurrences variates), and $l_x$ the iteration counter of loop *x*.
 
