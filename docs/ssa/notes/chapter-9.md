@@ -53,7 +53,7 @@ A use is **upward-exposed** in a block when there is no local definition precedi
   * *PhiDefs(B)*: variables defined by a φ at the entry of B;
   * *PhiUses(B)*: variables used in a φ at the entry of a direct successor of B;
     * *LiveIn(B) = PhiDefs(B) ∪ UpwardExposed(B) ∪ (LiveOut(B) \ Defs(B))*;
-    * *LiveOut(B) = ${∪_{S∈directsuccs(B)}}$ (LiveIn(S) \ PhiDefs(S)) ∪ PhiUses(B)*.
+    * *LiveOut(B) = $∪_{S∈directsuccs(B)}$ (LiveIn(S) \ PhiDefs(S)) ∪ PhiUses(B)*.
 
 ### 9.2.1 Liveness Sets on Reducible Graphs
 

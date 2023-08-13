@@ -6,8 +6,8 @@
 
 ### 10.1.2 Natural Loop Structures on the SSA
 
-* **Loop-φ nodes** “i = φ(x, j)” have an argument that contains a self-reference j and an invariant argument x;
-* **Close-φ nodes** “k = $φ_{exit}(i)$” capture the last value of a name defined in a loop. Names defined in a loop can only be used within that loop or in the arguments of a close-φ node (which is “closing” the set of uses of the names defined in that loop).
+* **Loop-φ nodes** "i = φ(x, j)" have an argument that contains a self-reference j and an invariant argument x;
+* **Close-φ nodes** "k = $φ_{exit}(i)$" capture the last value of a name defined in a loop. Names defined in a loop can only be used within that loop or in the arguments of a close-φ node (which is “closing” the set of uses of the names defined in that loop).
 
 ### 10.1.3 Improving the SSA Pretty Printer for Loops
 
@@ -35,5 +35,21 @@ The semantics of a chain of recurrences is defined using the binomial coefficien
 with $l_x^{\rightarrow}$ the iteration domain vector (the iteration loop counters of all the loops in which the chain of recurrences variates), and $l_x$ the iteration counter of loop *x*.
 
 Split the analysis into two phases, with a symbolic representation as a partial intermediate result:
-1. First, the analysis leads to an expression where the step part “s is left in a symbolic form, i.e., $\{c_0,+,s\}_x$;
+1. First, the analysis leads to an expression where the step part "s" is left in a symbolic form, i.e., $\{c_0,+,s\}_x$;
 2. Then, by instantiating the step, i.e., s = $\{c_1,+,c_2\}_x$, the chain of recurrences is that of a higher-degree polynomial, i.e., $\{c_0,+,\{c_1,+,c_2\}_x\}_x$ = $\{c_0,+,c_1,+,c_2\}_x$.
+
+### 10.2.3 Instantiation of Symbols and Region Parameters
+
+Example program with an induction variable and its polynomial:
+
+![Example program](../pics/fig-10-1.png)
+
+Polynomial: $\{3,+,8,+,5\}_1$
+
+$F(l) = 3\binom{l}{0} + 8\binom{l}{1} + 5\binom{l}{2} = \frac{5}{2}l^2 + \frac{11}{2}l + 3$
+
+### 10.2.4 Number of Iterations and Computation of the End-of-Loop Value
+
+**Trip count** - the number of times the loop body is executed before the exit condition becomes true.
+
+**Diophantine inequality** - the minimum solution of a polynomial inequality with integer solutions.
