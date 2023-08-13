@@ -26,17 +26,17 @@ The first phase of the induction variable analysis is the detection of the stron
 
 ### 10.2.2 Translation to Chains of Recurrences
 
-$\{\{0,+,1\}_x,+,2\}_y$ defines a multivariate chain of recurrences with a step of 1 in loop *x* and a step of 2 in loop *y*, where loop *y* is enclosed in loop *x*.
+$\\{\\{0,+,1\\}_x,+,2\\}_y$ defines a multivariate chain of recurrences with a step of 1 in loop *x* and a step of 2 in loop *y*, where loop *y* is enclosed in loop *x*.
 
-$\{3,+,\{8,+,5\}_x\}_x$ = $\{3,+,8,+,5\}_x$ represents a polynomial evolution of degree 2 in loop x.
+$\\{3,+,\\{8,+,5\\}_x\\}_x$ = $\\{3,+,8,+,5\\}_x$ represents a polynomial evolution of degree 2 in loop x.
 
-The semantics of a chain of recurrences is defined using the binomial coefficient $\binom{n}{k} = \frac{n!}{k!(n-k)!}$, by the equation: $\{c_0,+,c_1,+,c_2,+,...,+, c_n\}_x(l_x^{\rightarrow})=\sum_{p=0}^n\binom{l_x}{p}$
+The semantics of a chain of recurrences is defined using the binomial coefficient $\binom{n}{k} = \frac{n!}{k!(n-k)!}$, by the equation: $$\\{c_0,+,c_1,+,c_2,+,...,+,c_n\\}_x(l_x^{\rightarrow})=\sum\binom{l_x}{p}$$
 
 with $l_x^{\rightarrow}$ the iteration domain vector (the iteration loop counters of all the loops in which the chain of recurrences variates), and $l_x$ the iteration counter of loop *x*.
 
 Split the analysis into two phases, with a symbolic representation as a partial intermediate result:
-1. First, the analysis leads to an expression where the step part "s" is left in a symbolic form, i.e., $\{c_0,+,s\}_x$;
-2. Then, by instantiating the step, i.e., s = $\{c_1,+,c_2\}_x$, the chain of recurrences is that of a higher-degree polynomial, i.e., $\{c_0,+,\{c_1,+,c_2\}_x\}_x$ = $\{c_0,+,c_1,+,c_2\}_x$.
+1. First, the analysis leads to an expression where the step part "s" is left in a symbolic form, i.e., $\\{c_0,+,s\\}_x$;
+2. Then, by instantiating the step, i.e., s = $\\{c_1,+,c_2\\}_x$, the chain of recurrences is that of a higher-degree polynomial, i.e., $\\{c_0,+,\\{c_1,+,c_2\\}_x\\}_x$ = $\\{c_0,+,c_1,+,c_2\\}_x$.
 
 ### 10.2.3 Instantiation of Symbols and Region Parameters
 
@@ -44,7 +44,7 @@ Example program with an induction variable and its polynomial:
 
 ![Example program](../pics/fig-10-1.png)
 
-Polynomial: $\{3,+,8,+,5\}_1$
+Polynomial: $\\{3,+,8,+,5\\}_1$
 
 $F(l) = 3\binom{l}{0} + 8\binom{l}{1} + 5\binom{l}{2} = \frac{5}{2}l^2 + \frac{11}{2}l + 3$
 
