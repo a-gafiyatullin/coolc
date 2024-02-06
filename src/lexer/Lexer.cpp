@@ -21,8 +21,7 @@ const std::regex Lexer::LEXER_SPEC_REGEX(
         "[\f\r\t\v ]+|"
         // error
         "." // . does not accept \x00
-        "|\x00",
-        LEXER_SPEC_REGEX_SIZE),
+        "|\x00"),
     std::regex::extended);
 
 const std::regex Lexer::STR_SYMBOLS_REGEX("\\\"|\\\\|\\x00");

@@ -9,7 +9,8 @@
 
 #ifdef DEBUG
 #define LEXER_LOG_MATCH(type, str, pos)                                                                                \
-    (std::string) "Matched " + (std::string)type + " \"" + (std::string)str + "\" in position " + std::to_string((int)pos)
+    (std::string) "Matched " + (std::string)type + " \"" + (std::string)str + "\" in position " +                      \
+        std::to_string((int)pos)
 #else
 #define LEXER_LOG_MATCH(type, str, pos)
 #endif // DEBUG
@@ -32,7 +33,6 @@ class Lexer
 
     // lexer specification that is used outside of Cool strings and Cool comments
     static const std::regex LEXER_SPEC_REGEX;
-    static constexpr int LEXER_SPEC_REGEX_SIZE = 417; // length of the LEXER_SPEC_REGEX with null character
 
     static const std::regex STR_SYMBOLS_REGEX;
     static const std::regex COMM_SYMBOLS_REGEX;
@@ -75,20 +75,14 @@ class Lexer
      *
      * @return File name string
      */
-    inline std::string file_name() const
-    {
-        return _file_name;
-    }
+    inline std::string file_name() const { return _file_name; }
 
     /**
      * @brief Get the line number
      *
      * @return Current line number in file
      */
-    inline int line_number() const
-    {
-        return _line_number;
-    }
+    inline int line_number() const { return _line_number; }
 };
 
 } // namespace lexer
