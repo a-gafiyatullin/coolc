@@ -32,10 +32,7 @@ class Allocator
 
     // real allocation/free methods
     virtual ObjectLayout *allocate_inner(int tag, size_t size, void *disp_tab);
-    virtual void free_inner(ObjectLayout *obj)
-    {
-        assert(false);
-    } // TODO: should not reach here
+    virtual void free_inner(ObjectLayout *obj) { assert(false); } // TODO: should not reach here
 
   public:
     /**
@@ -67,20 +64,14 @@ class Allocator
      *
      * @return address of the start of the heap
      */
-    inline address start() const
-    {
-        return _start;
-    }
+    inline address start() const { return _start; }
 
     /**
      * @brief Get the end of the heap
      *
      * @return address of the end of the heap
      */
-    inline address end() const
-    {
-        return _end;
-    }
+    inline address end() const { return _end; }
 
 #ifdef DEBUG
     /**
@@ -104,10 +95,7 @@ class Allocator
      * @return true if addr is from the heap
      * @return false if addr isn't from the heap
      */
-    inline bool is_heap_addr(address addr) const
-    {
-        return addr >= _start && addr < _end;
-    }
+    inline bool is_heap_addr(address addr) const { return addr >= _start && addr < _end; }
 
     /**
      * @brief Initialize global allocator
@@ -127,10 +115,7 @@ class Allocator
      *
      * @return Allocator* Global allocator
      */
-    inline static Allocator *allocator()
-    {
-        return AllocatorObj;
-    }
+    inline static Allocator *allocator() { return AllocatorObj; }
 
     virtual ~Allocator();
 };
@@ -191,20 +176,14 @@ class SemispaceNextFitAllocator : public NextFitAllocator
      *
      * @return address tospace start
      */
-    inline address tospace() const
-    {
-        return _start;
-    }
+    inline address tospace() const { return _start; }
 
     /**
      * @brief Space from where we evacuate
      *
      * @return address fromspace start
      */
-    inline address fromspace() const
-    {
-        return _end != _orig_heap_end ? _end : _orig_heap_start;
-    }
+    inline address fromspace() const { return _end != _orig_heap_end ? _end : _orig_heap_start; }
 
     /**
      * @brief Check if this address is heap addr (in any of the semispaces)
@@ -213,10 +192,7 @@ class SemispaceNextFitAllocator : public NextFitAllocator
      * @return true if addr is from the heap
      * @return false if addr isn't from the heap
      */
-    inline bool is_orig_heap_addr(address obj) const
-    {
-        return obj >= _orig_heap_start && obj < _orig_heap_end;
-    }
+    inline bool is_orig_heap_addr(address obj) const { return obj >= _orig_heap_start && obj < _orig_heap_end; }
 
     virtual ~SemispaceNextFitAllocator();
 };

@@ -57,9 +57,6 @@ class RuntimeMips : public Runtime<const Label>
   public:
     RuntimeMips();
 
-    std::string symbol_name(const int &id) const override
-    {
-        return SYMBOLS[id];
-    }
+    std::string symbol_name(const int &id) const override { return SYMBOLS[id]; }
 };
 }; // namespace codegen

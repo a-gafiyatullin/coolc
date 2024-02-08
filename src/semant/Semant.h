@@ -158,10 +158,7 @@ class Semant
      * @param t Type for check
      * @return True if type is boolean
      */
-    inline static bool is_bool(const std::shared_ptr<ast::Type> &t)
-    {
-        return same_type(t, Bool);
-    }
+    inline static bool is_bool(const std::shared_ptr<ast::Type> &t) { return same_type(t, Bool); }
 
     /**
      * @brief Check if type is int
@@ -169,10 +166,7 @@ class Semant
      * @param t Type for check
      * @return True if type is int
      */
-    inline static bool is_int(const std::shared_ptr<ast::Type> &t)
-    {
-        return same_type(t, Int);
-    }
+    inline static bool is_int(const std::shared_ptr<ast::Type> &t) { return same_type(t, Int); }
 
     /**
      * @brief Check if type is string
@@ -180,10 +174,7 @@ class Semant
      * @param t Type for check
      * @return True if type is string
      */
-    inline static bool is_string(const std::shared_ptr<ast::Type> &t)
-    {
-        return same_type(t, String);
-    }
+    inline static bool is_string(const std::shared_ptr<ast::Type> &t) { return same_type(t, String); }
 
     /**
      * @brief Check if type is native boolean
@@ -191,10 +182,7 @@ class Semant
      * @param t Type for check
      * @return True if type is native boolean
      */
-    inline static bool is_native_bool(const std::shared_ptr<ast::Type> &t)
-    {
-        return same_type(t, NativeBool);
-    }
+    inline static bool is_native_bool(const std::shared_ptr<ast::Type> &t) { return same_type(t, NativeBool); }
 
     /**
      * @brief Check if type is native int
@@ -202,10 +190,7 @@ class Semant
      * @param t Type for check
      * @return True if type is native int
      */
-    inline static bool is_native_int(const std::shared_ptr<ast::Type> &t)
-    {
-        return same_type(t, NativeInt);
-    }
+    inline static bool is_native_int(const std::shared_ptr<ast::Type> &t) { return same_type(t, NativeInt); }
 
     /**
      * @brief Check if type is native string
@@ -213,10 +198,7 @@ class Semant
      * @param t Type for check
      * @return True if type is native string
      */
-    inline static bool is_native_string(const std::shared_ptr<ast::Type> &t)
-    {
-        return same_type(t, NativeString);
-    }
+    inline static bool is_native_string(const std::shared_ptr<ast::Type> &t) { return same_type(t, NativeString); }
 
     /**
      * @brief Check if type is SELF_TYPE
@@ -224,10 +206,7 @@ class Semant
      * @param t Type for check
      * @return True if type is SELF_TYPE
      */
-    inline static bool is_self_type(const std::shared_ptr<ast::Type> &t)
-    {
-        return same_type(t, SelfType);
-    }
+    inline static bool is_self_type(const std::shared_ptr<ast::Type> &t) { return same_type(t, SelfType); }
 
     /**
      * @brief Check if type is _EMPTY_TYPE
@@ -235,20 +214,14 @@ class Semant
      * @param t Type for check
      * @return True if type is _EMPTY_TYPE
      */
-    inline static bool is_empty_type(const std::shared_ptr<ast::Type> &t)
-    {
-        return same_type(t, Empty);
-    }
+    inline static bool is_empty_type(const std::shared_ptr<ast::Type> &t) { return same_type(t, Empty); }
 
     /**
      * @brief Get Empty type pointer
      *
      * @return Empty type pointer
      */
-    inline static std::shared_ptr<ast::Type> empty_type()
-    {
-        return Empty;
-    }
+    inline static std::shared_ptr<ast::Type> empty_type() { return Empty; }
 
     /**
      * @brief Check if type is Native

@@ -23,9 +23,7 @@ struct DAE : public FunctionPass
      *
      * @param rt Runtime methods
      */
-    DAE(const codegen::RuntimeLLVM &rt, int int_tag) : FunctionPass(ID), _runtime(rt), _int_tag(int_tag)
-    {
-    }
+    DAE(const codegen::RuntimeLLVM &rt, int int_tag) : FunctionPass(ID), _runtime(rt), _int_tag(int_tag) {}
 
     bool runOnFunction(Function &f) override;
 

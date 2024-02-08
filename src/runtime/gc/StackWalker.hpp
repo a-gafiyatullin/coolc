@@ -56,10 +56,7 @@ class StackWalker
      *
      * @return StackWalker* Global Stack Walker
      */
-    inline static StackWalker *walker()
-    {
-        return Walker;
-    }
+    inline static StackWalker *walker() { return Walker; }
 
     /**
      * @brief Apply relocations to derived pointers
@@ -67,9 +64,7 @@ class StackWalker
      */
     virtual void fix_derived_pointers() = 0;
 
-    virtual ~StackWalker()
-    {
-    }
+    virtual ~StackWalker() {}
 };
 
 #ifdef LLVM_SHADOW_STACK
@@ -80,9 +75,7 @@ class ShadowStackWalker : public StackWalker
                        bool records_derived_ptrs = false) override;
 
     // shadow stack don't create derived pointer
-    void fix_derived_pointers() override
-    {
-    }
+    void fix_derived_pointers() override {}
 };
 #endif // LLVM_SHADOW_STACK
 

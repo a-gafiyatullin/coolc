@@ -48,15 +48,9 @@ void StackWalker::release()
 }
 
 #ifdef LLVM_STATEPOINT_EXAMPLE
-StackMapWalker::StackMapWalker() : StackWalker()
-{
-    stackmap::StackMap::init();
-}
+StackMapWalker::StackMapWalker() : StackWalker() { stackmap::StackMap::init(); }
 
-StackMapWalker::~StackMapWalker()
-{
-    stackmap::StackMap::release();
-}
+StackMapWalker::~StackMapWalker() { stackmap::StackMap::release(); }
 
 void StackMapWalker::process_roots(void *obj, void (*visitor)(void *obj, address *root, const address *meta),
                                    bool records_derived_ptrs)
@@ -195,11 +189,7 @@ address *StackMapWalker::next_sp(address *sp, const stackmap::AddrInfo *info)
     return (address *)((address)sp + info->_stack_size + sizeof(address));
 }
 
-address *StackMapWalker::next_fp(address *fp, const stackmap::AddrInfo *info)
-{
-
-    return (address *)fp[0];
-}
+address *StackMapWalker::next_fp(address *fp, const stackmap::AddrInfo *info) { return (address *)fp[0]; }
 
 address *StackMapWalker::ret_addr(address *sp, address *fp, const stackmap::AddrInfo *info)
 {
@@ -239,10 +229,7 @@ address *StackMapWalker::next_sp(address *sp, const stackmap::AddrInfo *info)
     return (address *)((address)sp + info->_stack_size);
 }
 
-address *StackMapWalker::next_fp(address *fp, const stackmap::AddrInfo *info)
-{
-    return (address *)(fp[0]);
-}
+address *StackMapWalker::next_fp(address *fp, const stackmap::AddrInfo *info) { return (address *)(fp[0]); }
 
 address *StackMapWalker::ret_addr(address *sp, address *fp, const stackmap::AddrInfo *info)
 {

@@ -13,9 +13,7 @@ class Logger
     int _ident;
 
   public:
-    Logger() : _ident(0)
-    {
-    }
+    Logger() : _ident(0) {}
 
     /**
      * @brief Get the logger

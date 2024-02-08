@@ -40,29 +40,20 @@ struct ObjectLayout
      * @return true it is marked
      * @return false it is not marked
      */
-    inline bool is_marked() const
-    {
-        return _mark != MarkWordUnsetValue;
-    }
+    inline bool is_marked() const { return _mark != MarkWordUnsetValue; }
 
     /**
      * @brief Set mark word of the object
      *
      */
-    inline void set_marked()
-    {
-        _mark = MarkWordSetValue;
-    }
+    inline void set_marked() { _mark = MarkWordSetValue; }
 
     /**
      * @brief Unset mark word of the object
      *
      * @param obj Object header to unset
      */
-    inline void unset_marked()
-    {
-        _mark = MarkWordUnsetValue;
-    }
+    inline void unset_marked() { _mark = MarkWordUnsetValue; }
 
     /**
      * @brief Set object as unsed
@@ -104,10 +95,7 @@ struct ObjectLayout
      * @return true it is of the special type
      * @return false it is not of the special type
      */
-    inline bool has_special_type() const
-    {
-        return _tag == _int_tag || _tag == _bool_tag || _tag == _string_tag;
-    }
+    inline bool has_special_type() const { return _tag == _int_tag || _tag == _bool_tag || _tag == _string_tag; }
 
     /**
      * @brief Check if object is string
@@ -115,10 +103,7 @@ struct ObjectLayout
      * @return true if it is a string
      * @return false if it isn't a string
      */
-    inline bool is_string() const
-    {
-        return _tag == _string_tag;
-    }
+    inline bool is_string() const { return _tag == _string_tag; }
 
     /**
      * @brief Fill fields with zero

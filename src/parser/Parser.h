@@ -59,10 +59,7 @@ class Parser
 
     std::string _error; // error message
 
-    inline void advance_token()
-    {
-        _next_token = std::move(_lexer->next());
-    }
+    inline void advance_token() { _next_token = std::move(_lexer->next()); }
 
     // error handling
     void report_error();
@@ -113,10 +110,7 @@ class Parser
 
     // operators precedence control
     int precedence_level(const lexer::Token::TokenType &type) const;
-    inline void save_precedence_level()
-    {
-        _precedence_level.push(-1);
-    }
+    inline void save_precedence_level() { _precedence_level.push(-1); }
     void restore_precedence_level();
     int current_precedence_level() const;
     void set_precedence_level(const int &lvl);
@@ -151,9 +145,6 @@ class Parser
      *
      * @return Error message
      */
-    inline std::string error_msg()
-    {
-        return _error;
-    }
+    inline std::string error_msg() { return _error; }
 };
 } // namespace parser

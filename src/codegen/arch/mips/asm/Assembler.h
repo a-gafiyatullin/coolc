@@ -27,19 +27,14 @@ class CodeBuffer
      *
      * @param buffer Initial buffer
      */
-    explicit CodeBuffer(const CodeBuffer &buffer) : _buffer(buffer._buffer)
-    {
-    }
+    explicit CodeBuffer(const CodeBuffer &buffer) : _buffer(buffer._buffer) {}
 
     /**
      * @brief Add new commands to buffer
      *
      * @param command New commands
      */
-    inline void save(const std::string &command)
-    {
-        _buffer += command + "\n";
-    }
+    inline void save(const std::string &command) { _buffer += command + "\n"; }
 
     /**
      * @brief Concat buffers
@@ -54,10 +49,7 @@ class CodeBuffer
      *
      * @return Conten of the buffer
      */
-    operator std::string() const
-    {
-        return _buffer;
-    }
+    operator std::string() const { return _buffer; }
 };
 
 class Assembler;
@@ -109,10 +101,7 @@ class Register
      *
      * @return Register name
      */
-    operator std::string() const
-    {
-        return REG_TO_STR[_reg];
-    }
+    operator std::string() const { return REG_TO_STR[_reg]; }
 
     /**
      * @brief Get the register name as string
@@ -120,10 +109,7 @@ class Register
      * @param reg Register name as Reg
      * @return Register name as string
      */
-    inline static std::string reg_name(const Register::Reg &reg)
-    {
-        return REG_TO_STR[reg];
-    }
+    inline static std::string reg_name(const Register::Reg &reg) { return REG_TO_STR[reg]; }
 
   private:
     static const std::vector<std::string> REG_TO_STR;
@@ -166,10 +152,7 @@ class Label
      *
      * @return Label name
      */
-    operator std::string() const
-    {
-        return _name;
-    }
+    operator std::string() const { return _name; }
 };
 
 /**
@@ -219,58 +202,40 @@ class Assembler
      *
      * @return sp register
      */
-    inline const Register &sp() const
-    {
-        return SP;
-    }
+    inline const Register &sp() const { return SP; }
 
     /**
      * @brief ra register
      *
      * @return ra register
      */
-    inline const Register &ra() const
-    {
-        return RA;
-    }
+    inline const Register &ra() const { return RA; }
 
     /**
      * @brief fp register
      *
      * @return fp register
      */
-    inline const Register &fp() const
-    {
-        return FP;
-    }
+    inline const Register &fp() const { return FP; }
 
     /**
      * @brief zero register
      *
      * @return zero register
      */
-    inline const Register &zero() const
-    {
-        return ZERO;
-    }
+    inline const Register &zero() const { return ZERO; }
 
     /**
      * @brief Create data section
      *
      */
-    inline void data_section()
-    {
-        _code.save(std::string(_ident, ' ') + ".data");
-    }
+    inline void data_section() { _code.save(std::string(_ident, ' ') + ".data"); }
 
     /**
      * @brief Create text section
      *
      */
-    inline void text_section()
-    {
-        _code.save(std::string(_ident, ' ') + ".text");
-    }
+    inline void text_section() { _code.save(std::string(_ident, ' ') + ".text"); }
 
     /**
      * @brief Align
@@ -297,10 +262,7 @@ class Assembler
      *
      * @param value Word value
      */
-    inline void word(const int32_t &value)
-    {
-        _code.save(std::string(_ident, ' ') + ".word\t" + std::to_string(value));
-    }
+    inline void word(const int32_t &value) { _code.save(std::string(_ident, ' ') + ".word\t" + std::to_string(value)); }
 
     /**
      * @brief Declare pointer
@@ -317,10 +279,7 @@ class Assembler
      *
      * @param value Byte value
      */
-    inline void byte(const int8_t &value)
-    {
-        _code.save(std::string(_ident, ' ') + ".byte\t" + std::to_string(value));
-    }
+    inline void byte(const int8_t &value) { _code.save(std::string(_ident, ' ') + ".byte\t" + std::to_string(value)); }
 
     /**
      * @brief Emit string with escape sequencies
@@ -592,20 +551,14 @@ class Assembler
      *
      * @return sp offset
      */
-    inline int sp_offset() const
-    {
-        return _sp_offset;
-    }
+    inline int sp_offset() const { return _sp_offset; }
 
     /**
      * @brief Set sp offset
      *
      * @param offset New offset
      */
-    void set_sp_offset(const int32_t &offset)
-    {
-        _sp_offset = offset;
-    }
+    void set_sp_offset(const int32_t &offset) { _sp_offset = offset; }
 
 #ifdef DEBUG
     /**

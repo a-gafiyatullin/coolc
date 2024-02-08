@@ -342,6 +342,4 @@ void DataLLVM::gen_class_name_tab()
                         names);
 }
 
-void DataLLVM::emit_inner(const std::string &out_file)
-{
-}
+void DataLLVM::emit_inner(const std::string &out_file) {}
