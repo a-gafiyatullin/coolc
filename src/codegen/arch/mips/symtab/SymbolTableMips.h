@@ -28,8 +28,6 @@ struct Symbol
      * @param type Base type
      * @param offset Offset from base
      */
-    Symbol(const SymbolType &type, const int &offset) : _type(type), _offset(offset)
-    {
-    }
+    Symbol(const SymbolType &type, const int &offset) : _type(type), _offset(offset) {}
 };
 }; // namespace codegen

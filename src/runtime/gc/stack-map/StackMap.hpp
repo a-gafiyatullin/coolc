@@ -141,10 +141,7 @@ class StackMap
      *
      * @return A global StackMap
      */
-    static StackMap *map()
-    {
-        return Map;
-    }
+    static StackMap *map() { return Map; }
 
     /**
      * @brief Get info about stack by addr

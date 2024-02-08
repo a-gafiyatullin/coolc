@@ -5,13 +5,9 @@ using namespace gc;
 
 Marker *Marker::MarkerObj = nullptr;
 
-Marker::Marker(address heap_start, address heap_end) : _heap_start(heap_start), _heap_end(heap_end)
-{
-}
+Marker::Marker(address heap_start, address heap_end) : _heap_start(heap_start), _heap_end(heap_end) {}
 
-Marker::~Marker()
-{
-}
+Marker::~Marker() {}
 
 void Marker::init()
 {
@@ -58,15 +54,9 @@ void MarkerFIFO::mark_from_roots()
     StackWalker::walker()->process_roots(this, &MarkerFIFO::mark_root, true);
 }
 
-bool MarkerFIFO::is_marked(ObjectLayout *object) const
-{
-    return object->is_marked();
-}
+bool MarkerFIFO::is_marked(ObjectLayout *object) const { return object->is_marked(); }
 
-void MarkerFIFO::mark_unmarked_object(ObjectLayout *object)
-{
-    object->set_marked();
-}
+void MarkerFIFO::mark_unmarked_object(ObjectLayout *object) { object->set_marked(); }
 
 void MarkerFIFO::mark_root(address *root)
 {
@@ -217,7 +207,4 @@ bool BitMapMarker::is_marked(ObjectLayout *object) const
     return is_bit_set(byte_to_bit((address)object));
 }
 
-void BitMapMarker::clear()
-{
-    std::fill(_bitmap.begin(), _bitmap.end(), 0);
-}
+void BitMapMarker::clear() { std::fill(_bitmap.begin(), _bitmap.end(), 0); }

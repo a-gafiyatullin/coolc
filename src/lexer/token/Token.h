@@ -92,10 +92,7 @@ class Token
      * @param str Lexeme
      * @return Token type for lexeme
      */
-    inline static const TokenType &str_to_token(const std::string &str)
-    {
-        return STR_TO_TOKEN_TYPE.find(str)->second;
-    }
+    inline static const TokenType &str_to_token(const std::string &str) { return STR_TO_TOKEN_TYPE.find(str)->second; }
 
     /**
      * @brief Check if lexeme is a keyword
@@ -125,10 +122,7 @@ class Token
      * @param str Lexeme
      * @return True if it is a number
      */
-    inline static bool is_number(const std::string &str)
-    {
-        return isdigit(str[0]);
-    }
+    inline static bool is_number(const std::string &str) { return isdigit(str[0]); }
 
     /**
      * @brief Check if lexeme is a boolean
@@ -144,10 +138,7 @@ class Token
      * @param str Lexeme
      * @return True if it is a type name
      */
-    inline static bool is_typeid(const std::string &str)
-    {
-        return str[0] >= 'A' && str[0] <= 'Z' && !is_keyword(str);
-    }
+    inline static bool is_typeid(const std::string &str) { return str[0] >= 'A' && str[0] <= 'Z' && !is_keyword(str); }
 
     /**
      * @brief Check if lexeme is an object name
@@ -155,10 +146,7 @@ class Token
      * @param str Lexeme
      * @return True if it is an object name
      */
-    inline static bool is_object(const std::string &str)
-    {
-        return str[0] >= 'a' && str[0] <= 'z' && !is_keyword(str);
-    }
+    inline static bool is_object(const std::string &str) { return str[0] >= 'a' && str[0] <= 'z' && !is_keyword(str); }
 
     /**
      * @brief Check if lexeme is a closing comment bracket
@@ -166,30 +154,21 @@ class Token
      * @param str Lexeme
      * @return True if it a closing comment bracket
      */
-    inline static bool is_close_par_comment(const std::string &str)
-    {
-        return str == "*)";
-    }
+    inline static bool is_close_par_comment(const std::string &str) { return str == "*)"; }
 
     /**
      * @brief Get the type as string
      *
      * @return String for type
      */
-    inline const std::string &type_as_str() const
-    {
-        return TOKEN_TYPE_TO_STR[_type];
-    }
+    inline const std::string &type_as_str() const { return TOKEN_TYPE_TO_STR[_type]; }
 
     /**
      * @brief Get the line number
      *
      * @return Line number
      */
-    inline const int &line_number() const
-    {
-        return _line_number;
-    }
+    inline const int &line_number() const { return _line_number; }
 
     /**
      * @brief Check if this token has given type
@@ -197,30 +176,21 @@ class Token
      * @param type Type from TOKEN_TYPE
      * @return True if this token has given type
      */
-    inline bool same_token_type(const TokenType &type) const
-    {
-        return _type == type;
-    }
+    inline bool same_token_type(const TokenType &type) const { return _type == type; }
 
     /**
      * @brief Get the lexeme
      *
      * @return Lexeme
      */
-    inline const std::string &value() const
-    {
-        return _lexeme;
-    }
+    inline const std::string &value() const { return _lexeme; }
 
     /**
      * @brief Get the type
      *
      * @return Type
      */
-    inline const TokenType &type() const
-    {
-        return _type;
-    }
+    inline const TokenType &type() const { return _type; }
 
 #ifdef DEBUG
     /**

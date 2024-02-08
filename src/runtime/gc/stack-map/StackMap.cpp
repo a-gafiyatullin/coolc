@@ -202,12 +202,6 @@ const AddrInfo *StackMap::info(address ret) const
     return nullptr;
 }
 
-void StackMap::init()
-{
-    Map = new StackMap;
-}
+void StackMap::init() { Map = new StackMap; }
 
-void StackMap::release()
-{
-    delete Map;
-}
+void StackMap::release() { delete Map; }

@@ -109,23 +109,15 @@ class GC
      *
      * @param root Address of a slot with an object
      */
-    inline void add_runtime_root(address *root)
-    {
-        _runtime_roots.push_back(root);
-    }
+    inline void add_runtime_root(address *root) { _runtime_roots.push_back(root); }
 
     /**
      * @brief Clean list of preserved objects
      *
      */
-    inline void clean_runtime_roots()
-    {
-        _runtime_roots.clear();
-    }
+    inline void clean_runtime_roots() { _runtime_roots.clear(); }
 
-    virtual ~GC()
-    {
-    }
+    virtual ~GC() {}
 };
 
 // --------------------------------------- ZeroGC ---------------------------------------
@@ -136,9 +128,7 @@ class GC
 class ZeroGC : public GC
 {
   public:
-    void collect() override
-    {
-    }
+    void collect() override {}
 };
 
 #if defined(LLVM_SHADOW_STACK) || defined(LLVM_STATEPOINT_EXAMPLE)

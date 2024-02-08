@@ -25,9 +25,7 @@ struct NCE : public FunctionPass
      *
      * @param rt Runtime methods
      */
-    NCE(const codegen::RuntimeLLVM &rt) : FunctionPass(ID), _runtime(rt)
-    {
-    }
+    NCE(const codegen::RuntimeLLVM &rt) : FunctionPass(ID), _runtime(rt) {}
 
     bool runOnFunction(Function &f) override;
 

@@ -48,9 +48,7 @@ Label::Label(const std::string &name, const LabelPolicy &policy) : _name(name)
 const std::unordered_map<std::string, int> Assembler::SPECIAL_SYMBOLS = {{"\\", 92}};
 const std::regex Assembler::SPECIAL_SYMBOLS_REGEX("\\\\");
 
-Assembler::Assembler(CodeBuffer &code) : _code(code), _ident(IDENTATION)
-{
-}
+Assembler::Assembler(CodeBuffer &code) : _code(code), _ident(IDENTATION) {}
 
 void Assembler::sw(const Register &from_reg, const Register &to_reg, const int32_t &offset)
 {

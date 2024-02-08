@@ -21,10 +21,7 @@ class Marker
 
     virtual void mark() = 0;
 
-    inline bool is_heap_addr(address addr) const
-    {
-        return addr >= _heap_start && addr <= _heap_end;
-    }
+    inline bool is_heap_addr(address addr) const { return addr >= _heap_start && addr <= _heap_end; }
 
     virtual bool is_marked(ObjectLayout *object) const = 0;
 
@@ -69,10 +66,7 @@ class Marker
      *
      * @return Marker* Global Marker
      */
-    inline static Marker *marker()
-    {
-        return MarkerObj;
-    }
+    inline static Marker *marker() { return MarkerObj; }
 
     virtual ~Marker();
 };
@@ -91,9 +85,7 @@ class MarkerFIFO : public Marker
     void mark_unmarked_object(ObjectLayout *object) override;
 
   public:
-    MarkerFIFO(address heap_start, address heap_end) : Marker(heap_start, heap_end)
-    {
-    }
+    MarkerFIFO(address heap_start, address heap_end) : Marker(heap_start, heap_end) {}
 
     void mark_from_roots() override;
 
@@ -120,10 +112,7 @@ class BitMapMarker : public MarkerFIFO
 
     void mark_from_roots() override;
 
-    void mark_root(address *root) override
-    {
-        MarkerFIFO::mark_root(root);
-    }
+    void mark_root(address *root) override { MarkerFIFO::mark_root(root); }
 
     bool is_marked(ObjectLayout *object) const override;
 
@@ -146,10 +135,7 @@ class BitMapMarker : public MarkerFIFO
      * @param byte Byte number
      * @return size_t Bit number
      */
-    inline size_t byte_to_bit(address byte) const
-    {
-        return (size_t)((address)byte - _heap_start) / BYTES_PER_BIT;
-    }
+    inline size_t byte_to_bit(address byte) const { return (size_t)((address)byte - _heap_start) / BYTES_PER_BIT; }
 
     /**
      * @brief Get the first byte that is represnted by the given bit
@@ -157,10 +143,7 @@ class BitMapMarker : public MarkerFIFO
      * @param bit Bit index in bitmap
      * @return size_t Byte offset from the heap start
      */
-    inline size_t bit_to_byte(size_t bit) const
-    {
-        return bit * BYTES_PER_BIT;
-    }
+    inline size_t bit_to_byte(size_t bit) const { return bit * BYTES_PER_BIT; }
 
     /**
      * @brief Get bitmap word number by the byte number
@@ -168,10 +151,7 @@ class BitMapMarker : public MarkerFIFO
      * @param byte Byte number
      * @return size_t Bitmap word number
      */
-    inline size_t byte_to_word_num(address byte) const
-    {
-        return byte_to_bit(byte) / BITS_PER_BIT_MAP_WORD;
-    }
+    inline size_t byte_to_word_num(address byte) const { return byte_to_bit(byte) / BITS_PER_BIT_MAP_WORD; }
 
     /**
      * @brief Get bimap word by index
@@ -179,20 +159,14 @@ class BitMapMarker : public MarkerFIFO
      * @param idx Word index
      * @return const BitMapWord& Word
      */
-    inline const BitMapWord &word(size_t idx) const
-    {
-        return _bitmap[idx];
-    }
+    inline const BitMapWord &word(size_t idx) const { return _bitmap[idx]; }
 
     /**
      * @brief Number of words in bitmap
      *
      * @return size_t Number of words in bitmap
      */
-    inline size_t words_num() const
-    {
-        return _bitmap.size();
-    }
+    inline size_t words_num() const { return _bitmap.size(); }
 
     /**
      * @brief Get nubmer of bits in the given amount of words
@@ -200,10 +174,7 @@ class BitMapMarker : public MarkerFIFO
      * @param word Number of words
      * @return size_t Number of bits
      */
-    inline size_t word_to_bit(size_t words) const
-    {
-        return words * BITS_PER_BIT_MAP_WORD;
-    }
+    inline size_t word_to_bit(size_t words) const { return words * BITS_PER_BIT_MAP_WORD; }
 
     /**
      * @brief Number of bits in this bitmap

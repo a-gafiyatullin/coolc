@@ -22,18 +22,11 @@ class KlassMips : public Klass
     static constexpr std::string_view PROTOTYPE_NAME_SUFFIX = "_protObj";
     static constexpr std::string_view DISP_TAB_NAME_SUFFIX = "_dispTab";
 
-    KlassMips(const std::shared_ptr<ast::Class> &klass, const KlassBuilder *builder) : Klass(klass, builder)
-    {
-    }
+    KlassMips(const std::shared_ptr<ast::Class> &klass, const KlassBuilder *builder) : Klass(klass, builder) {}
 
-    KlassMips() : Klass()
-    {
-    }
+    KlassMips() : Klass() {}
 
-    size_t size() const override
-    {
-        return (_fields.size() + HEADER_FIELDS) * WORD_SIZE;
-    }
+    size_t size() const override { return (_fields.size() + HEADER_FIELDS) * WORD_SIZE; }
 
     std::string method_full_name(const std::string &method_name) const override;
 
@@ -48,10 +41,7 @@ class KlassMips : public Klass
      *
      * @return Number of methods
      */
-    inline size_t methods_num() const
-    {
-        return _methods.size();
-    }
+    inline size_t methods_num() const { return _methods.size(); }
 
     /**
      * @brief Construct full name of the method for this Class
@@ -61,20 +51,11 @@ class KlassMips : public Klass
      */
     std::string method_full_name(const int &n) const;
 
-    std::string init_method() const override
-    {
-        return name() + static_cast<std::string>(INIT_METHOD_NAME_SUFFIX);
-    }
+    std::string init_method() const override { return name() + static_cast<std::string>(INIT_METHOD_NAME_SUFFIX); }
 
-    std::string prototype() const override
-    {
-        return name() + static_cast<std::string>(PROTOTYPE_NAME_SUFFIX);
-    }
+    std::string prototype() const override { return name() + static_cast<std::string>(PROTOTYPE_NAME_SUFFIX); }
 
-    std::string disp_tab() const override
-    {
-        return name() + static_cast<std::string>(DISP_TAB_NAME_SUFFIX);
-    }
+    std::string disp_tab() const override { return name() + static_cast<std::string>(DISP_TAB_NAME_SUFFIX); }
 };
 
 class KlassBuilderMips : public KlassBuilder
@@ -83,9 +64,7 @@ class KlassBuilderMips : public KlassBuilder
     std::shared_ptr<Klass> make_klass(const std::shared_ptr<ast::Class> &klass) override;
 
   public:
-    explicit KlassBuilderMips(const std::shared_ptr<semant::ClassNode> &root) : KlassBuilder(root)
-    {
-    }
+    explicit KlassBuilderMips(const std::shared_ptr<semant::ClassNode> &root) : KlassBuilder(root) {}
 };
 
 }; // namespace codegen

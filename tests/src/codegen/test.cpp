@@ -3,10 +3,7 @@
 class CodegenParameterizedTest : public CompilerParameterizedTest
 {
   public:
-    static std::vector<TestParam> read_codegen_tests_from_disk()
-    {
-        return read_test_cases_from_disk("codegen/");
-    }
+    static std::vector<TestParam> read_codegen_tests_from_disk() { return read_test_cases_from_disk("codegen/"); }
 };
 
 TEST_P(CodegenParameterizedTest, CodegenAsExpected)

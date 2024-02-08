@@ -96,9 +96,7 @@ template <class Value, class Symbol> class CodeGen
      */
     virtual void emit(const std::string &out_file) = 0;
 
-    virtual ~CodeGen()
-    {
-    }
+    virtual ~CodeGen() {}
 };
 
 }; // namespace codegen

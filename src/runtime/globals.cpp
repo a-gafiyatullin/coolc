@@ -25,10 +25,7 @@ size_t allign(size_t byte, int words)
     return byte + (byte % bytes ? bytes - byte % bytes : 0);
 }
 
-bool is_alligned(size_t byte, int words)
-{
-    return byte % (sizeof(address) * words) == 0;
-}
+bool is_alligned(size_t byte, int words) { return byte % (sizeof(address) * words) == 0; }
 
 bool PrintGCStatistics = false;
 

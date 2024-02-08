@@ -92,10 +92,7 @@ void CodeGenLLVM::allocate_shadow_stack(int max_stack)
 #endif // DEBUG
 }
 
-void CodeGenLLVM::set_need_reload(bool need_reload)
-{
-    _need_reload = need_reload;
-}
+void CodeGenLLVM::set_need_reload(bool need_reload) { _need_reload = need_reload; }
 
 void CodeGenLLVM::init_shadow_stack(const std::vector<llvm::Value *> &args)
 {

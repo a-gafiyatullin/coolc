@@ -152,85 +152,58 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
      * @param elem Element
      * @return Type
      */
-    inline llvm::Type *header_elem_type(const HeaderLayout &elem) const
-    {
-        return _header_layout_types[elem];
-    }
+    inline llvm::Type *header_elem_type(const HeaderLayout &elem) const { return _header_layout_types[elem]; }
 
     /**
      * @brief Get type for 32 bit int
      *
      * @return Type of 32 bit int
      */
-    inline llvm::Type *int32_type() const
-    {
-        return _int32_type;
-    }
+    inline llvm::Type *int32_type() const { return _int32_type; }
 
     /**
      * @brief Get type for 64 bit int
      *
      * @return Type of 64 bit int
      */
-    inline llvm::Type *int64_type() const
-    {
-        return _int64_type;
-    }
+    inline llvm::Type *int64_type() const { return _int64_type; }
 
     /**
      * @brief Get type for void
      *
      * @return Type of void
      */
-    inline llvm::Type *void_type() const
-    {
-        return _void_type;
-    }
+    inline llvm::Type *void_type() const { return _void_type; }
 
     /**
      * @brief Get type for heap pointer
      *
      * @return Type of heap pointer
      */
-    inline llvm::PointerType *heap_ptr_type() const
-    {
-        return _heap_ptr_type;
-    }
+    inline llvm::PointerType *heap_ptr_type() const { return _heap_ptr_type; }
 
     /**
      * @brief Get type for 8 bit int
      *
      * @return Type of 8 bit int
      */
-    inline llvm::Type *int8_type() const
-    {
-        return _int8_type;
-    }
+    inline llvm::Type *int8_type() const { return _int8_type; }
 
     /**
      * @brief Get type of stack slot
      *
      * @return Type of stack slot
      */
-    inline llvm::PointerType *stack_slot_type() const
-    {
-        return _stack_slot_type;
-    }
+    inline llvm::PointerType *stack_slot_type() const { return _stack_slot_type; }
 
     /**
      * @brief Get default int type
      *
      * @return Type for default int
      */
-    inline llvm::Type *default_int() const
-    {
-        return _default_int;
-    }
+    inline llvm::Type *default_int() const { return _default_int; }
 
-    std::string symbol_name(const int &id) const override
-    {
-        return SYMBOLS[id];
-    }
+    std::string symbol_name(const int &id) const override { return SYMBOLS[id]; }
 
     /**
      * @brief Get gc strategy name
@@ -256,20 +229,14 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
      *
      * @return llvm::GlobalVariable*
      */
-    llvm::GlobalVariable *stack_pointer() const
-    {
-        return _stack_pointer;
-    }
+    llvm::GlobalVariable *stack_pointer() const { return _stack_pointer; }
 
     /**
      * @brief Get thread local variable to store frame pointer
      *
      * @return llvm::GlobalVariable*
      */
-    llvm::GlobalVariable *frame_pointer() const
-    {
-        return _frame_pointer;
-    }
+    llvm::GlobalVariable *frame_pointer() const { return _frame_pointer; }
 
     /**
      * @brief Get stack pointer register name

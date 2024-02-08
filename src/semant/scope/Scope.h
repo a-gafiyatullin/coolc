@@ -43,10 +43,7 @@ class Scope
      * @brief Start new scope
      *
      */
-    inline void push_scope()
-    {
-        _symbols.emplace_back();
-    }
+    inline void push_scope() { _symbols.emplace_back(); }
 
     /**
      * @brief Pop current scope
@@ -73,10 +70,7 @@ class Scope
      * @param name Element name
      * @return True if assignment is allowed
      */
-    inline static bool can_assign(const std::string &name)
-    {
-        return name != SelfObject;
-    }
+    inline static bool can_assign(const std::string &name) { return name != SelfObject; }
 
     /**
      * @brief Find element in the scope
