@@ -1,0 +1,38 @@
+name: clang-tidy LLVM Default Build
+
+# You can be more specific, but it currently only works on pull requests
+on: [pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build Google Tests
+      run: |
+        sudo apt install libgtest-dev llvm clang libboost-all-dev
+        cd /usr/src/gtest
+        sudo cmake CMakeLists.txt
+        sudo make
+        sudo cp lib/*.a /usr/lib
+
+    - uses: ZedThree/clang-tidy-review@v0.14.0
+      id: review
+      with:
+        clang_tidy_version: 14
+        cmake_command: |
+          cmake --no-warn-unused-cli -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE \
+          -DCMAKE_BUILD_TYPE:STRING=Release \
+          -DARCH:STRING=LLVM \
+          -DGCTYPE:STRING=LLVM_STATEPOINT_EXAMPLE \
+          -H. -Bbuild -G "Unix Makefiles"
+
+    # Uploads an artefact containing clang_fixes.json
+    - uses: ZedThree/clang-tidy-review/upload@v0.14.0
+      id: upload-review
+
+    # If there are any comments, fail the check
+    - if: steps.review.outputs.total_comments > 0
+      run: exit 1
