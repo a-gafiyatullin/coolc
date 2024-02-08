@@ -3,8 +3,7 @@
 This directory and its subdirectories contain source code for **coolc**,
 the compiler for **Classroom Object Oriented Language** created for educational purposes by **Alexander Aiken**.
 
-Please see the documentation provided in **docs/** for further
-assistance with **coolc**.
+Please see the documentation provided in **docs/** for further assistance with **coolc**.
 
 ## Getting the Source Code and Building COOLC
 
@@ -12,13 +11,12 @@ assistance with **coolc**.
     - `git clone https://github.com/a-gafiyatullin/coolc.git`
 
 2. Configure and build COOLC:
-    - Prerequirement:
+    - Prerequirements:
       - **clang-14**;
       - **gtest**;
       - **boost-1.61**;
       - **llvm-14**;
       - You can use `VS Code` and `Dev Containers` extension to get `Ubuntu 22.04` which contains these packages.
-    - `cd coolc`
     - `build.sh [-release/-debug] [options]`<br>
     Some usefull options:
         - `-clean` --- clean build directory before compilation.
