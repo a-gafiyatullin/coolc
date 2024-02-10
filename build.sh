@@ -95,5 +95,5 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
 fi
 
 if [ $test -eq 1 ]; then
-    make -C build test
+    ctest --test-dir build -C $config
 fi
