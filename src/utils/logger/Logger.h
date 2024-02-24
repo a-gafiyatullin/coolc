@@ -27,7 +27,7 @@ class Logger
      *
      * @param msg Message
      * @param cr Do carriage return
-     * @param do_ident Make idendation before message
+     * @param do_ident Make indentation before message
      */
     void log(const std::string &msg, const bool &cr = true, const bool &do_ident = true);
 

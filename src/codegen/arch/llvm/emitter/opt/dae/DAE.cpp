@@ -1,4 +1,5 @@
 #include "DAE.hpp"
+#include "utils/logger/Logger.h"
 #include <llvm/IR/Instructions.h>
 #include <llvm/Support/raw_ostream.h>
 

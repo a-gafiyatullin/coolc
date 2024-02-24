@@ -1,4 +1,6 @@
 #include "lexer/Lexer.h"
+#include "utils/Utils.h"
+#include "utils/logger/Logger.h"
 
 using namespace lexer;
 
