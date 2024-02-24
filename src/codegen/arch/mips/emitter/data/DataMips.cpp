@@ -68,6 +68,7 @@ void DataMips::gen_class_name_tab()
     const AssemblerMarkSection mark(_asm, *_runtime.symbol_by_id(RuntimeMips::RuntimeMipsSymbols::CLASS_NAME_TAB));
 
     // gather to table
+    __ word(0); // create null name, because tag 0 is reserved
     for (const auto &klass : _builder->klasses())
     {
         __ word(string_const(klass->name()));
@@ -81,6 +82,8 @@ void DataMips::gen_class_obj_tab()
 
     const AssemblerMarkSection mark(_asm, *_runtime.symbol_by_id(RuntimeMips::RuntimeMipsSymbols::CLASS_OBJ_TAB));
 
+    __ word(0); // create null prototype, because tag 0 is reserved
+    __ word(0); // create null init, because tag 0 is reserved
     for (const auto &klass : _builder->klasses())
     {
         __ word(Label(klass->prototype()));
