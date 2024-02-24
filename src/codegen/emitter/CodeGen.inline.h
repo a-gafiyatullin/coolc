@@ -1,4 +1,7 @@
+#pragma once
+
 #include "codegen/emitter/CodeGen.h"
+#include "utils/logger/Logger.h"
 
 using namespace codegen;
 
@@ -68,9 +71,9 @@ template <class Value, class Symbol>
 Value CodeGen<Value, Symbol>::emit_unary_expr(const ast::UnaryExpression &expr,
                                               const std::shared_ptr<ast::Type> &expr_type)
 {
-    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN UNAXRY EXPR"));
+    CODEGEN_VERBOSE_ONLY(LOG_ENTER("GEN UNARY EXPR"));
 
-    CODEGEN_RETURN_VALUE_IF_CAN(emit_unary_expr_inner(expr, expr_type), "GEN UNAXRY EXPR");
+    CODEGEN_RETURN_VALUE_IF_CAN(emit_unary_expr_inner(expr, expr_type), "GEN UNARY EXPR");
 }
 
 template <class Value, class Symbol>

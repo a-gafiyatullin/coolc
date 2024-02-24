@@ -1,4 +1,5 @@
 #include "Token.h"
+#include "utils/Utils.h"
 
 using namespace lexer;
 

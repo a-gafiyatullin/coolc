@@ -1,5 +1,6 @@
 #include "parser/Parser.h"
 #include "parser/Parser.inline.h"
+#include "utils/logger/Logger.h"
 
 using namespace parser;
 

@@ -1,4 +1,5 @@
 #include "semant/Semant.h"
+#include "utils/logger/Logger.h"
 
 using namespace semant;
 
@@ -733,7 +734,7 @@ std::shared_ptr<ast::Type> Semant::infer_loop_type(const ast::WhileExpression &l
     SEMANT_RETURN_IF_FALSE(infer_expression_type(loop._body_expr, scope), nullptr);
     body_expr_stack = _expression_stack;
 
-    // loop doesn't ceate a new value
+    // loop doesn't create a new value
     _expression_stack = std::max(predicate_expr_stack, body_expr_stack);
 
     SEMANT_VERBOSE_ONLY(LOG_EXIT("INFER LOOP TYPE"));

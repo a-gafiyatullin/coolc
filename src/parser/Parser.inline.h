@@ -1,6 +1,7 @@
 #pragma once
 
 #include "parser/Parser.h"
+#include "utils/logger/Logger.h"
 
 using namespace parser;
 

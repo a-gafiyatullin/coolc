@@ -1,6 +1,7 @@
 #pragma once
 
 #include "utils/Utils.h"
+#include "utils/logger/Logger.h"
 #include <functional>
 #include <unordered_map>
 
