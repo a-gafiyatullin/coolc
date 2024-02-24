@@ -1,6 +1,5 @@
 #pragma once
 
-#include "ast/AST.h"
 #include "decls/Decls.h"
 #include "lexer/Lexer.h"
 #include <functional>
@@ -48,6 +47,18 @@
 #define PARSER_RETURN_IF_FALSE(pred)                                                                                   \
     if (!pred)                                                                                                         \
         return nullptr;
+
+namespace ast
+{
+struct Class;
+struct Feature;
+struct Formal;
+struct Expression;
+struct Case;
+struct Type;
+struct ObjectExpression;
+struct Program;
+} // namespace ast
 
 namespace parser
 {
