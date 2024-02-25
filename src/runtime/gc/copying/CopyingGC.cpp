@@ -13,7 +13,7 @@ void SemispaceCopyingGC::collect()
     address scan = alloca->tospace();
     _free = scan;
 
-    assert(is_alligned((size_t)scan));
+    assert(is_aligned((size_t)scan));
 
     // traverse stack roots
     StackWalker::walker()->process_roots(this, &SemispaceCopyingGC::update_stack_root, true);

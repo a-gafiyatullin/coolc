@@ -19,13 +19,13 @@ bool TraceGCCycles = false;
 bool TraceVerifyOops = false;
 #endif // DEBUG
 
-size_t allign(size_t byte, int words)
+size_t align(size_t byte, int words)
 {
     int bytes = (sizeof(address) * words);
     return byte + (byte % bytes ? bytes - byte % bytes : 0);
 }
 
-bool is_alligned(size_t byte, int words) { return byte % (sizeof(address) * words) == 0; }
+bool is_aligned(size_t byte, int words) { return byte % (sizeof(address) * words) == 0; }
 
 bool PrintGCStatistics = false;
 

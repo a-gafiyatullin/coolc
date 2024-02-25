@@ -1,6 +1,5 @@
 #include "StackWalker.hpp"
 #include "runtime/gc/Allocator.hpp"
-#include "runtime/globals.hpp"
 #include <cassert>
 
 using namespace gc;
@@ -134,7 +133,7 @@ void StackMapWalker::process_roots(void *obj, void (*visitor)(void *obj, address
             }
 #endif // DEBUG
 
-            // call has to be here, because visitir can destroy info for base-derived pair
+            // call has to be here, because visitor can destroy info for base-derived pair
             (*visitor)(obj, base_ptr_slot, NULL);
         }
 
