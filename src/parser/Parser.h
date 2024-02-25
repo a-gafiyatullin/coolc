@@ -1,9 +1,7 @@
 #pragma once
 
-#include "decls/Decls.h"
+#include "ast/AST.h"
 #include "lexer/Lexer.h"
-#include <functional>
-#include <stack>
 
 #ifdef DEBUG
 #define PARSER_APPEND_LINE_NUM(msg)                                                                                    \
@@ -47,18 +45,6 @@
 #define PARSER_RETURN_IF_FALSE(pred)                                                                                   \
     if (!pred)                                                                                                         \
         return nullptr;
-
-namespace ast
-{
-struct Class;
-struct Feature;
-struct Formal;
-struct Expression;
-struct Case;
-struct Type;
-struct ObjectExpression;
-struct Program;
-} // namespace ast
 
 namespace parser
 {

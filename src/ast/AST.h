@@ -5,11 +5,6 @@
 #include <variant>
 #include <vector>
 
-#ifdef DEBUG
-#include <algorithm>
-#include <iostream>
-#endif // DEBUG
-
 namespace ast
 {
 // main structural elements

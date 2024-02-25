@@ -1,5 +1,6 @@
 #include "semant/Semant.h"
 #include "utils/logger/Logger.h"
+#include <algorithm>
 
 using namespace semant;
 

@@ -250,7 +250,7 @@ class RuntimeLLVM : public Runtime<RuntimeMethod>
     }
 
     /**
-     * @brief Get frame popinter register name
+     * @brief Get frame pointer register name
      *
      * @return Frame Pointer register name as Metadata
      */

@@ -1,7 +1,6 @@
 #pragma once
 
 #ifdef DEBUG
-#include <iostream>
 #include <memory>
 
 class Logger

@@ -1,4 +1,5 @@
 #include "KlassMips.h"
+#include <algorithm>
 
 using namespace codegen;
 

@@ -1,4 +1,5 @@
 #include "Scope.h"
+#include <iostream>
 
 using namespace semant;
 

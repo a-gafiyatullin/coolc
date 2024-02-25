@@ -1,5 +1,7 @@
 #include "ast/AST.h"
 #include "utils/Utils.h"
+#include <algorithm>
+#include <iostream>
 
 namespace ast
 {

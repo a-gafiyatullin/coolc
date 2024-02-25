@@ -1,4 +1,5 @@
 #include "Assembler.h"
+#include "utils/Utils.h"
 #include "utils/logger/Logger.h"
 
 using namespace codegen;

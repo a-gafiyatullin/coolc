@@ -1,6 +1,8 @@
 #include "CodeGenMips.h"
 #include "codegen/emitter/CodeGen.inline.h"
 #include "codegen/emitter/data/Data.inline.h"
+#include <cmath>
+#include <fstream>
 
 using namespace codegen;
 
@@ -376,7 +378,7 @@ void CodeGenMips::emit_in_scope(const std::shared_ptr<ast::ObjectExpression> &ob
         }
         else
         {
-            __ push(__ zero()); // defualt value for uninitialized objects
+            __ push(__ zero()); // default value for uninitialized objects
         }
     }
 
