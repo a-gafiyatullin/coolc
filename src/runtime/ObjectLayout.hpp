@@ -56,7 +56,7 @@ struct ObjectLayout
     inline void unset_marked() { _mark = MarkWordUnsetValue; }
 
     /**
-     * @brief Set object as unsed
+     * @brief Set object as unused
      *
      * @param size Size of the object
      */
