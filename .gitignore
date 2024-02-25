@@ -8,8 +8,8 @@ tests/parser-semant/results/
 tests/codegen/results/
 tests/codegen/tests/*.o
 tests/parser-semant/tests/*.o
-lib/
-bin/
+/lib/
+/bin/
 .clangd/
 compile_commands.json
 out/

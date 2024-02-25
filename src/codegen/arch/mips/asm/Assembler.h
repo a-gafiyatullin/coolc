@@ -47,7 +47,7 @@ class CodeBuffer
     /**
      * @brief Cast to string
      *
-     * @return Conten of the buffer
+     * @return Content of the buffer
      */
     operator std::string() const { return _buffer; }
 };
@@ -55,8 +55,8 @@ class CodeBuffer
 class Assembler;
 
 /**
- * @brief Register represenantion in Assembler
- * Not all mips regiters!
+ * @brief Register representation in Assembler
+ * Not all mips registers!
  */
 class Register
 {
@@ -156,13 +156,13 @@ class Label
 };
 
 /**
- * @brief MIPS Assember
+ * @brief MIPS Assembler
  * Not all MIPS commands!
  */
 class Assembler
 {
   private:
-    static constexpr int IDENTATION = 4;
+    static constexpr int INDENTATION = 4;
 
     CodeBuffer &_code;
     int _ident;
@@ -183,7 +183,7 @@ class Assembler
     int _sp_offset;
 
     const static std::unordered_map<std::string, int>
-        SPECIAL_SYMBOLS; // idk, spim requries some strings to be converted to int
+        SPECIAL_SYMBOLS; // idk, spim requires some strings to be converted to int
     const static std::regex SPECIAL_SYMBOLS_REGEX;
 
     // .ascii str
@@ -495,7 +495,7 @@ class Assembler
     void blt(const Register &op1_reg, const int32_t &op2_imm, const Label &label);
 
     /**
-     * @brief Uncinditional jump
+     * @brief Unconditional jump
      *
      * @param label Jump target
      */

@@ -1,4 +1,5 @@
 #include "Assembler.h"
+#include "utils/logger/Logger.h"
 
 using namespace codegen;
 
@@ -11,7 +12,7 @@ CodeBuffer &CodeBuffer::operator+=(const CodeBuffer &buffer)
     return *this;
 }
 
-// ----------------------------------------------- Regsiters -----------------------------------------------
+// ----------------------------------------------- Registers -----------------------------------------------
 const std::vector<std::string> Register::REG_TO_STR = {"$sp", "$fp", "$ra", "$t0", "$t1", "$t2", "$t3",
                                                        "$t4", "$t5", "$t6", "$a0", "$a1", "$s0", "$zero"};
 
@@ -34,7 +35,7 @@ Register::Register(const Reg &reg) : _reg(reg)
 Register::~Register()
 {
     const auto reg_ptr = Assembler::UsedRegisters.find(_reg);
-    GUARANTEE_DEBUG(reg_ptr != Assembler::UsedRegisters.end()); // imposible
+    GUARANTEE_DEBUG(reg_ptr != Assembler::UsedRegisters.end()); // impossible
     Assembler::UsedRegisters.erase(reg_ptr);
 }
 
@@ -48,7 +49,7 @@ Label::Label(const std::string &name, const LabelPolicy &policy) : _name(name)
 const std::unordered_map<std::string, int> Assembler::SPECIAL_SYMBOLS = {{"\\", 92}};
 const std::regex Assembler::SPECIAL_SYMBOLS_REGEX("\\\\");
 
-Assembler::Assembler(CodeBuffer &code) : _code(code), _ident(IDENTATION) {}
+Assembler::Assembler(CodeBuffer &code) : _code(code), _ident(INDENTATION) {}
 
 void Assembler::sw(const Register &from_reg, const Register &to_reg, const int32_t &offset)
 {
