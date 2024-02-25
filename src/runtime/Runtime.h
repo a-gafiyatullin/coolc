@@ -53,7 +53,7 @@ extern "C"
     // Basic classes methods
     // ------------------------------ Object ------------------------------
     /**
-     * @brief Abort program with debuf info
+     * @brief Abort program with debug info
      *
      * @param receiver Receiver
      * @return NULL
