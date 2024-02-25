@@ -18,12 +18,12 @@ Please see the documentation provided in **docs/** for further assistance with *
       - **llvm-14**;
       - You can use `VS Code` and `Dev Containers` extension to get `Ubuntu 22.04` which contains these packages.
     - `build.sh [-release/-debug] [options]`<br>
-    Some usefull options:
+    Some useful options:
         - `-clean` --- clean build directory before compilation.
         - `-asan` --- build with AddressSanitizer (**debug only**).
         - `-ubsan` --- build with UndefinedBehaviorSanitizer (**debug only**).
         - `-test` --- run tests after building.
-        - `-mips` --- build for **SPIM** emulator (not currently under active maintenance).
+        - `-mips` --- build for **SPIM** emulator.
         - `-llvm` --- build with **LLVM** for host architecture.
         - `-shadow-stack-gc` --- (**llvm build**) build with **LLVM Shadow Stack**.
         - `-statepoint-example-gc` --- (**llvm build**) build with **LLVM Stack Maps**. **(*default*)**

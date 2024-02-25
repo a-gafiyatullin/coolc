@@ -1,4 +1,4 @@
-name: MIPS
+name: MIPS(SPIM)
 on: [pull_request]
 
 env:
