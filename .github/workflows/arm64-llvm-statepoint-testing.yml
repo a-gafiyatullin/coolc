@@ -1,4 +1,4 @@
-name: ARM64
+name: ARM64 (LLVM_STATEPOINT)
 on: [pull_request]
 
 env:
