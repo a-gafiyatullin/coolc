@@ -1,24 +1,23 @@
-name: MIPS (SPIM)
+name: ARM64 (LLVM_SHADOW_STACK)
 on: [pull_request]
 
 env:
   BUILD_TYPE: Debug
   ASAN: OFF
-  ARCH: MIPS
+  GC: LLVM_SHADOW_STACK
+  ARCH: LLVM
   C_COMPILER: /usr/bin/clang
   CXX_COMPILER: /usr/bin/clang++
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, ARM64]
 
     steps:
     - uses: actions/checkout@v3
 
     - name: Install Dependencies
-      run: |
-        sudo apt update
-        sudo apt -y install llvm clang libboost-all-dev libgtest-dev cmake clang-tidy
+      run: sudo apt -y install llvm clang libboost-all-dev libgtest-dev cmake clang-tidy
 
     - name: Build GTest
       run: |
@@ -32,6 +31,7 @@ jobs:
         cmake -B ${{github.workspace}}/build --no-warn-unused-cli \
         -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
         -DASAN=${{env.ASAN}} \
+        -DGCTYPE:STRING=${{env.GC}} \
         -DARCH:STRING=${{env.ARCH}} \
         -DCMAKE_C_COMPILER:FILEPATH=${{env.C_COMPILER}} \
         -DCMAKE_CXX_COMPILER:FILEPATH=${{env.CXX_COMPILER}} \
@@ -42,6 +42,4 @@ jobs:
 
     - name: Test
       working-directory: ${{github.workspace}}/build
-      run: |
-        sudo dpkg --add-architecture i386
-        ctest -C ${{env.BUILD_TYPE}}
+      run: ctest -C ${{env.BUILD_TYPE}}
