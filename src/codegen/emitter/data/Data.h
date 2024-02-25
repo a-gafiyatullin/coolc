@@ -1,7 +1,6 @@
 #pragma once
 
 #include "codegen/klass/Klass.h"
-#include <fstream>
 
 namespace codegen
 {
@@ -53,7 +52,7 @@ template <class Value, class ClassDesc = Value> class Data
      * @brief Declare boolean constant
      *
      * @param value Boolean
-     * @return Value associated with a given bolean
+     * @return Value associated with a given boolean
      */
     Value bool_const(const bool &value);
 

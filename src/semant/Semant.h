@@ -1,8 +1,6 @@
 #pragma once
 
-#include "decls/Decls.h"
 #include "semant/scope/Scope.h"
-#include <algorithm>
 
 #define SEMANT_RETURN_IF_FALSE_WITH_ERROR(cond, error, line_num, retval)                                               \
     if (!(cond))                                                                                                       \
@@ -42,7 +40,7 @@ class Semant
         const std::vector<std::shared_ptr<ast::Program>> &programs);
     std::shared_ptr<ast::Program> _program;    // program to analyze
     std::shared_ptr<ast::Type> _current_class; // current class of analysis for SELF_TYPE
-    int _expression_stack; // expression stack slots number for the currently analysing method/class init
+    int _expression_stack; // expression stack slots number for the currently analyzing method/class init
 
     // ----------------------------- Analysis algorithms support -----------------------------
     std::unordered_map<std::string, std::shared_ptr<ClassNode>> _classes; // fast access to class info
@@ -102,7 +100,7 @@ class Semant
     // expressions type check helpers
 
     // t1 is subtype of t2
-    // this function is not сommutative !!!
+    // this function is not commutative !!!
     bool check_types_meet(const std::shared_ptr<ast::Type> &dynamic_type,
                           const std::shared_ptr<ast::Type> &static_type) const;
     inline static bool same_type(const std::shared_ptr<ast::Type> &t1, const std::shared_ptr<ast::Type> &t2)
@@ -132,7 +130,7 @@ class Semant
     /**
      * @brief Infer empty types in AST
      *
-     * @return Root of class hierarhy program that consists of classes from all programs
+     * @return Root of class hierarchy program that consists of classes from all programs
      */
     std::pair<std::shared_ptr<ClassNode>, std::shared_ptr<ast::Program>> infer_types_and_check();
 

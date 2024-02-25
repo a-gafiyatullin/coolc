@@ -220,7 +220,7 @@ class KlassBuilder
 
     /**
      * @brief Create a Klass object. Pass nullptr for the first parameter to create initial empty Klass (head of
-     * hierarhy)
+     * hierarchy)
      *
      * @param klass ast::Class representation of Cool Class
      * @return New Klass object
@@ -231,7 +231,7 @@ class KlassBuilder
     /**
      * @brief Build map of Klasses for Cool classes
      *
-     * @param root Root of the class hierarhy
+     * @param root Root of the class hierarchy
      */
     explicit KlassBuilder(const std::shared_ptr<semant::ClassNode> &root);
 
@@ -293,9 +293,9 @@ class KlassBuilder
     inline const std::vector<std::shared_ptr<Klass>> &klasses() const { return _klasses_by_tag; }
 
     /**
-     * @brief Get root of the Class hierarhy
+     * @brief Get root of the Class hierarchy
      *
-     * @return Root of the Class hierarhy
+     * @return Root of the Class hierarchy
      */
     inline const std::shared_ptr<semant::ClassNode> &root() const { return _root; }
 };

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "ast/AST.h"
 #include "parser/Parser.h"
 #include "utils/Utils.h"
 #include "utils/logger/Logger.h"

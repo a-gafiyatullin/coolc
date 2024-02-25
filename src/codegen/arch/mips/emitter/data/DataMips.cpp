@@ -1,5 +1,7 @@
 #include "DataMips.h"
 #include "codegen/emitter/data/Data.inline.h"
+#include <cmath>
+#include <fstream>
 
 using namespace codegen;
 

@@ -1,10 +1,8 @@
 #pragma once
 
 #include "codegen/arch/mips/emitter/data/DataMips.h"
-#include "codegen/arch/mips/klass/KlassMips.h"
 #include "codegen/arch/mips/symtab/SymbolTableMips.h"
 #include "codegen/emitter/CodeGen.h"
-#include <ios>
 
 namespace codegen
 {
@@ -16,7 +14,7 @@ namespace codegen
 class CodeGenMips : public CodeGen<void, Symbol>
 {
   private:
-    // usefull constants
+    // useful constants
     static constexpr int OBJECT_HEADER_SIZE_IN_BYTES = 3 * WORD_SIZE;
     static constexpr int DISPATCH_TABLE_OFFSET = 2 * WORD_SIZE;
 
@@ -93,7 +91,7 @@ class CodeGenMips : public CodeGen<void, Symbol>
     /**
      * @brief Construct a new CodeGen object
      *
-     * @param root Root of program class hierarhy
+     * @param root Root of program class hierarchy
      */
     explicit CodeGenMips(const std::shared_ptr<semant::ClassNode> &root);
 

@@ -3,8 +3,6 @@
 #include "codegen/arch/mips/klass/KlassMips.h"
 #include "codegen/arch/mips/runtime/RuntimeMips.h"
 #include "codegen/emitter/data/Data.h"
-#include "codegen/symnames/NameConstructor.h"
-#include <cmath>
 
 namespace codegen
 {

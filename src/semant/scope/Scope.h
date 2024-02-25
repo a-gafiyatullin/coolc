@@ -56,7 +56,7 @@ class Scope
     }
 
     /**
-     * @brief Add new element to the current scoope
+     * @brief Add new element to the current scope
      *
      * @param name Element name
      * @param type Element type
@@ -76,7 +76,7 @@ class Scope
      * @brief Find element in the scope
      *
      * @param name Element for lookup
-     * @param scope_shift Start lookup from previos scope_shift scopes
+     * @param scope_shift Start lookup from previous scope_shift scopes
      * @return Type of the element
      */
     std::shared_ptr<ast::Type> find(const std::string &name, const int &scope_shift = 0) const;

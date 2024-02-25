@@ -1,5 +1,6 @@
 #include "Klass.h"
 #include "utils/logger/Logger.h"
+#include <algorithm>
 
 using namespace codegen;
 

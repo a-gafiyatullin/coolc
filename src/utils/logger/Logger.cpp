@@ -1,4 +1,5 @@
 #include "utils/logger/Logger.h"
+#include <iostream>
 
 #ifdef DEBUG
 std::shared_ptr<Logger> Logger::LOGGER = nullptr;

@@ -1,8 +1,6 @@
 #pragma once
 
-#include <cstring>
 #include <string>
-#include <utility>
 #include <vector>
 
 #ifdef LLVM
@@ -26,8 +24,6 @@ std::pair<std::vector<int>, std::string> process_args(char *const args[], const 
 
 #ifdef DEBUG
 #include <cassert>
-#include <iomanip>
-#include <sstream>
 
 extern bool TraceLexer;
 extern bool TokensOnly;

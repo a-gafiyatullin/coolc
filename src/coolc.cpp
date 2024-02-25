@@ -1,6 +1,6 @@
 #include "coolc.h"
-#include "lexer/Lexer.h"
 #include "parser/Parser.h"
+#include <iostream>
 #include <numeric>
 
 /**
