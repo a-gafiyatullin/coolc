@@ -16,7 +16,7 @@ namespace gc
 class Marker;
 
 // info to relocate derived pointers
-struct DeriviedPtrRelocInfo
+struct DerivedPtrRelocInfo
 {
     address *_base_ptr_slot;    // where to find a new address of the base pointer
     address *_derived_ptr_slot; // where to write a new derived ptr
@@ -32,8 +32,8 @@ class StackWalker
     /**
      * @brief Visit stack roots (base pointers only)
      *
-     * @param obj Arbitrray object for visitor
-     * @param visitor Visistor func
+     * @param obj Arbitrary object for visitor
+     * @param visitor Visitor func
      * @param record_derived_ptrs Record derived pointer to fix them further
      */
     virtual void process_roots(void *obj, void (*visitor)(void *obj, address *root, const address *meta),
@@ -83,7 +83,7 @@ class ShadowStackWalker : public StackWalker
 class StackMapWalker : public StackWalker
 {
   private:
-    std::vector<DeriviedPtrRelocInfo> _derived_ptrs;
+    std::vector<DerivedPtrRelocInfo> _derived_ptrs;
 
     address *next_sp(address *sp, const stackmap::AddrInfo *info);
     address *next_fp(address *fp, const stackmap::AddrInfo *info);

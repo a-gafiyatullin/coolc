@@ -32,7 +32,7 @@ void GCStats::dump()
 
 ObjectLayout *GC::allocate(int tag, size_t size, void *disp_tab)
 {
-    size = allign(size);
+    size = align(size);
 
     Allocator *alloca = Allocator::allocator();
 
@@ -76,7 +76,7 @@ ObjectLayout *GC::copy(const ObjectLayout *obj)
     ObjectLayout *new_obj = allocate(obj->_tag, obj->_size, obj->_dispatch_table);
     assert(new_obj);
 
-    size_t size = std::min(obj->_size, new_obj->_size) - Allocator::HEADER_SIZE; // because of allignemnt
+    size_t size = std::min(obj->_size, new_obj->_size) - Allocator::HEADER_SIZE; // because of allignment
     memcpy(new_obj->fields_base(), obj->fields_base(), size);
 
     return new_obj;

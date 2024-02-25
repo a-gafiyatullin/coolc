@@ -1,6 +1,5 @@
 #include "StackMap.hpp"
 #include <cassert>
-#include <cstdio>
 
 using namespace gc::stackmap;
 

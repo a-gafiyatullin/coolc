@@ -1,7 +1,6 @@
 #pragma once
 
 #include "StackWalker.hpp"
-#include "runtime/ObjectLayout.hpp"
 #include <cassert>
 #include <queue>
 
@@ -138,7 +137,7 @@ class BitMapMarker : public MarkerFIFO
     inline size_t byte_to_bit(address byte) const { return (size_t)((address)byte - _heap_start) / BYTES_PER_BIT; }
 
     /**
-     * @brief Get the first byte that is represnted by the given bit
+     * @brief Get the first byte that is represented by the given bit
      *
      * @param bit Bit index in bitmap
      * @return size_t Byte offset from the heap start
@@ -154,7 +153,7 @@ class BitMapMarker : public MarkerFIFO
     inline size_t byte_to_word_num(address byte) const { return byte_to_bit(byte) / BITS_PER_BIT_MAP_WORD; }
 
     /**
-     * @brief Get bimap word by index
+     * @brief Get bitmap word by index
      *
      * @param idx Word index
      * @return const BitMapWord& Word
@@ -169,7 +168,7 @@ class BitMapMarker : public MarkerFIFO
     inline size_t words_num() const { return _bitmap.size(); }
 
     /**
-     * @brief Get nubmer of bits in the given amount of words
+     * @brief Get number of bits in the given amount of words
      *
      * @param word Number of words
      * @return size_t Number of bits

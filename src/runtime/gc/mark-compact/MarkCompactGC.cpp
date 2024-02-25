@@ -54,7 +54,7 @@ void ThreadedCompactionGC::update(address *obj, address addr)
 {
     Allocator *alloca = Allocator::allocator();
 
-    // if it is threaded object, so all references to it was orginized to linked list
+    // if it is threaded object, so all references to it was organized to linked list
     address temp = (address)((ObjectLayout *)obj)->_size;
 
     // if _size field contains a heap pointer - it is a start of the list
@@ -244,7 +244,7 @@ address CompressorGC::new_address(address old)
         return old;
     }
 
-    assert(is_alligned((size_t)old));
+    assert(is_aligned((size_t)old));
 
     address heap_start = Allocator::allocator()->start();
     BitMapMarker *marker = (BitMapMarker *)Marker::marker();
@@ -273,7 +273,7 @@ address CompressorGC::new_address(address old)
 
     assert(block_idx < _offsets.size());
     address new_addr = heap_start + _offsets[block_idx] + marker->bit_to_byte(used_bits);
-    assert(is_alligned((size_t)new_addr));
+    assert(is_aligned((size_t)new_addr));
 
 #ifdef DEBUG
     if (TraceObjectFieldUpdate)

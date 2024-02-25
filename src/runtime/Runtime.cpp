@@ -242,7 +242,7 @@ void _verify_oop(ObjectLayout *obj) // NOLINT
     assert(!obj ||
            (obj->is_marked() && !gc::Allocator::allocator()->is_heap_addr((address)obj) &&
             obj->has_special_type()) || // constant object are always marked
-           (is_alligned((size_t)obj) && gc::Allocator::allocator()->is_heap_addr((address)obj) && !obj->is_marked()));
+           (is_aligned((size_t)obj) && gc::Allocator::allocator()->is_heap_addr((address)obj) && !obj->is_marked()));
 }
 
 #endif // DEBUG

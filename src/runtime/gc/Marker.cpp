@@ -135,7 +135,7 @@ void BitMapMarker::mark_from_roots()
 
 void BitMapMarker::mark_unmarked_object(ObjectLayout *object)
 {
-    assert(is_alligned((address)object - _heap_start));
+    assert(is_aligned((address)object - _heap_start));
     size_t bit_num = (size_t)((address)object - _heap_start) / BYTES_PER_BIT;
 
     size_t first_word_num = bit_num / BITS_PER_BIT_MAP_WORD;
@@ -143,7 +143,7 @@ void BitMapMarker::mark_unmarked_object(ObjectLayout *object)
 
     size_t mask1 = ~((1llu << (bit_num % BITS_PER_BIT_MAP_WORD)) - 1);
 
-    assert(is_alligned(object->_size));
+    assert(is_aligned(object->_size));
     size_t object_size_bits = object->_size / BYTES_PER_BIT - 1;
     size_t last_word_num = (bit_num + object_size_bits) / BITS_PER_BIT_MAP_WORD;
     assert(last_word_num < _bitmap.size());

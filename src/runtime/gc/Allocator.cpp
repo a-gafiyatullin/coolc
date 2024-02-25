@@ -1,8 +1,5 @@
 #include "Allocator.hpp"
 #include "Utils.hpp"
-#include "runtime/globals.hpp"
-#include <cstdio>
-#include <cstdlib>
 #include <cstring>
 
 using namespace gc;
@@ -10,7 +7,7 @@ using namespace gc;
 Allocator *Allocator::AllocatorObj = nullptr;
 
 Allocator::Allocator(const size_t &size)
-    : _size(allign(size, 2)) // 16 byte allignment
+    : _size(align(size, 2)) // 16 byte allignment
 #ifdef DEBUG
       ,
       _allocated_size(0), _freed_size(0)
@@ -153,7 +150,7 @@ NextFitAllocator::NextFitAllocator(const size_t &size) : Allocator(size)
 
 ObjectLayout *NextFitAllocator::allocate_inner(int tag, size_t size, void *disp_tab)
 {
-    // try to find suitable chunk of the memeory
+    // try to find suitable chunk of the memory
     // compact chunks by the way
     ObjectLayout *chunk = nullptr;
     // assume that we allocate memory consequently between collections
@@ -217,8 +214,8 @@ ObjectLayout *NextFitAllocator::allocate_inner(int tag, size_t size, void *disp_
     if (current_chunk_size - size < HEADER_SIZE)
     {
         appendix_size = current_chunk_size - size;
-        size = current_chunk_size; // allign allocation for correct heap interation
-        // this headen fields always will be zero, so will not affeсt gc
+        size = current_chunk_size; // align allocation for correct heap interation
+        // this hidden fields always will be zero, so will not affect gc
     }
 
     if (current_chunk_size - size >= HEADER_SIZE)
@@ -294,7 +291,7 @@ void NextFitAllocator::move(const ObjectLayout *src, address dst)
 
 void NextFitAllocator::force_alloc_pos(address pos)
 {
-    assert(is_alligned((size_t)pos));
+    assert(is_aligned((size_t)pos));
 
     // create an artificial object with tag 0 and size heap_size
     ObjectLayout *aobj = (ObjectLayout *)pos;
