@@ -1,6 +1,7 @@
 #include "IR.inline.hpp"
 #include "cfg/CFG.hpp"
 #include <cassert>
+#include <iostream>
 
 using namespace myir;
 

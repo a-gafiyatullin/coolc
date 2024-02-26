@@ -1,8 +1,6 @@
 #pragma once
 
 #include "codegen/arch/llvm/runtime/RuntimeLLVM.h"
-#include <llvm/IR/Function.h>
-#include <llvm/IR/Instruction.h>
 #include <llvm/Pass.h>
 
 using namespace llvm;

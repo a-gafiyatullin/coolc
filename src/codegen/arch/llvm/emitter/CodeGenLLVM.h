@@ -2,23 +2,8 @@
 #include "codegen/arch/llvm/klass/KlassLLVM.h"
 #include "codegen/arch/llvm/symtab/SymbolTableLLVM.h"
 #include "codegen/emitter/CodeGen.h"
-#include <boost/dll/runtime_symbol_info.hpp>
-#include <boost/filesystem.hpp>
-#include <filesystem>
-#include <iostream>
 #include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/LegacyPassManager.h>
-#include <llvm/IR/Verifier.h>
-#include <llvm/MC/TargetRegistry.h>
-#include <llvm/Support/Host.h>
-#include <llvm/Support/Program.h>
-#include <llvm/Support/TargetSelect.h>
-#include <llvm/Target/TargetMachine.h>
-#include <llvm/Target/TargetOptions.h>
-#include <llvm/Transforms/InstCombine/InstCombine.h>
-#include <llvm/Transforms/Scalar.h>
-#include <llvm/Transforms/Scalar/GVN.h>
 
 namespace codegen
 {

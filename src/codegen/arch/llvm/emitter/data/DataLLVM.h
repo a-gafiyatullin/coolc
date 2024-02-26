@@ -2,8 +2,6 @@
 
 #include "codegen/arch/llvm/runtime/RuntimeLLVM.h"
 #include "codegen/emitter/data/Data.h"
-#include <llvm/IR/Constants.h>
-#include <llvm/IR/DerivedTypes.h>
 
 namespace codegen
 {

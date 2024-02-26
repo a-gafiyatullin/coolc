@@ -263,7 +263,7 @@ void Unboxing::replace_load(Load *load, OperandType type, std::stack<TypeLink> &
     // don't change def. Will be eliminated by copy propagation
     Instruction *move = nullptr;
 
-    // all acceses to Integer objects by constant offsets
+    // all access to Integer objects by constant offsets
     switch (offset_val)
     {
     case codegen::HeaderLayoutOffsets::FieldOffset: {
@@ -272,7 +272,7 @@ void Unboxing::replace_load(Load *load, OperandType type, std::stack<TypeLink> &
         break;
     }
     case codegen::HeaderLayoutOffsets::DispatchTableOffset: {
-        // load of the dispatch table. We know exactyly the type
+        // load of the dispatch table. We know exactly the type
         move = new Move(result, _data.class_disp_tab(operand_to_klass(type)));
         break;
     }
@@ -305,7 +305,7 @@ void Unboxing::wrap_primitives(Instruction *inst, OperandType type) const
         }
     }
 
-    // noew create allocations and replace uses
+    // now create allocations and replace uses
     for (auto *value : for_replace)
     {
         auto *object = allocate_primitive(inst, value, operand_to_klass(type)->klass());
@@ -392,7 +392,7 @@ void Unboxing::replace_store(Store *store, OperandType type, std::stack<TypeLink
         s.push({inst, type});
     }
 
-    // We can delete object allocaion and initialization
+    // We can delete object allocation and initialization
     if (!for_delete.empty())
     {
         for_delete.push_back(object->def());

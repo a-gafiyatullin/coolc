@@ -10,7 +10,7 @@
 namespace allocator
 {
 
-// Objects of this class cannot be allocted in heap
+// Objects of this class cannot be allocated in heap
 class StackObject
 {
   private:

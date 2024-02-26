@@ -1,5 +1,7 @@
 #include "DataLLVM.h"
 #include "codegen/emitter/data/Data.inline.h"
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/DerivedTypes.h>
 
 using namespace codegen;
 

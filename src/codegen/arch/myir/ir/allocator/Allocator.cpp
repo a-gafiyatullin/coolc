@@ -51,7 +51,7 @@ void *allocator::LinearAllocator::allocate(size_t size, size_t align)
         return allocate(size, align);
     }
 
-    // allign reqs
+    // align reqs
     if ((size_t)curr_pos % align)
     {
         curr_pos += addition;

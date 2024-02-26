@@ -1,7 +1,6 @@
 #include "NCE.hpp"
 #include "utils/logger/Logger.h"
 #include <llvm/IR/Instructions.h>
-#include <llvm/Support/raw_ostream.h>
 
 using namespace opt;
 

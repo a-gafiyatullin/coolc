@@ -3,6 +3,7 @@
 #include "codegen/arch/myir/ir/Oper.hpp"
 #include "codegen/arch/myir/ir/cfg/CFG.inline.hpp"
 #include "utils/Utils.h"
+#include <iostream>
 
 using namespace myir;
 
@@ -65,7 +66,7 @@ std::unordered_map<Operand *, std::set<Block *>> SSAConstruction::defs_in_blocks
 
 void SSAConstruction::insert_phis(const CFG::DominanceInfo &info)
 {
-    // 1.1. calcaulate DF
+    // 1.1. calculate DF
     auto &df = info.dominance_frontier();
     // 1.2 find all variables with multiple defs
     auto defs = defs_in_blocks();
