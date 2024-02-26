@@ -1,6 +1,7 @@
 #include "DIE.hpp"
 #include "codegen/arch/myir/ir/IR.inline.hpp"
 #include "codegen/arch/myir/ir/cfg/CFG.hpp"
+
 using namespace myir;
 
 void DIE::run(Function *func)

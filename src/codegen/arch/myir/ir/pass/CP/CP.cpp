@@ -1,6 +1,7 @@
 #include "CP.hpp"
 #include "codegen/arch/myir/ir/IR.inline.hpp"
 #include "codegen/arch/myir/ir/cfg/CFG.hpp"
+
 using namespace myir;
 
 void CP::run(Function *func)
@@ -22,7 +23,7 @@ void CP::run(Function *func)
             // operands from executable paths
             auto executable = operands_from_executable_paths(inst, bvisited);
 
-            // get optimisitic prediction
+            // get optimistic prediction
             Operand *copy = nullptr;
             for (auto *o : executable)
             {

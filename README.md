@@ -29,7 +29,7 @@ Please see the documentation provided in **docs/** for further assistance with *
         - `-statepoint-example-gc` --- (**llvm build**) build with **LLVM Stack Maps**. **(*default*)**
         - `-no-gc` --- (**llvm build**) build without GC (**ZeroGC** only).
 
-3. Some usefull runtime options for **LLVM**-based build with GC (pass them as argument to executable):
+3. Some useful runtime options for **LLVM**-based build with GC (pass them as argument to executable):
    1. `MaxHeapSize` --- maximal heap size (e.g. `MaxHeapSize=1024[Gb/Mb/Kb/no specifier for bytes]`).
    2. `GCAlgo` --- GC algorithm (e.g. `GCAlgo=1`):
       1. `ZeroGC` (code **0**) --- just allocate memory without collecting.

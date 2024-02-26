@@ -3,7 +3,19 @@
 #include "codegen/emitter/data/Data.inline.h"
 #include "opt/dae/DAE.hpp"
 #include "opt/nce/NCE.hpp"
-#include <llvm/IR/Attributes.h>
+#include <boost/dll/runtime_symbol_info.hpp>
+#include <boost/filesystem.hpp>
+#include <filesystem>
+#include <iostream>
+#include <llvm/IR/Verifier.h>
+#include <llvm/MC/TargetRegistry.h>
+#include <llvm/Support/Host.h>
+#include <llvm/Support/Program.h>
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/Target/TargetMachine.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#include <llvm/Transforms/Scalar.h>
+#include <llvm/Transforms/Scalar/GVN.h>
 
 using namespace codegen;
 
@@ -39,7 +51,7 @@ void CodeGenLLVM::init_optimizer()
         _optimizer.add(new opt::NCE(_runtime));
     }
 
-    // Do simple "peephole" optimizations and bit-twiddling optzns.
+    // Do simple "peephole" optimizations and bit-twiddling optimizations.
     _optimizer.add(llvm::createInstructionCombiningPass());
 
     // Reassociate expressions.

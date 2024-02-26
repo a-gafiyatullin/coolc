@@ -153,7 +153,7 @@ void Pass::merge_blocks()
             // delete branch
             bb->erase(bb->insts().back());
 
-            // uncoditional branch and successor has only one predecessor
+            // unconditional branch and successor has only one predecessor
             for (auto *inst : successor->insts())
             {
                 bb->append(inst);

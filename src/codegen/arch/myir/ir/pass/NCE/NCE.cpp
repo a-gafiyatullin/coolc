@@ -1,6 +1,7 @@
 #include "NCE.hpp"
 #include "codegen/arch/myir/ir/IR.inline.hpp"
 #include "codegen/arch/myir/ir/cfg/CFG.hpp"
+
 using namespace myir;
 
 void NCE::run(Function *func)
@@ -19,7 +20,7 @@ void NCE::run(Function *func)
         {
             auto executable = operands_from_executable_paths(inst, bvisited);
 
-            // get optimisitic prediction
+            // get optimistic prediction
             bool not_null_state = true;
             for (auto *o : executable)
             {
@@ -35,7 +36,7 @@ void NCE::run(Function *func)
         }
         else if (Instruction::isa<CondBranch>(inst))
         {
-            // use the best estimaton for this branch
+            // use the best estimation for this branch
             auto *br = Instruction::as<CondBranch>(inst);
             if (!br->use(0)->has_def())
             {
@@ -113,7 +114,7 @@ void NCE::run(Function *func)
 
 void NCE::gather_not_nulls(std::vector<bool> &not_null)
 {
-    // self is defenetely not null
+    // self is definitely not null
     not_null[_func->param(0)->id()] = true;
 
     auto *alloca = _runtime.symbol_by_id(codegen::RuntimeMyIR::GC_ALLOC)->_func;

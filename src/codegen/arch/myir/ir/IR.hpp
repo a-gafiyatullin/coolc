@@ -95,7 +95,7 @@ class Module : public allocator::StackObject
     // data segment
     std::unordered_map<std::string, GlobalVariable *> _variables;
 
-    // convinient access to arrays
+    // convenient access to arrays
     template <class T> T get_by_name(const std::string &name, const std::unordered_map<std::string, T> &map) const;
 
   public:
@@ -119,7 +119,7 @@ class IRBuilder : public allocator::StackObject
     Block *_curr_block;
     Function *_curr_func;
 
-    // convinience methods for bnary and unary instructions
+    // convenience methods for binary and unary instructions
     template <class T> Operand *binary(Operand *lhs, Operand *rhs);
     template <class T> Operand *unary(Operand *operand);
 
