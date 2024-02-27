@@ -124,15 +124,52 @@ else()
   set(RUN_DIR llvm)
 endif()
 
-if((CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)" AND ARCH STREQUAL "MIPS") OR ARCH STREQUAL "LLVM")
+add_executable(codegen_tests tests/src/test.cpp tests/src/codegen/test.cpp)
+target_link_libraries(codegen_tests ${GTEST_LIBRARIES} pthread ${GTEST_MAIN_LIBRARIES})
+
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)" AND ARCH STREQUAL "MIPS")
   add_test(PrepareCodegenTestsResults
     ${PROJECT_SOURCE_DIR}/tests/codegen/make_results.sh
     ${EXECUTABLE_OUTPUT_PATH}
     ${PROJECT_SOURCE_DIR}/tests/codegen/arch/${RUN_DIR}/run.sh
   )
-  add_executable(codegen_tests tests/src/test.cpp tests/src/codegen/test.cpp)
-  target_link_libraries(codegen_tests ${GTEST_LIBRARIES} pthread ${GTEST_MAIN_LIBRARIES})
   add_test(CodegenTests ${EXECUTABLE_OUTPUT_PATH}/codegen_tests)
+elseif(ARCH STREQUAL "LLVM")
+  add_test(PrepareCodegenMarkAndSweepTestsResults
+    ${PROJECT_SOURCE_DIR}/tests/codegen/make_results.sh
+    ${EXECUTABLE_OUTPUT_PATH}
+    ${PROJECT_SOURCE_DIR}/tests/codegen/arch/${RUN_DIR}/run.sh
+    1
+    "6Kb"
+  )
+  add_test(CodegenTestsMarkAndSweep ${EXECUTABLE_OUTPUT_PATH}/codegen_tests)
+
+  add_test(PrepareCodegenThreadedTestsResults
+    ${PROJECT_SOURCE_DIR}/tests/codegen/make_results.sh
+    ${EXECUTABLE_OUTPUT_PATH}
+    ${PROJECT_SOURCE_DIR}/tests/codegen/arch/${RUN_DIR}/run.sh
+    2
+    "5Kb"
+  )
+  add_test(CodegenTestsThreaded ${EXECUTABLE_OUTPUT_PATH}/codegen_tests)
+
+  add_test(PrepareCodegenCompressorTestsResults
+    ${PROJECT_SOURCE_DIR}/tests/codegen/make_results.sh
+    ${EXECUTABLE_OUTPUT_PATH}
+    ${PROJECT_SOURCE_DIR}/tests/codegen/arch/${RUN_DIR}/run.sh
+    3
+    "5Kb"
+  )
+  add_test(CodegenTestsCompressor ${EXECUTABLE_OUTPUT_PATH}/codegen_tests)
+
+  add_test(PrepareCodegenSemispaceTestsResults
+    ${PROJECT_SOURCE_DIR}/tests/codegen/make_results.sh
+    ${EXECUTABLE_OUTPUT_PATH}
+    ${PROJECT_SOURCE_DIR}/tests/codegen/arch/${RUN_DIR}/run.sh
+    4
+    "10Kb"
+  )
+  add_test(CodegenTestsSemispace ${EXECUTABLE_OUTPUT_PATH}/codegen_tests)
 endif()
 
 unset(ARCH CACHE)

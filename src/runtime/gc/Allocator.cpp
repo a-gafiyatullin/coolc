@@ -49,6 +49,7 @@ void Allocator::init(const size_t &size)
 #ifdef DEBUG
     if (TraceGCCycles)
     {
+        fprintf(stderr, "Chosen GC: %d\n", GCAlgo);
         fprintf(stderr, "Heap: [%p-%p]\n", AllocatorObj->start(), AllocatorObj->end());
     }
 #endif // DEBUG
