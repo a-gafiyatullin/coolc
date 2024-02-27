@@ -1,4 +1,5 @@
 #include "test.h"
+#include <fstream>
 
 class LexerParameterizedTest : public CompilerParameterizedTest
 {

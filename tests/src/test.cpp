@@ -1,4 +1,7 @@
 #include "test.h"
+#include <filesystem>
+#include <fstream>
+#include <iostream>
 
 std::string CompilerParameterizedTest::ProjHomeDir;
 std::string CompilerParameterizedTest::CompilerTestsDir;
