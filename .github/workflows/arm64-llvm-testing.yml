@@ -1,10 +1,9 @@
-name: ARM64 (LLVM_STATEPOINT)
+name: ARM64
 on: [pull_request]
 
 env:
   BUILD_TYPE: Debug
   ASAN: OFF
-  GC: LLVM_STATEPOINT_EXAMPLE
   ARCH: LLVM
   C_COMPILER: /usr/bin/clang
   CXX_COMPILER: /usr/bin/clang++
@@ -13,7 +12,9 @@ jobs:
   build:
     name: Build and Test
     runs-on: [self-hosted, ARM64]
-
+    strategy:
+      matrix:
+        stack_walker: [LLVM_SHADOW_STACK, LLVM_STATEPOINT_EXAMPLE]
     steps:
     - uses: actions/checkout@v3
 
@@ -32,7 +33,7 @@ jobs:
         cmake -B ${{github.workspace}}/build --no-warn-unused-cli \
         -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
         -DASAN=${{env.ASAN}} \
-        -DGCTYPE:STRING=${{env.GC}} \
+        -DGCTYPE:STRING=${{matrix.stack_walker}} \
         -DARCH:STRING=${{env.ARCH}} \
         -DCMAKE_C_COMPILER:FILEPATH=${{env.C_COMPILER}} \
         -DCMAKE_CXX_COMPILER:FILEPATH=${{env.CXX_COMPILER}} \
