@@ -1,4 +1,5 @@
 #include "runtime/gc/GC.hpp"
+#include <algorithm>
 #include <bit>
 
 using namespace gc;

@@ -1,4 +1,4 @@
-name: ARM64
+name: X86
 on: [pull_request]
 
 env:
@@ -11,12 +11,29 @@ env:
 jobs:
   build:
     name: Build and Test
-    runs-on: [self-hosted, ARM64]
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         stack_walker: [LLVM_SHADOW_STACK, LLVM_STATEPOINT_EXAMPLE]
+        os: [ubuntu-22.04]
     steps:
+    - uses: mjp41/workaround8649@c8550b715ccdc17f89c8d5c28d7a48eeff9c94a8
+      with:
+        os: ${{ matrix.os }}
+
     - uses: actions/checkout@v3
+
+    - name: Install Dependencies
+      run: |
+        sudo apt update
+        sudo apt -y install llvm clang libboost-all-dev libgtest-dev cmake clang-tidy
+
+    - name: Build GTest
+      run: |
+        cd /usr/src/gtest
+        sudo cmake CMakeLists.txt
+        sudo make
+        sudo cp lib/*.a /usr/lib
 
     - name: Configure CMake
       run: | 

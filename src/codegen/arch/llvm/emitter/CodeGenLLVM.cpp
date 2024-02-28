@@ -7,6 +7,7 @@
 #include <boost/filesystem.hpp>
 #include <filesystem>
 #include <iostream>
+#include <llvm-14/llvm/Support/CodeGen.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/MC/TargetRegistry.h>
 #include <llvm/Support/Host.h>
@@ -1503,8 +1504,9 @@ void CodeGenLLVM::emit(const std::string &out_file)
 
     CODEGEN_VERBOSE_ONLY(LOG("Found target: " + std::string(target->getName())));
 
-    auto *const target_machine = target->createTargetMachine(
-        target_triple, arch_spec.second, arch_spec.first, llvm::TargetOptions(), llvm::Optional<llvm::Reloc::Model>());
+    auto *const target_machine =
+        target->createTargetMachine(target_triple, arch_spec.second, arch_spec.first, llvm::TargetOptions(),
+                                    llvm::Optional<llvm::Reloc::Model>(llvm::Reloc::Model::PIC_));
     EXIT_ON_ERROR(target_machine, "Can't create target machine!");
 
     _module.setDataLayout(target_machine->createDataLayout());
