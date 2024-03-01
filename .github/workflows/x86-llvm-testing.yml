@@ -3,7 +3,7 @@ on: [pull_request]
 
 env:
   BUILD_TYPE: Release
-  ASAN: OFF
+  ASAN: ON
   ARCH: LLVM
   C_COMPILER: /usr/bin/clang
   CXX_COMPILER: /usr/bin/clang++
