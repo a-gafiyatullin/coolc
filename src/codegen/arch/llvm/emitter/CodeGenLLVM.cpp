@@ -3,7 +3,7 @@
 #include "codegen/emitter/data/Data.inline.h"
 #include "opt/dae/DAE.hpp"
 #include "opt/nce/NCE.hpp"
-#include <boost/dll/runtime_symbol_info.hpp>
+#include <boost/dll/runtime_symbol_info.hpp> // NOLINT
 #include <boost/filesystem.hpp>
 #include <filesystem>
 #include <iostream>
