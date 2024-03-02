@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Inst.hpp"
+#include <cstdint>
 #include <unordered_map>
 
 namespace myir
