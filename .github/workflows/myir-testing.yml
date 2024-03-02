@@ -1,0 +1,45 @@
+name: MYIR
+on: [pull_request]
+
+env:
+  BUILD_TYPE: Debug
+  ASAN: ON
+  ARCH: MYIR
+  C_COMPILER: /usr/bin/clang
+  CXX_COMPILER: /usr/bin/clang++
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Dependencies
+      run: |
+        sudo apt update
+        sudo apt -y install clang libboost-all-dev libgtest-dev cmake clang-tidy
+
+    - name: Build GTest
+      run: |
+        cd /usr/src/gtest
+        sudo cmake CMakeLists.txt
+        sudo make
+        sudo cp lib/*.a /usr/lib
+
+    - name: Configure CMake
+      run: | 
+        cmake -B ${{github.workspace}}/build --no-warn-unused-cli \
+        -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+        -DASAN=${{env.ASAN}} \
+        -DARCH:STRING=${{env.ARCH}} \
+        -DCMAKE_C_COMPILER:FILEPATH=${{env.C_COMPILER}} \
+        -DCMAKE_CXX_COMPILER:FILEPATH=${{env.CXX_COMPILER}} \
+        -G "Unix Makefiles" \
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --target all -j 4 --
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build
+      run: ctest -C ${{env.BUILD_TYPE}}

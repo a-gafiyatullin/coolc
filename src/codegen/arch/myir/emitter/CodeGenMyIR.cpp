@@ -809,5 +809,5 @@ void CodeGenMyIR::emit(const std::string &out_file)
     // apply passes
     passes.run();
 
-    std::cout << _module.dump();
+    CODEGEN_VERBOSE_ONLY(std::cout << _module.dump());
 }

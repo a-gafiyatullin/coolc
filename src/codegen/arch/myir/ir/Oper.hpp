@@ -1,6 +1,8 @@
 #pragma once
 
 #include "allocator/Allocator.hpp"
+#include <algorithm>
+#include <cstdint>
 
 namespace myir
 {
