@@ -43,7 +43,7 @@ endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_CLANG_TIDY "clang-tidy;--extra-arg=-std=gnu++2a")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch -D${ARCH}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-return-type -Wno-switch -D${ARCH}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -D${ARCH}")
 
 if(ASAN)
