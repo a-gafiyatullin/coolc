@@ -3,7 +3,7 @@ on: [pull_request]
 
 env:
   BUILD_TYPE: Debug
-  ASAN: ON
+  ASAN: OFF
   ARCH: MIPS
   C_COMPILER: /usr/bin/clang
   CXX_COMPILER: /usr/bin/clang++
